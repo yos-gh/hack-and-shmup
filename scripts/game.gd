@@ -3,6 +3,10 @@ extends Node2D
 const TILE := 32.0
 const SPEED := 245.0
 const PLAYER_HIT_RADIUS := 5.0
+# Enemy timing stays at floor-one values; only population and HP scale.
+const ENEMY_MOVE_SPEED := 86.0
+const ENEMY_BULLET_SPEED := 238.0
+const ENEMY_SHOT_INTERVAL := 1.665
 var goal_room := 0
 var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
@@ -483,8 +487,8 @@ func _physics_process(delta: float) -> void:
 		if e.active:
 			if e.kind == 1:
 				if e.cd <= 0:
-					emit_shot(e.p, toward, minf(230 + floor_number * 8, 390), 1, true)
-					e.cd = maxf(0.65, 1.7 - floor_number * 0.035)
+					emit_shot(e.p, toward, ENEMY_BULLET_SPEED, 1, true)
+					e.cd = ENEMY_SHOT_INTERVAL
 			elif e.kind == 2:
 				if e.charge > 0:
 					e.charge -= delta
@@ -497,7 +501,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				var c := tile(e.p)
 				var target: Vector2 = player if c == tile(player) else center(flow.get(c, c))
-				velocity = (target - e.p).normalized() * minf(82 + floor_number * 4, 165)
+				velocity = (target - e.p).normalized() * ENEMY_MOVE_SPEED
 		elif not e.searching:
 			velocity = e.dir * 18
 		var next_position := slide(e.p, (velocity + e.push) * delta)
