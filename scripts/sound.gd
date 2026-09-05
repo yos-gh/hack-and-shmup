@@ -5,6 +5,7 @@ var voices: Array[AudioStreamPlayer] = []
 var clips: Dictionary = {}
 var audio_mode := 0
 var headless := false
+var paused_state := false
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
@@ -37,6 +38,10 @@ func play_sfx(key: String) -> void:
 			return
 
 func set_paused(value: bool) -> void:
+	# Web Sample playback restarts on every unpause call, even when already running.
+	# Apply transitions only; game physics may request the same state every frame.
+	if value == paused_state: return
+	paused_state = value
 	music.stream_paused = value
 	for voice in voices: voice.stream_paused = value
 
