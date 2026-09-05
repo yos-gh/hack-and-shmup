@@ -4,6 +4,13 @@ func _initialize() -> void:
 func run() -> void:
 	var sound = load("res://scripts/sound.gd").new()
 	root.add_child(sound)
+	assert(sound.music.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "use the Godot mixer on Web")
+	assert(sound.music.stream.format == AudioStreamWAV.FORMAT_16_BITS, "BGM uses PCM")
+	assert(sound.music.stream.loop_end == sound.music.stream.data.size() / 2, "full PCM loop")
+	for voice in sound.voices:
+		assert(voice.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "SE uses the Godot mixer")
+	for clip in sound.clips.values():
+		assert(clip.format == AudioStreamWAV.FORMAT_16_BITS, "SE uses PCM")
 	await create_timer(0.2).timeout
 	assert(sound.music.playing, "BGM playback")
 	var before: float = sound.music.get_playback_position()

@@ -1,2 +1,10 @@
 .godot/
 *.log
+
+addons/sentry/bin/android/
+addons/sentry/bin/ios/
+addons/sentry/bin/linux/
+addons/sentry/bin/macos/
+addons/sentry/bin/windows/x86_32/
+addons/sentry/bin/windows/arm64/
+addons/sentry/dotnet/

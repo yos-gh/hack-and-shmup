@@ -11,6 +11,7 @@ func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
 	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
+	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
 	var loop: AudioStreamWAV = load("res://assets/audio/descent.wav").duplicate()
 	loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -20,6 +21,7 @@ func _ready() -> void:
 	music.volume_db = -10
 	for i in range(12):
 		var voice := AudioStreamPlayer.new()
+		voice.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		add_child(voice)
 		voice.volume_db = -5
 		voices.append(voice)

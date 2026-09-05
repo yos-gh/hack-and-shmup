@@ -681,9 +681,9 @@ func _draw() -> void:
 	if paused or choosing:
 		draw_rect(Rect2(Vector2.ZERO, screen), Color(0.02,0.03,0.06,0.93))
 		if paused:
-			label_at(screen * 0.5 - Vector2(70,30), "PAUSED", 28)
-			label_at(screen * 0.5 - Vector2(150,-20), "CLICK TO RESUME", 22,Color("63f5ce"))
-			label_at(screen * 0.5 - Vector2(150,-58), "ESC / RETURN TO TITLE", 18,Color("8194aa"))
+			centered_title_label(screen,screen.y*0.5-30,"PAUSED",28)
+			centered_title_label(screen,screen.y*0.5+20,"CLICK TO RESUME",22,Color("63f5ce"))
+			centered_title_label(screen,screen.y*0.5+58,"ESC / RETURN TO TITLE",18,Color("8194aa"))
 		else:
 			label_at(Vector2(screen.x / 2 - 240,screen.y / 2 - 130), "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
 			label_at(Vector2(screen.x / 2 - 175,screen.y / 2 - 90), "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))

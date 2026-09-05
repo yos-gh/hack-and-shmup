@@ -14,6 +14,15 @@ config/name="HACK & SHMUP"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7")
 
+[audio]
+
+general/default_playback_type=1
+general/default_playback_type.web=1
+
+[debug]
+
+settings/gdscript/always_track_call_stacks=true
+
 [display]
 
 window/size/viewport_width=1280
@@ -24,3 +33,14 @@ window/stretch/mode="canvas_items"
 
 renderer/rendering_method="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.025, 0.035, 0.055, 1)
+
+[sentry]
+
+schema_version=4
+options/dsn="https://8cb8a62a7e8fa10e70a7ca8cf15fe9a7@o4511784787771392.ingest.us.sentry.io/4512034123153408"
+options/release="hack-and-shmup@web-audio-stream-1"
+options/attach_log=false
+options/enable_logs=true
+options/send_default_pii=false
+options/attach_scene_tree=false
+options/debug_printing=false
