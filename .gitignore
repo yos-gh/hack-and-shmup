@@ -1,5 +1,6 @@
 .godot/
 *.log
+/[Dd]ocs/
 
 addons/sentry/bin/android/
 addons/sentry/bin/ios/

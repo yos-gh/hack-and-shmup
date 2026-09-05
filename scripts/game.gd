@@ -7,6 +7,12 @@ const PLAYER_HIT_RADIUS := 5.0
 const ENEMY_MOVE_SPEED := 86.0
 const ENEMY_BULLET_SPEED := 238.0
 const ENEMY_SHOT_INTERVAL := 1.665
+const ENEMY_BUCKET_SIZE := 64.0
+const BULLET_HIT_RADIUS := 14.0
+const IDLE_UPDATE_PHASES := 6
+var enemy_buckets: Dictionary = {}
+var patrol_elapsed: Dictionary = {}
+var simulation_tick := 0
 var goal_room := 0
 var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
@@ -224,6 +230,9 @@ func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
 
 func restart_attempt() -> void:
 	enemies = initial_enemies.duplicate(true)
+	enemy_buckets.clear()
+	patrol_elapsed.clear()
+	simulation_tick = 0
 	bullets.clear()
 	particles.clear()
 	effects.clear()
@@ -316,6 +325,29 @@ func build_flow() -> void:
 			if cells.has(n) and not flow.has(n):
 				flow[n] = c
 				queue.append(n)
+
+func enemy_bucket(p: Vector2) -> Vector2i:
+	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
+
+func rebuild_enemy_buckets() -> void:
+	enemy_buckets.clear()
+	# Insert in enemy order, including every bucket touched by the hit radius.
+	# A bullet needs one lookup; overlapping targets keep their original priority.
+	for e in enemies:
+		if e.hp <= 0: continue
+		var lo := enemy_bucket(e.p - Vector2.ONE * BULLET_HIT_RADIUS)
+		var hi := enemy_bucket(e.p + Vector2.ONE * BULLET_HIT_RADIUS)
+		for y in range(lo.y, hi.y + 1):
+			for x in range(lo.x, hi.x + 1):
+				var key := Vector2i(x, y)
+				if not enemy_buckets.has(key): enemy_buckets[key] = []
+				enemy_buckets[key].append(e)
+
+func bullet_target(p: Vector2) -> Dictionary:
+	for e in enemy_buckets.get(enemy_bucket(p), []):
+		if e.hp > 0 and p.distance_squared_to(e.p) < BULLET_HIT_RADIUS * BULLET_HIT_RADIUS and attack_open(e.p):
+			return e
+	return {}
 
 func cycle_audio() -> void:
 	audio_mode = (audio_mode + 1) % 3
@@ -475,11 +507,20 @@ func _physics_process(delta: float) -> void:
 	if fire_armed and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and sub_cd <= 0:
 		fire_sub(aim)
 	flow_cd -= delta
-	if flow_cd <= 0:
+	if flow_cd <= 0 and flow.get(tile(player), Vector2i(-999999, -999999)) != tile(player):
 		build_flow()
 		flow_cd = 0.22
+	simulation_tick += 1
+	for i in range(1, rooms.size()):
+		patrol_elapsed[i] = patrol_elapsed.get(i, 0.0) + delta
 	for e in enemies:
 		if e.hp <= 0: continue
+		var enemy_delta := delta
+		# Unseen patrols run at 10 Hz, staggered by room. Entered rooms and
+		# pursuing enemies retain full-rate reactions, motion and collisions.
+		if not e.active and not e.searching and not discovered.has(e.room) and e.push == Vector2.ZERO:
+			if (simulation_tick + e.room) % IDLE_UPDATE_PHASES != 0: continue
+			enemy_delta = patrol_elapsed.get(e.room, delta)
 		update_awareness(e, room_id, delta)
 		if e.active: e.cd -= delta
 		var toward: Vector2 = (player - e.p).normalized()
@@ -504,13 +545,17 @@ func _physics_process(delta: float) -> void:
 				velocity = (target - e.p).normalized() * ENEMY_MOVE_SPEED
 		elif not e.searching:
 			velocity = e.dir * 18
-		var next_position := slide(e.p, (velocity + e.push) * delta)
+		var next_position := slide(e.p, (velocity + e.push) * enemy_delta)
 		# Unalerted patrols must not drift back into the entrance buffer.
 		if e.active or entry_safe(next_position, e.room): e.p = next_position
 		e.push = e.push.move_toward(Vector2.ZERO, 600 * delta)
 		if enemy_touches_player(e):
 			die()
 			if pending_respawn: return
+	for i in range(1, rooms.size()):
+		if discovered.has(i) or (simulation_tick + i) % IDLE_UPDATE_PHASES == 0:
+			patrol_elapsed[i] = 0.0
+	rebuild_enemy_buckets()
 	for b in bullets:
 		b.life -= delta
 		var travel: Vector2 = b.v * delta
@@ -525,11 +570,10 @@ func _physics_process(delta: float) -> void:
 					b.life = 0
 					break
 			else:
-				for e in enemies:
-					if e.hp > 0 and attack_open(e.p) and b.p.distance_to(e.p) < 14:
-						hurt_enemy(e, b.damage, b.v.normalized())
-						b.life = 0
-						break
+				var target := bullet_target(b.p)
+				if not target.is_empty():
+					hurt_enemy(target, b.damage, b.v.normalized())
+					b.life = 0
 			if b.life <= 0: break
 	bullets = bullets.filter(func(b: Dictionary) -> bool: return b.life > 0)
 	for e in enemies:
