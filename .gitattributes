@@ -1,0 +1,4 @@
+*.wasm -text
+*.pck -text
+*.wav -text
+*.png -text
