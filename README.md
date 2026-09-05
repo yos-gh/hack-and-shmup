@@ -64,6 +64,8 @@ Web音声の注意: Sample再生で毎フレームポーズ解除すると音が
 
 Web固有の連続ノイズ対策として、BGM・SEともにStream再生を明示し、Godotのミキサー経由で再生します。WAVは16-bit PCMで取り込み、WebのSample再生と圧縮音声デコードを避けます。
 
+更新時は tools/export_web.ps1 を実行してください。拡張対応前のエンジンがブラウザーキャッシュから混ざらないよう、game-v2というファイル名で書き出し、入口のHTMLをindex.htmlにもコピーします。
+
 ## Sentry
 
 公式Sentry Godot SDK 2.1.1を addons/sentry に導入。指定プロジェクトへの自動初期化と構造化ログを有効にしています。Windows x64とWeb用バイナリを同梱し、Web書き出しにはGDExtension対応・スレッドなしのテンプレートを使用します。他OS向けの書き出しには公式リリースから対応バイナリを追加してください。
