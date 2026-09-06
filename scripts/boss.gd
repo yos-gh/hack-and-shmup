@@ -6,6 +6,20 @@ const GUIDED_TURN_RATE := 2.8
 # Indexed by surviving turrets minus one. Total fire density rises at each loss.
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
 const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
+const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE"]
+const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b")]
+var lasers: Array[Dictionary] = []
+var pending_summons: Array[Dictionary] = []
+
+func reset() -> void:
+	lasers.clear()
+	pending_summons.clear()
+
+func tier(game) -> int:
+	return clampi(int(game.floor_number / 5) - 1,0,8)
+
+func rate_scale(game) -> float:
+	return 1.0 + tier(game)*0.1
 
 func build(game) -> void:
 	game.rooms.assign([Rect2i(-12,-4,9,9), Rect2i(0,-10,28,22)])
@@ -24,11 +38,12 @@ func build(game) -> void:
 	# for dodging and repositioning within a roughly 20-30 second encounter.
 	var hp: float = maxf(8.0, game.power * minf(game.fire_rate / 0.09,60.0) * 1.6)
 	var positions := [Vector2i(8,-6),Vector2i(18,-6),Vector2i(23,1),Vector2i(18,8),Vector2i(8,8),Vector2i(5,1)]
-	for i in range(TURRETS):
-		game.enemies.append({"p":game.center(positions[i]),"kind":3,"hp":hp,"room":1,
+	if game.boss_variant != 0: positions = [Vector2i(14,1)]
+	for i in range(positions.size()):
+		game.enemies.append({"p":game.center(positions[i]),"kind":3,"hp":hp if game.boss_variant == 0 else hp*TURRETS,"room":1,
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
-			"push":Vector2.ZERO,"shots":i % 2})
+			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":3.0,"laser_cd":2.0,"waypoint":0})
 	game.initial_enemies = game.enemies.duplicate(true)
 	game.boss_max_hp = hp * TURRETS
 	game.floor_start_kills = game.kills
@@ -53,13 +68,99 @@ func health(game) -> float:
 func fire(game, e: Dictionary, toward: Vector2) -> void:
 	var stage := clampi(remaining(game),1,TURRETS)-1
 	var guided: bool = e.shots % 2 == 1
-	var count: int = VOLLEY_COUNTS[stage]
+	var count: int = VOLLEY_COUNTS[stage] * (1 + mini(tier(game),3))
 	for i in range(count):
-		var aim := toward.rotated((i - (count-1)*0.5)*0.20)
+		var aim := toward.rotated((i - (count-1)*0.5)*minf(0.20,2.4/maxi(count-1,1)))
 		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 235.0,1,true,1200)
 		if guided:
 			game.bullets[-1]["homing_time"] = 1.0
 			game.bullets[-1]["turn_rate"] = GUIDED_TURN_RATE
 			game.bullets[-1]["guided"] = true
 	e.shots += 1
-	e.cd = SHOT_INTERVALS[stage]
+	e.cd = SHOT_INTERVALS[stage]/rate_scale(game)
+
+func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
+	if game.boss_variant == 0:
+		if e.cd <= 0: fire(game,e,toward)
+		return Vector2.ZERO
+	if game.boss_variant == 1:
+		e.summon_cd -= delta
+		if e.summon_cd <= 0:
+			summon(game,e)
+			e.summon_cd = 5.5/rate_scale(game)
+		if e.cd <= 0:
+			var count := 1 + mini(tier(game),4)
+			for i in range(count):
+				var aim := toward.rotated((i-(count-1)*0.5)*0.24)
+				add_laser(e.p,game.attack_end(e.p,aim,1100.0),0.8,0.35,e)
+			e.cd = 2.7/rate_scale(game)
+			e.shots += 1
+		# Hold still while the line is being announced so its safe side is stable.
+		for beam in lasers:
+			if beam.owner == e and beam.warning > 0: return Vector2.ZERO
+		var points := [Vector2i(7,-4),Vector2i(21,-4),Vector2i(21,6),Vector2i(7,6)]
+		var destination: Vector2 = game.center(points[e.waypoint])
+		if e.p.distance_to(destination) < 12:
+			e.waypoint = (e.waypoint+1)%points.size()
+		return e.p.direction_to(destination)*105.0
+	e.laser_cd -= delta
+	if e.laser_cd <= 0:
+		var count := 1 + mini(tier(game)/2,3)
+		for i in range(count):
+			var lane: int = (e.shots+i)%4
+			var a: Vector2
+			var b: Vector2
+			if lane < 2:
+				var y := -3 if lane == 0 else 5
+				a = game.center(Vector2i(1,y)); b = game.center(Vector2i(26,y))
+			else:
+				var x := 8 if lane == 2 else 20
+				a = game.center(Vector2i(x,-9)); b = game.center(Vector2i(x,10))
+			add_laser(a,b,0.95,1.1,e)
+		e.laser_cd = 5.0/rate_scale(game)
+	if e.cd <= 0:
+		var radial: bool = e.shots % 2 == 1
+		var count := 12+tier(game)*4 if radial else 5+tier(game)*2
+		for i in range(count):
+			var aim := Vector2.from_angle(TAU*i/count+e.shots*0.17) if radial else toward.rotated((i-(count-1)*0.5)*0.13)
+			game.emit_shot(e.p,aim,165.0 if radial else 190.0,1,true,1200)
+		e.shots += 1
+		e.cd = 1.65/rate_scale(game)
+	return Vector2.ZERO
+
+func summon(game, e: Dictionary) -> void:
+	var adds := 0
+	for enemy in game.enemies:
+		if enemy.kind < 3 and enemy.hp > 0: adds += 1
+	var count := mini(2+tier(game),8)
+	for i in range(mini(count,24-adds)):
+		var p: Vector2 = e.p + Vector2.from_angle(TAU*i/count+e.shots)*100
+		if game.cells.get(game.tile(p),-1) != 1 or not game.walkable(p) or p.distance_to(game.player) < 96: continue
+		var kind := i%2
+		pending_summons.append({"p":p,"kind":kind,"hp":game.enemy_health(kind,game.floor_number),"room":1,
+			"active":false,"searching":true,"notice":0.65,"turn_speed":2.4,"cd":0.6,
+			"charge":0.0,"stun":0.0,"dir":Vector2.from_angle(TAU*i/count),"push":Vector2.ZERO})
+
+func add_laser(a: Vector2, b: Vector2, warning: float, duration: float, owner: Dictionary) -> void:
+	lasers.append({"a":a,"b":b,"warning":warning,"duration":duration,"owner":owner})
+
+func advance_lasers(game, delta: float) -> void:
+	for beam in lasers:
+		if beam.owner.hp <= 0: beam.duration = 0; continue
+		if beam.warning > 0:
+			beam.warning = maxf(0.0,beam.warning-delta)
+			continue
+		beam.duration -= delta
+		if beam.duration > 0:
+			var nearest := Geometry2D.get_closest_point_to_segment(game.player,beam.a,beam.b)
+			if nearest.distance_to(game.player) < 6.0+game.PLAYER_HIT_RADIUS: game.die()
+	lasers = lasers.filter(func(beam: Dictionary) -> bool: return beam.duration > 0)
+
+func draw_lasers(game) -> void:
+	for beam in lasers:
+		if beam.owner.hp <= 0: continue
+		if beam.warning > 0:
+			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5)
+		else:
+			game.draw_line(beam.a,beam.b,Color(1,0.35,0.25,0.35),12)
+			game.draw_line(beam.a,beam.b,Color("ffe2c9"),4)

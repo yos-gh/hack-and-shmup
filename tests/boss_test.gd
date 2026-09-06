@@ -13,13 +13,15 @@ func run() -> void:
 	game.title_screen = false
 	for depth in [5,10,15,20]:
 		game.floor_number = depth
-		game.new_floor()
+		game.new_floor(0)
 		check(game.boss_floor and game.rooms.size() == 2 and game.enemies.size() == 6, "boss every fifth floor with two rooms")
 		check(not game.stairs_unlocked, "stairs locked before defeat")
 		for e in game.enemies:
 			check(game.flow.has(game.tile(e.p)), "turret is reachable")
 			check(e.p.distance_to(game.entrances[1][0]) > 96, "safe boss entry")
 		check(game.flow.has(game.tile(game.stairs)), "stairs have a path")
+	game.floor_number = 5
+	game.new_floor(0)
 	game._physics_process(1.0/60)
 	check(not game.pending_respawn and game.time_left == 0, "boss has no time limit")
 	check(game.bullets.is_empty(), "boss does not shoot before entry")
@@ -73,7 +75,7 @@ func run() -> void:
 	check(game.stairs_unlocked and game.enemies.is_empty(), "all turrets defeated unlock stairs")
 	game.player = game.stairs
 	game._physics_process(1.0/60)
-	check(game.choosing and game.best_cleared == 20, "boss stairs offer upgrade and update record")
+	check(game.choosing and game.best_cleared == 5, "boss stairs offer upgrade and update record")
 	game.upgrade(0)
 	check(not game.boss_floor and game.rooms.size() >= 7 and game.stairs_unlocked and game.time_left > 0, "normal floor after boss")
 	var e: Dictionary = game.enemies[0]

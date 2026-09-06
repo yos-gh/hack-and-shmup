@@ -6,11 +6,13 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.title_screen = false
-	for level in range(2):
-		game.floor_number = 5 + level*5
-		game.power = 1.0 + level*1.4
-		game.fire_rate = 1.0 + level*0.8
-		game.new_floor()
+	for level in range(6):
+		var variant := level%3
+		var upgrade_level := int(level/3)
+		game.floor_number = 5 + upgrade_level*5
+		game.power = 1.0 + upgrade_level*1.4
+		game.fire_rate = 1.0 + upgrade_level*0.8
+		game.new_floor(variant)
 		game.player = game.center(Vector2i(1,1))
 		# Measure damage and travel budget, not the bot's ability to dodge.
 		game.grace = 999
@@ -20,7 +22,7 @@ func run() -> void:
 			var best := INF
 			for e in game.enemies:
 				var distance: float = game.player.distance_to(e.p)
-				if e.hp > 0 and distance < best: target = e; best = distance
+				if e.kind == 3 and e.hp > 0 and distance < best: target = e; best = distance
 			if not target.is_empty():
 				var aim: Vector2 = game.player.direction_to(target.p)
 				if best > 220: game.player = game.slide(game.player,aim*game.SPEED/60.0,game.PLAYER_HIT_RADIUS)
@@ -34,6 +36,6 @@ func run() -> void:
 			game.free()
 			quit(1)
 			return
-		print("PASS: actual MG bullets clear boss in %.2fs at power %.1f / rate %.1f (dodging excluded)" % [elapsed,game.power,game.fire_rate])
+		print("PASS: actual MG clears boss %d in %.2fs at power %.1f / rate %.1f (dodging excluded)" % [variant,elapsed,game.power,game.fire_rate])
 	game.free()
 	quit()

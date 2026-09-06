@@ -49,7 +49,7 @@ func capture() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/title.png")
 	game.floor_number = 5
-	game.new_floor()
+	game.new_floor(0)
 	game.title_screen = false
 	game.player = game.center(Vector2i(10,1))
 	game.grace = 999
@@ -63,6 +63,22 @@ func capture() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/boss.png")
+	for variant in [1,2]:
+		game.new_floor(variant)
+		game.player = game.center(Vector2i(3,1))
+		game.grace = 999
+		game.discovered[1] = true
+		var enemy: Dictionary = game.enemies[0]
+		enemy.active = true
+		enemy.cd = 0
+		enemy.summon_cd = 0
+		enemy.laser_cd = 0
+		for frame in range(60): game._physics_process(1.0/60)
+		game.camera_pos = game.center(game.rooms[1].get_center())
+		game.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://docs/boss-%d.png" % (variant+1))
 	game.queue_free()
 	await process_frame
 	await process_frame

@@ -74,6 +74,7 @@ var boss = preload("res://scripts/boss.gd").new()
 var boss_floor := false
 var stairs_unlocked := true
 var boss_max_hp := 0.0
+var boss_variant := 0
 
 func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
@@ -87,7 +88,7 @@ func tile(p: Vector2) -> Vector2i:
 func center(p: Vector2i) -> Vector2:
 	return Vector2(p) * TILE + Vector2.ONE * TILE * 0.5
 
-func new_floor() -> void:
+func new_floor(boss_choice: int = -1) -> void:
 	cells.clear()
 	rooms.clear()
 	room_shapes.clear()
@@ -102,6 +103,7 @@ func new_floor() -> void:
 	corridor_cells.clear()
 	boss_floor = floor_number % 5 == 0
 	if boss_floor:
+		boss_variant = rng.randi_range(0,2) if boss_choice < 0 else clampi(boss_choice,0,2)
 		boss.build(self)
 		return
 	# Scatter larger rooms without overlap, then connect a spanning tree and loops.
@@ -244,6 +246,7 @@ func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
 	return true
 
 func restart_attempt() -> void:
+	boss.reset()
 	stairs_unlocked = not boss_floor
 	enemies = initial_enemies.duplicate(true)
 	enemy_buckets.clear()
@@ -573,7 +576,7 @@ func _physics_process(delta: float) -> void:
 			elif e.kind == 2:
 				velocity = shield_velocity(e, delta, toward)
 			elif e.kind == 3:
-				if e.cd <= 0: boss.fire(self,e,toward)
+				velocity = boss.enemy_velocity(self,e,delta,toward)
 			else:
 				var c := tile(e.p)
 				var target: Vector2 = player if c == tile(player) else center(flow.get(c, c))
@@ -590,6 +593,8 @@ func _physics_process(delta: float) -> void:
 	for i in range(1, rooms.size()):
 		if discovered.has(i) or (simulation_tick + i) % IDLE_UPDATE_PHASES == 0:
 			patrol_elapsed[i] = 0.0
+	enemies.append_array(boss.pending_summons)
+	boss.pending_summons.clear()
 	rebuild_enemy_buckets()
 	for b in bullets:
 		b.life -= delta
@@ -620,8 +625,13 @@ func _physics_process(delta: float) -> void:
 	enemies = enemies.filter(func(e: Dictionary) -> bool: return e.hp > 0)
 	if boss_floor and not stairs_unlocked and boss.remaining(self) == 0:
 		stairs_unlocked = true
+		enemies.clear()
+		boss.reset()
 		bullets = bullets.filter(func(b: Dictionary) -> bool: return not b.hostile)
 		banner = 3.0
+	if boss_floor:
+		boss.advance_lasers(self,delta)
+		if pending_respawn: return
 	for p in particles:
 		p.life -= delta
 		p.p += p.v * delta
@@ -672,6 +682,7 @@ func _draw() -> void:
 		draw_rect(Rect2(stairs - Vector2(23,23), Vector2(46,46)), Color("24493c"))
 		for i in range(4): draw_line(stairs + Vector2(-16 + i * 4, -12 + i * 8), stairs + Vector2(16, -12 + i * 8), Color("65ffcf"), 3)
 		label_at(stairs + Vector2(-30,-34), "DESCEND", 13, Color("65ffcf"))
+	boss.draw_lasers(self)
 	for e in enemies:
 		if cells.get(tile(e.p), -1) >= 0 and not discovered.has(cells[tile(e.p)]): continue
 		var p: Vector2 = e.p
@@ -690,9 +701,17 @@ func _draw() -> void:
 			var side := dir.orthogonal() * 15
 			draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		else:
-			draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),Color("66547e"))
+			var ink: Color = boss.COLORS[boss_variant]
+			if boss_variant == 0:
+				draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),ink.darkened(0.55))
+			elif boss_variant == 1:
+				var angle: float = e.dir.angle()
+				draw_colored_polygon(PackedVector2Array([p+Vector2(-24,-18).rotated(angle),p+Vector2(24,0).rotated(angle),p+Vector2(-24,18).rotated(angle)]),ink.darkened(0.35))
+			else:
+				draw_circle(p,24,ink.darkened(0.55))
+				draw_arc(p,29,0,TAU,32,ink,2)
 			var extent := lerpf(12.0,7.0,warning)
-			draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),Color("d996ed").lerp(Color.WHITE,warning))
+			draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),ink.lerp(Color.WHITE,warning))
 	for b in bullets:
 		if cells.get(tile(b.p), -1) >= 0 and not discovered.has(cells[tile(b.p)]): continue
 		draw_line(b.p, b.p - b.v.normalized() * 12, (Color("d996ed") if b.get("guided",false) else Color("ffb95e")) if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
@@ -752,9 +771,9 @@ func _draw() -> void:
 	label_at(Vector2(650,31), "RMB  /  " + SUB_NAMES[sub_weapon], 20, Color("ffb95e"))
 	label_at(Vector2(650,56), "READY" if sub_cd <= 0 else "RECHARGING  %.1fs" % sub_cd, 13, Color("8194aa"))
 	if boss_floor:
-		label_at(Vector2(930,31), "CORE %d / 6" % boss.remaining(self), 23, Color("d996ed"))
+		label_at(Vector2(930,31), "CORE %d / 6" % boss.remaining(self) if boss_variant == 0 else "BOSS", 23, boss.COLORS[boss_variant])
 		label_at(Vector2(930,56), "NO TIME LIMIT", 12, Color("8194aa"))
-		draw_rect(Rect2(0,76,screen.x*boss.health(self)/maxf(boss_max_hp,1),3),Color("d996ed"))
+		draw_rect(Rect2(0,76,screen.x*boss.health(self)/maxf(boss_max_hp,1),3),boss.COLORS[boss_variant])
 	else:
 		label_at(Vector2(930,31), "%04.1f s" % time_left, 25, Color("ff647c") if time_left < 5 else Color("63f5ce"))
 		label_at(Vector2(930,56), "TO DESCEND", 12, Color("8194aa"))
@@ -775,7 +794,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
 	label_at(Vector2(26,screen.y - 15), "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO", 13, Color("a4b3c6"))
 	if banner > 0:
-		centered_title_label(screen,110,("BOSS DEFEATED / DESCEND" if stairs_unlocked else "SIEGE ARRAY / DESTROY ALL SIX CORES") if boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
+		centered_title_label(screen,110,("BOSS DEFEATED / DESCEND" if stairs_unlocked else boss.NAMES[boss_variant]) if boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
 	if hit_flash > 0:
 		draw_rect(Rect2(Vector2.ZERO,screen),Color(1,0.25,0.3,hit_flash*0.35))
 		draw_rect(Rect2(Vector2(4,4),screen-Vector2(8,8)),Color(1,0.3,0.35,hit_flash*2),false,6)
