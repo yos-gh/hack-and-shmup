@@ -101,6 +101,23 @@ func capture() -> void:
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://docs/boss-gaps-%d.png" % variant)
+	for phase in range(3):
+		game.floor_number = 15
+		game.new_floor(2)
+		game.player = game.center(Vector2i(6,1))
+		game.grace = 999
+		game.discovered[1] = true
+		var core: Dictionary = game.enemies[0]
+		core.active = true
+		core.shots = phase
+		core.cd = 99
+		game.boss.fire_halo(game,core,Vector2.LEFT)
+		for frame in range(85): game._physics_process(1.0/60)
+		game.camera_pos = game.center(game.rooms[1].get_center())
+		game.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://docs/halo-pattern-%d.png" % phase)
 	game.queue_free()
 	await process_frame
 	await process_frame

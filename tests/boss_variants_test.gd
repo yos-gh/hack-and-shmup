@@ -116,14 +116,14 @@ func run() -> void:
 		game.floor_number = depth
 		game.new_floor(2)
 		owner = game.enemies[0]
-		for volley in [1,3,5]:
+		for volley in [1,4,7]:
 			game.bullets.clear()
 			owner.shots = volley
 			owner.cd = 0
 			game.boss.enemy_velocity(game,owner,0.016,Vector2.RIGHT)
 			for b in game.bullets:
-				var sector_angle := wrapf(b.v.angle(),-PI/4,PI/4)
-				check(absf(sector_angle) <= 0.471, "radial escape corridors remain open across tiers and volleys")
+				var sector_angle := wrapf(b.v.angle()-int(volley/3)*0.20,-PI/4,PI/4)
+				check(absf(sector_angle) <= 0.471, "radial escape corridors retain width while changing direction")
 	for variant in range(3):
 		game.floor_number = 45
 		game.new_floor(variant)

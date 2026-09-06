@@ -630,7 +630,7 @@ func _physics_process(delta: float) -> void:
 		bullets = bullets.filter(func(b: Dictionary) -> bool: return not b.hostile)
 		banner = 3.0
 	if boss_floor:
-		boss.advance_lasers(self,delta)
+		boss.advance_attacks(self,delta)
 		if pending_respawn: return
 	for p in particles:
 		p.life -= delta
@@ -655,6 +655,7 @@ func label_at(p: Vector2, value: String, size: int = 18, color: Color = Color.WH
 
 func attack_warning(e: Dictionary) -> float:
 	if not e.active or e.charge > 0 or e.get("stun",0.0) > 0 or e.kind == 0: return 0.0
+	if e.kind == 3: return boss.warning(e)
 	var duration := 0.45 if e.kind == 1 else (0.55 if e.kind == 2 else 0.6)
 	return clampf(1.0-e.cd/duration,0.0,1.0)
 
@@ -714,7 +715,8 @@ func _draw() -> void:
 			draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),ink.lerp(Color.WHITE,warning))
 	for b in bullets:
 		if cells.get(tile(b.p), -1) >= 0 and not discovered.has(cells[tile(b.p)]): continue
-		draw_line(b.p, b.p - b.v.normalized() * 12, (Color("d996ed") if b.get("guided",false) else Color("ffb95e")) if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
+		var bullet_ink := Color("ff788e") if b.get("pressure",false) else (Color("d996ed") if b.get("guided",false) else Color("ffb95e"))
+		draw_line(b.p, b.p - b.v.normalized() * 12, bullet_ink if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
 	var preview_aim := (get_global_mouse_position() - offset - player).normalized()
 	var preview_alpha := 0.18 if sub_cd <= 0 else 0.06
 	if sub_weapon == 0:

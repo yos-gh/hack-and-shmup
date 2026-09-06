@@ -27,10 +27,12 @@ const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE"]
 const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b")]
 var lasers: Array[Dictionary] = []
 var pending_summons: Array[Dictionary] = []
+var salvos: Array[Dictionary] = []
 
 func reset() -> void:
 	lasers.clear()
 	pending_summons.clear()
+	salvos.clear()
 
 func tier(game) -> int:
 	return clampi(int(game.floor_number / 5) - 1,0,8)
@@ -60,7 +62,7 @@ func build(game) -> void:
 		game.enemies.append({"p":game.center(positions[i]),"kind":3,"hp":hp if game.boss_variant == 0 else hp*TURRETS,"room":1,
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
-			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"laser_cd":2.0,"waypoint":0})
+			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"pressure_cd":1.1,"orbit_side":1.0,"laser_cd":2.0})
 	game.initial_enemies = game.enemies.duplicate(true)
 	game.boss_max_hp = hp * TURRETS
 	game.floor_start_kills = game.kills
@@ -98,12 +100,49 @@ func fire(game, e: Dictionary, toward: Vector2) -> void:
 			game.bullets[-1]["homing_offset"] = offset if count >= 9 else 0.0
 	e.shots += 1
 	e.cd = SHOT_INTERVALS[stage]/rate_scale(game)
+	if stage == 0 and e.shots % 3 == 0:
+		# A delayed, readable aimed triplet breaks camping without filling the fan.
+		queue_aimed(e,0.45,3,0.11,210.0)
+
+func queue_aimed(e: Dictionary, delay: float, count: int, spacing: float, speed: float) -> void:
+	var offsets := PackedFloat32Array()
+	for i in range(count): offsets.append((i-(count-1)*0.5)*spacing)
+	salvos.append({"owner":e,"delay":delay,"offsets":offsets,"speed":speed,"aim":Vector2.ZERO})
+
+func emit_salvo(game, salvo: Dictionary) -> void:
+	var owner: Dictionary = salvo.owner
+	var aim: Vector2 = salvo.aim
+	if aim == Vector2.ZERO: aim = owner.p.direction_to(game.player)
+	for offset in salvo.offsets:
+		game.emit_shot(owner.p,aim.rotated(offset),salvo.speed,1,true,1200)
+		game.bullets[-1]["pressure"] = true
+
+func warning(e: Dictionary) -> float:
+	var value := clampf(1.0-e.cd/0.6,0.0,1.0)
+	for salvo in salvos:
+		if salvo.owner == e:
+			value = maxf(value,clampf(1.0-salvo.delay/0.45,0.0,1.0))
+	return value
+
+func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
+	var distance: float = e.p.distance_to(game.player)
+	# Retreat when crowded, approach a distant player, strafe at weapon range.
+	var direction := toward*clampf((distance-260.0)/100.0,-1.4,1.0)
+	direction += toward.orthogonal()*e.orbit_side*0.8
+	var interior := Rect2(Vector2(game.rooms[1].position)*game.TILE,Vector2(game.rooms[1].size)*game.TILE).grow(-65.0)
+	if not interior.has_point(e.p+direction.normalized()*75.0):
+		direction = e.p.direction_to(interior.get_center())*1.5+direction*0.3
+	return direction.normalized()*HUNTER_SPEED
 
 func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	if game.boss_variant == 0:
 		if e.cd <= 0: fire(game,e,toward)
 		return Vector2.ZERO
 	if game.boss_variant == 1:
+		e.pressure_cd -= delta
+		if e.pressure_cd <= 0:
+			for i in range(3): queue_aimed(e,0.45+i*0.20,3+2*mini(tier(game)/3,1),0.10,210.0)
+			e.pressure_cd = 0.85+1.4/rate_scale(game)
 		e.summon_cd -= delta
 		if e.summon_cd <= 0:
 			summon(game,e)
@@ -115,38 +154,55 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 				add_laser(e.p,game.attack_end(e.p,aim,1100.0),0.8,0.35,e)
 			e.cd = 2.7/rate_scale(game)
 			e.shots += 1
+			e.orbit_side *= -1.0
 		# Hold still while the line is being announced so its safe side is stable.
 		for beam in lasers:
 			if beam.owner == e and beam.warning > 0: return Vector2.ZERO
-		var points := [Vector2i(7,-4),Vector2i(21,-4),Vector2i(21,6),Vector2i(7,6)]
-		var destination: Vector2 = game.center(points[e.waypoint])
-		if e.p.distance_to(destination) < 12:
-			e.waypoint = (e.waypoint+1)%points.size()
-		return e.p.direction_to(destination)*HUNTER_SPEED
-	e.laser_cd -= delta
-	if e.laser_cd <= 0:
-		var count := 1 + mini(tier(game)/2,3)
-		for i in range(count):
-			var lane: int = (e.shots+i)%4
-			var a: Vector2
-			var b: Vector2
-			if lane < 2:
-				var y := -3 if lane == 0 else 5
-				a = game.center(Vector2i(1,y)); b = game.center(Vector2i(26,y))
-			else:
-				var x := 8 if lane == 2 else 20
-				a = game.center(Vector2i(x,-9)); b = game.center(Vector2i(x,10))
-			add_laser(a,b,0.95,1.1,e)
-		e.laser_cd = 5.0/rate_scale(game)
+		return hunter_velocity(game,e,toward)
 	if e.cd <= 0:
-		var radial: bool = e.shots % 2 == 1
-		var count := 12+tier(game)*4 if radial else 5+tier(game)*2
-		for i in range(count):
-			var aim := Vector2.from_angle(radial_angle(i,count)) if radial else toward.rotated(fan_angle(i,count)*0.65)
-			game.emit_shot(e.p,aim,165.0 if radial else 190.0,1,true,1200)
+		fire_halo(game,e,toward)
 		e.shots += 1
-		e.cd = 1.65/rate_scale(game)
+		# Fixed recovery after the sequence; depth adds bullets, not reaction speed.
+		e.cd = 2.5
 	return Vector2.ZERO
+
+func fire_halo(game, e: Dictionary, toward: Vector2) -> void:
+	var phase: int = e.shots % 3
+	if phase == 0:
+		# Re-aim each short fan: small deliberate movement streams the bullets.
+		var opening := salvos.size()
+		for i in range(4+mini(tier(game),2)):
+			queue_aimed(e,i*0.22,3+2*mini(tier(game),2),0.13,190.0)
+		# The opening fan follows the normal core warning; the rest are timed.
+		emit_salvo(game,salvos[opening])
+		salvos.remove_at(opening)
+	elif phase == 1:
+		var count := 12+tier(game)*4
+		var rotation := int(e.shots/3)*0.20
+		for i in range(count):
+			game.emit_shot(e.p,Vector2.from_angle(radial_angle(i,count)+rotation),165.0,1,true,1200)
+		# Static obstacles plus aimed pressure, separated in time and color.
+		queue_aimed(e,0.55,3,0.10,190.0)
+		queue_aimed(e,0.95,3+2*mini(tier(game)/3,2),0.10,190.0)
+	else:
+		# Lock a pincer to the old position; the center stays traversable.
+		for wave in range(3):
+			var offsets := PackedFloat32Array()
+			var count := 3+mini(tier(game),4)
+			for side in [-1,1]:
+				for i in range(count):
+					offsets.append(side*(0.70-wave*0.16)+(i-(count-1)*0.5)*0.045)
+			var salvo := {"owner":e,"delay":wave*0.35,"offsets":offsets,"speed":175.0,"aim":toward}
+			if wave == 0: emit_salvo(game,salvo)
+			else: salvos.append(salvo)
+		queue_aimed(e,1.20,3,0.12,190.0)
+
+func advance_attacks(game, delta: float) -> void:
+	for salvo in salvos:
+		salvo.delay -= delta
+		if salvo.delay <= 0 and salvo.owner.hp > 0: emit_salvo(game,salvo)
+	salvos = salvos.filter(func(salvo: Dictionary) -> bool: return salvo.delay > 0 and salvo.owner.hp > 0)
+	advance_lasers(game,delta)
 
 func summon(game, e: Dictionary) -> void:
 	var adds := 0
