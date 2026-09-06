@@ -10,6 +10,7 @@ const ENEMY_SHOT_INTERVAL := 1.665
 const ENEMY_BUCKET_SIZE := 64.0
 const BULLET_HIT_RADIUS := 14.0
 const IDLE_UPDATE_PHASES := 6
+const KILL_TIME_BONUS := [0.1, 0.2, 0.3]
 var enemy_buckets: Dictionary = {}
 var patrol_elapsed: Dictionary = {}
 var simulation_tick := 0
@@ -174,7 +175,7 @@ func new_floor() -> void:
 			var kind := 0
 			if n % 7 == 0: kind = 1
 			elif n % 11 == 0: kind = 2
-			enemies.append({"p":center(p), "kind":kind, "hp":1.0 if kind == 2 else (2.0+floor_number*0.3 if kind == 0 else 1.0+(floor_number-1)*0.3),
+			enemies.append({"p":center(p), "kind":kind, "hp":enemy_health(kind, floor_number),
 				"room":i, "active":false, "searching":false, "notice":rng.randf_range(0.35,0.85), "turn_speed":rng.randf_range(1.8,3.8),
 				"cd":rng.randf_range(0.25,0.65), "charge":0.0, "dir":Vector2.from_angle(rng.randf()*TAU), "push":Vector2.ZERO})
 	initial_enemies = enemies.duplicate(true)
@@ -190,6 +191,11 @@ func new_floor() -> void:
 	route_seconds = steps * TILE / (SPEED + move_bonus)
 	time_limit = route_seconds * 1.35 + 2.0
 	restart_attempt()
+
+func enemy_health(kind: int, depth: int) -> float:
+	if kind == 2: return 1.0
+	# Preserve floor-one HP and interpolate to the requested floor-15 targets.
+	return lerpf(2.3, 6.0, (depth - 1) / 14.0) if kind == 0 else 1.0 + (depth - 1) / 7.0
 
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.kind == 1: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
@@ -389,6 +395,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if title_screen:
 			if event.keycode in [KEY_ENTER, KEY_SPACE]: start_run()
+			elif event.keycode == KEY_ESCAPE and not OS.has_feature("web"): get_tree().quit()
 			return
 		if event.keycode == KEY_ESCAPE:
 			if paused: return_to_title()
@@ -452,7 +459,9 @@ func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: flo
 	damage_labels.append({"p": e.p + offset, "damage": damage, "life": 0.65})
 	if damage_labels.size() > 96: damage_labels.pop_front()
 	e.hp -= damage
-	if e.hp <= 0: sound.play_sfx("kill")
+	if e.hp <= 0:
+		time_left += KILL_TIME_BONUS[e.kind]
+		sound.play_sfx("kill")
 	burst(e.p, Color("ff647c"), 3)
 
 func die(reason: String = "HIT") -> void:
@@ -733,8 +742,8 @@ func _draw() -> void:
 			centered_title_label(screen,screen.y*0.5+20,"CLICK TO RESUME",22,Color("63f5ce"))
 			centered_title_label(screen,screen.y*0.5+58,"ESC / RETURN TO TITLE",18,Color("8194aa"))
 		else:
-			label_at(Vector2(screen.x / 2 - 240,screen.y / 2 - 130), "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
-			label_at(Vector2(screen.x / 2 - 175,screen.y / 2 - 90), "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))
+			centered_title_label(screen,screen.y / 2 - 130, "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
+			centered_title_label(screen,screen.y / 2 - 90, "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))
 			var names := ["HEAVY ROUNDS", "OVERCLOCK", "QUICKSTEP", "HUNTER"]
 			var descriptions := ["+35% base weapon damage", "+20% base firing speed", "+20 movement speed", "+20% damage / +10 speed"]
 			for i in range(3):
@@ -743,8 +752,28 @@ func _draw() -> void:
 				draw_rect(Rect2(p,Vector2(290,150)),Color("63f5ce"),false,2)
 				label_at(p + Vector2(18,32), "0%d / %s" % [i + 1, names[choices[i]]], 20)
 				label_at(p + Vector2(18,86), descriptions[choices[i]], 15, Color("a4b3c6"))
+		draw_player_stats(screen, screen.y * 0.5 + 155)
 
 
+
+func player_stats() -> Array[Dictionary]:
+	return [
+		{"name":"DAMAGE", "value":"%.2fx" % power, "detail":"+%.0f%%" % ((power - 1.0) * 100.0)},
+		{"name":"FIRE RATE", "value":"%.2fx" % fire_rate, "detail":"+%.0f%%" % ((fire_rate - 1.0) * 100.0)},
+		{"name":"MOVE SPEED", "value":"%.0f" % (SPEED + move_bonus), "detail":"+%.0f" % move_bonus}
+	]
+
+func draw_player_stats(screen: Vector2, y: float) -> void:
+	centered_title_label(screen, y, "CURRENT STATS", 15, Color("8194aa"))
+	var stats := player_stats()
+	for i in range(stats.size()):
+		var x := screen.x * 0.5 + (i - 1) * 250.0
+		var item: Dictionary = stats[i]
+		draw_rect(Rect2(x - 115, y + 15, 230, 105), Color("182735"))
+		var column := Vector2(x * 2.0, screen.y)
+		centered_title_label(column, y + 40, item.name, 15, Color("8194aa"))
+		centered_title_label(column, y + 73, item.value, 25, Color("63f5ce"))
+		centered_title_label(column, y + 101, item.detail, 15, Color("a4b3c6"))
 
 func centered_title_label(screen: Vector2, y: float, value: String, size: int, color: Color = Color.WHITE) -> void:
 	var width := font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
@@ -783,3 +812,5 @@ func draw_title(screen: Vector2) -> void:
 	centered_title_label(screen,origin.y+105,"CLICK OR ENTER TO DESCEND",22)
 	centered_title_label(screen,origin.y+148,"WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
 	centered_title_label(screen,origin.y+176,"M AUDIO / RECORD LASTS UNTIL YOU QUIT",14,Color("8194aa"))
+	if not OS.has_feature("web"):
+		centered_title_label(screen,origin.y+204,"ESC / QUIT",14,Color("8194aa"))

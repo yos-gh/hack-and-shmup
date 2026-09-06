@@ -28,6 +28,21 @@ func capture() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/scatter-preview.png")
+	game.power = 1.7
+	game.fire_rate = 1.4
+	game.move_bonus = 40
+	game.paused = true
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://docs/pause.png")
+	game.paused = false
+	game.choosing = true
+	game.choices.assign([0,1,2])
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://docs/upgrades.png")
 	game.return_to_title()
 	game.queue_redraw()
 	await process_frame
