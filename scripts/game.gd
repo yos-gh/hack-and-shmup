@@ -70,6 +70,10 @@ var choices: Array[int] = []
 var banner := 4.0
 var rng := RandomNumberGenerator.new()
 var font := ThemeDB.fallback_font
+var boss = preload("res://scripts/boss.gd").new()
+var boss_floor := false
+var stairs_unlocked := true
+var boss_max_hp := 0.0
 
 func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
@@ -96,6 +100,10 @@ func new_floor() -> void:
 	particles.clear()
 	room_links.clear()
 	corridor_cells.clear()
+	boss_floor = floor_number % 5 == 0
+	if boss_floor:
+		boss.build(self)
+		return
 	# Scatter larger rooms without overlap, then connect a spanning tree and loops.
 	var target_count := rng.randi_range(7, 10)
 	for attempt in range(600):
@@ -215,6 +223,7 @@ func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 	e.dir = Vector2.from_angle(angle)
 	if e.notice <= 0 and absf(angle_difference(angle,target_angle)) < 0.2 and attack_reaches(e.p,player):
 		e.active = true
+		if e.kind in [1,2]: e.cd = maxf(e.cd,0.55)
 
 func entry_safe(p: Vector2, room_id: int) -> bool:
 	if cells.get(tile(p), -1) != room_id: return false
@@ -235,6 +244,7 @@ func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
 	return true
 
 func restart_attempt() -> void:
+	stairs_unlocked = not boss_floor
 	enemies = initial_enemies.duplicate(true)
 	enemy_buckets.clear()
 	patrol_elapsed.clear()
@@ -469,7 +479,7 @@ func burst(p: Vector2, color: Color, count: int = 8) -> void:
 
 func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: float = 180.0) -> void:
 	if e.hp <= 0: return
-	e.push += direction * knockback
+	if e.kind != 3: e.push += direction * knockback
 	if e.kind == 2 and direction.dot(e.dir) < -0.35:
 		sound.play_sfx("shield")
 		burst(e.p, Color.SKY_BLUE, 3)
@@ -480,7 +490,7 @@ func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: flo
 	if damage_labels.size() > 96: damage_labels.pop_front()
 	e.hp -= damage
 	if e.hp <= 0:
-		time_left += KILL_TIME_BONUS[e.kind]
+		if not boss_floor and e.kind < 3: time_left += KILL_TIME_BONUS[e.kind]
 		sound.play_sfx("kill")
 	burst(e.p, Color("ff647c"), 3)
 
@@ -509,10 +519,11 @@ func _physics_process(delta: float) -> void:
 	hit_banner = maxf(0,hit_banner-delta)
 	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT): fire_armed = true
 	timeout_banner = maxf(0, timeout_banner - delta)
-	time_left = maxf(0, time_left - delta)
-	if time_left <= 0:
-		die("TIME UP")
-		return
+	if not boss_floor:
+		time_left = maxf(0, time_left - delta)
+		if time_left <= 0:
+			die("TIME UP")
+			return
 	for entry in damage_labels:
 		entry.life -= delta
 		entry.p.y -= 34.0 * delta
@@ -561,11 +572,13 @@ func _physics_process(delta: float) -> void:
 					e.cd = ENEMY_SHOT_INTERVAL
 			elif e.kind == 2:
 				velocity = shield_velocity(e, delta, toward)
+			elif e.kind == 3:
+				if e.cd <= 0: boss.fire(self,e,toward)
 			else:
 				var c := tile(e.p)
 				var target: Vector2 = player if c == tile(player) else center(flow.get(c, c))
 				velocity = (target - e.p).normalized() * ENEMY_MOVE_SPEED
-		elif not e.searching:
+		elif not e.searching and e.kind != 3:
 			velocity = e.dir * 18
 		var next_position := slide(e.p, (velocity + e.push) * enemy_delta)
 		# Unalerted patrols must not drift back into the entrance buffer.
@@ -580,6 +593,10 @@ func _physics_process(delta: float) -> void:
 	rebuild_enemy_buckets()
 	for b in bullets:
 		b.life -= delta
+		if b.get("homing_time",0.0) > 0:
+			var heading: float = rotate_toward(b.v.angle(),b.p.angle_to_point(player),1.1*minf(delta,b.homing_time))
+			b.v = Vector2.from_angle(heading)*b.v.length()
+			b.homing_time = maxf(0.0,b.homing_time-delta)
 		var travel: Vector2 = b.v * delta
 		var steps := maxi(1, int(ceil(travel.length() / 7)))
 		for step in range(steps):
@@ -601,11 +618,15 @@ func _physics_process(delta: float) -> void:
 	for e in enemies:
 		if e.hp <= 0: kills += 1; burst(e.p, Color("ff647c"), 12)
 	enemies = enemies.filter(func(e: Dictionary) -> bool: return e.hp > 0)
+	if boss_floor and not stairs_unlocked and boss.remaining(self) == 0:
+		stairs_unlocked = true
+		bullets = bullets.filter(func(b: Dictionary) -> bool: return not b.hostile)
+		banner = 3.0
 	for p in particles:
 		p.life -= delta
 		p.p += p.v * delta
 	particles = particles.filter(func(p: Dictionary) -> bool: return p.life > 0)
-	if player.distance_to(stairs) < 24:
+	if stairs_unlocked and player.distance_to(stairs) < 24:
 		choices.assign([0, 1, 2, 3])
 		choices.shuffle()
 		choices.resize(3)
@@ -621,6 +642,11 @@ func draw_radial_fill(origin: Vector2, outline: PackedVector2Array, color: Color
 
 func label_at(p: Vector2, value: String, size: int = 18, color: Color = Color.WHITE) -> void:
 	draw_string(font, p, value, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+
+func attack_warning(e: Dictionary) -> float:
+	if not e.active or e.charge > 0 or e.get("stun",0.0) > 0 or e.kind == 0: return 0.0
+	var duration := 0.45 if e.kind == 1 else (0.55 if e.kind == 2 else 0.6)
+	return clampf(1.0-e.cd/duration,0.0,1.0)
 
 func _draw() -> void:
 	var screen := get_viewport_rect().size
@@ -642,31 +668,34 @@ func _draw() -> void:
 				var edge := p + Vector2(16,16) + Vector2(d) * 16
 				var side := Vector2(-d.y, d.x) * 16
 				draw_line(edge - side, edge + side, Color("354858") if visible else Color("16202d"), 3)
-	if discovered.has(goal_room):
+	if stairs_unlocked and discovered.has(goal_room):
 		draw_rect(Rect2(stairs - Vector2(23,23), Vector2(46,46)), Color("24493c"))
 		for i in range(4): draw_line(stairs + Vector2(-16 + i * 4, -12 + i * 8), stairs + Vector2(16, -12 + i * 8), Color("65ffcf"), 3)
 		label_at(stairs + Vector2(-30,-34), "DESCEND", 13, Color("65ffcf"))
 	for e in enemies:
 		if cells.get(tile(e.p), -1) >= 0 and not discovered.has(cells[tile(e.p)]): continue
 		var p: Vector2 = e.p
+		var warning := attack_warning(e)
 		if not e.active:
 			draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if e.kind == 0:
 			draw_rect(Rect2(p - Vector2(10,10), Vector2(20,20)), Color("f3637a"))
 		elif e.kind == 1:
-			draw_circle(p, 12, Color("ffb95e"))
-			draw_circle(p, 5, Color("342338"))
-		else:
-			draw_rect(Rect2(p - Vector2(12,12), Vector2(24,24)), Color("ad8fff"))
+			draw_circle(p, 12, Color("ffb95e").lerp(Color("fff4dd"),warning))
+			draw_circle(p, lerpf(5.0,1.5,warning), Color("342338"))
+		elif e.kind == 2:
+			var extent := 12.0 - warning*2.0
+			draw_rect(Rect2(p - Vector2.ONE*extent, Vector2.ONE*extent*2), Color("ad8fff").lerp(Color("fff4dd"),warning))
 			var dir: Vector2 = e.dir
 			var side := dir.orthogonal() * 15
 			draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
-			if e.get("stun", 0.0) > 0:
-				draw_arc(p,22,-PI/2,-PI/2+TAU*e.stun,24,Color("c7eaff"),2)
-			elif e.active and e.charge <= 0 and e.cd < 0.5: draw_line(p, p + dir * 110, Color(1,0.4,0.5,0.5), 2)
+		else:
+			draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),Color("66547e"))
+			var extent := lerpf(12.0,7.0,warning)
+			draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),Color("d996ed").lerp(Color.WHITE,warning))
 	for b in bullets:
 		if cells.get(tile(b.p), -1) >= 0 and not discovered.has(cells[tile(b.p)]): continue
-		draw_line(b.p, b.p - b.v.normalized() * 12, Color("ffb95e") if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
+		draw_line(b.p, b.p - b.v.normalized() * 12, (Color("d996ed") if b.get("guided",false) else Color("ffb95e")) if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
 	var preview_aim := (get_global_mouse_position() - offset - player).normalized()
 	var preview_alpha := 0.18 if sub_cd <= 0 else 0.06
 	if sub_weapon == 0:
@@ -714,7 +743,7 @@ func _draw() -> void:
 	var aim := (get_global_mouse_position() - offset - player).normalized()
 	draw_line(player + aim * 8, player + aim * 23, Color.WHITE, 5)
 	if grace > 0: draw_arc(player, 21, 0, TAU, 32, Color("63f5ce"), 1)
-	if time_left <= 5.0:
+	if not boss_floor and time_left <= 5.0:
 		draw_arc(player,29,-PI/2,-PI/2+TAU*clampf(time_left/5,0.001,1),48,Color(1,0.28,0.34,0.8),3)
 	draw_set_transform(Vector2.ZERO)
 	draw_rect(Rect2(0,0,screen.x,76), Color("0b111c"))
@@ -722,9 +751,14 @@ func _draw() -> void:
 	label_at(Vector2(26,56), "KILLS %d   /   RETRIES %d" % [kills, deaths], 13, Color("8194aa"))
 	label_at(Vector2(650,31), "RMB  /  " + SUB_NAMES[sub_weapon], 20, Color("ffb95e"))
 	label_at(Vector2(650,56), "READY" if sub_cd <= 0 else "RECHARGING  %.1fs" % sub_cd, 13, Color("8194aa"))
-	label_at(Vector2(930,31), "%04.1f s" % time_left, 25, Color("ff647c") if time_left < 5 else Color("63f5ce"))
-	label_at(Vector2(930,56), "TO DESCEND", 12, Color("8194aa"))
-	draw_rect(Rect2(0,76,screen.x * clampf(time_left / maxf(time_limit, 0.01),0,1),3), Color("ff647c") if time_left < 5 else Color("63f5ce"))
+	if boss_floor:
+		label_at(Vector2(930,31), "CORE %d / 6" % boss.remaining(self), 23, Color("d996ed"))
+		label_at(Vector2(930,56), "NO TIME LIMIT", 12, Color("8194aa"))
+		draw_rect(Rect2(0,76,screen.x*boss.health(self)/maxf(boss_max_hp,1),3),Color("d996ed"))
+	else:
+		label_at(Vector2(930,31), "%04.1f s" % time_left, 25, Color("ff647c") if time_left < 5 else Color("63f5ce"))
+		label_at(Vector2(930,56), "TO DESCEND", 12, Color("8194aa"))
+		draw_rect(Rect2(0,76,screen.x * clampf(time_left / maxf(time_limit, 0.01),0,1),3), Color("ff647c") if time_left < 5 else Color("63f5ce"))
 	# Spatial overview reflects the actual irregular graph, including the goal bearing.
 	var bounds := Rect2(Vector2(rooms[0].position),Vector2(rooms[0].size))
 	for r in rooms: bounds = bounds.merge(Rect2(Vector2(r.position),Vector2(r.size)))
@@ -737,10 +771,11 @@ func _draw() -> void:
 	for i in range(rooms.size()):
 		var mp := map_origin + (Vector2(rooms[i].position)-bounds.position)*map_scale
 		draw_rect(Rect2(mp,Vector2(rooms[i].size)*map_scale),Color("63f5ce") if cells.get(tile(player),-1)==i else (Color("354858") if discovered.has(i) else Color("171f2b")))
-		if i == goal_room: draw_circle(mp+Vector2(rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
+		if i == goal_room and stairs_unlocked: draw_circle(mp+Vector2(rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
 	draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
 	label_at(Vector2(26,screen.y - 15), "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO", 13, Color("a4b3c6"))
-	if banner > 0: label_at(Vector2(screen.x / 2 - 190,110), "FIND THE STAIRS. KEEP DESCENDING.", 18, Color("63f5ce"))
+	if banner > 0:
+		centered_title_label(screen,110,("BOSS DEFEATED / DESCEND" if stairs_unlocked else "SIEGE ARRAY / DESTROY ALL SIX CORES") if boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
 	if hit_flash > 0:
 		draw_rect(Rect2(Vector2.ZERO,screen),Color(1,0.25,0.3,hit_flash*0.35))
 		draw_rect(Rect2(Vector2(4,4),screen-Vector2(8,8)),Color(1,0.3,0.35,hit_flash*2),false,6)

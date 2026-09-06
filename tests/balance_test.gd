@@ -13,10 +13,10 @@ func run() -> void:
 	check(is_equal_approx(game.enemy_health(0,15),6.0), "floor 15 chaser HP")
 	check(is_equal_approx(game.enemy_health(1,15),3.0), "floor 15 sniper HP")
 	check(game.enemy_health(1,1) == 1.0 and game.enemy_health(2,30) == 1.0, "sniper starting HP and shield HP")
-	game.floor_number = 15
+	game.floor_number = 14
 	game.new_floor()
 	for enemy in game.enemies:
-		check(is_equal_approx(enemy.hp,[6.0,3.0,1.0][enemy.kind]), "generated enemies use adjusted HP")
+		check(is_equal_approx(enemy.hp,game.enemy_health(enemy.kind,14)), "generated enemies use adjusted HP")
 	game.time_left = game.time_limit
 	var initial_time: float = game.time_left
 	for kind in range(3):

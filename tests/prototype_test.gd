@@ -115,11 +115,12 @@ func run() -> void:
 	game.emit_shot(foe.p,Vector2.LEFT,100,1,true)
 	game.fire_sub(Vector2.RIGHT)
 	check(foe.push.length() >= 650 and game.bullets.is_empty(), "shock pushes and clears bullets")
-	var watcher := {"kind":1,"p":game.player+Vector2(96,0),"room":0,"active":false,"searching":false,"notice":0.5,"turn_speed":2.0,"dir":Vector2.RIGHT,"charge":0.0}
+	var watcher := {"kind":1,"p":game.player+Vector2(96,0),"room":0,"active":false,"searching":false,"notice":0.5,"turn_speed":2.0,"dir":Vector2.RIGHT,"charge":0.0,"cd":0.25}
 	game.update_awareness(watcher,0,0.2)
 	check(watcher.searching and not watcher.active, "entry begins search without immediate activation")
 	for frame in range(150): game.update_awareness(watcher,0,0.016)
 	check(watcher.active, "turn and sight activate enemy")
+	check(watcher.cd >= 0.55, "newly alerted enemy gives full attack warning")
 	watcher.active = false
 	watcher.notice = 0.0
 	watcher.dir = Vector2.LEFT

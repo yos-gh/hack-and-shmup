@@ -14,7 +14,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.rng.seed = 0
-	game.floor_number = 20
+	game.floor_number = 19
 	game.new_floor()
 	for i in range(game.rooms.size()): game.discovered[i] = true
 	game.rebuild_enemy_buckets()

@@ -48,6 +48,21 @@ func capture() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/title.png")
+	game.floor_number = 5
+	game.new_floor()
+	game.title_screen = false
+	game.player = game.center(Vector2i(10,1))
+	game.grace = 999
+	game.discovered[1] = true
+	for enemy in game.enemies:
+		enemy.active = true
+		enemy.cd = 0.2 + game.enemies.find(enemy)*0.15
+	for frame in range(90): game._physics_process(1.0/60)
+	game.camera_pos = game.center(game.rooms[1].get_center())
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://docs/boss.png")
 	game.queue_free()
 	await process_frame
 	await process_frame
