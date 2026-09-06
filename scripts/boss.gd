@@ -1,6 +1,11 @@
 extends RefCounted
 
 const TURRETS := 6
+const GUIDED_SPEED := 150.0
+const GUIDED_TURN_RATE := 2.8
+# Indexed by surviving turrets minus one. Total fire density rises at each loss.
+const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
+const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
 
 func build(game) -> void:
 	game.rooms.assign([Rect2i(-12,-4,9,9), Rect2i(0,-10,28,22)])
@@ -46,14 +51,15 @@ func health(game) -> float:
 	return hp
 
 func fire(game, e: Dictionary, toward: Vector2) -> void:
-	var destroyed := TURRETS - remaining(game)
+	var stage := clampi(remaining(game),1,TURRETS)-1
 	var guided: bool = e.shots % 2 == 1
-	var count := 3 if destroyed >= 3 else 1
+	var count: int = VOLLEY_COUNTS[stage]
 	for i in range(count):
 		var aim := toward.rotated((i - (count-1)*0.5)*0.20)
-		game.emit_shot(e.p,aim,180.0 if guided else 235.0,1,true,1200)
+		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 235.0,1,true,1200)
 		if guided:
 			game.bullets[-1]["homing_time"] = 1.0
+			game.bullets[-1]["turn_rate"] = GUIDED_TURN_RATE
 			game.bullets[-1]["guided"] = true
 	e.shots += 1
-	e.cd = maxf(0.85,2.1-destroyed*0.22)
+	e.cd = SHOT_INTERVALS[stage]

@@ -42,7 +42,21 @@ func run() -> void:
 	for i in [1,2,3]: game.hurt_enemy(game.enemies[i],99999,Vector2.RIGHT)
 	game.bullets.clear()
 	game.boss.fire(game,turret,Vector2.RIGHT)
-	check(game.bullets.size() == 3 and turret.cd < interval, "remaining turrets intensify after losses")
+	check(game.bullets.size() == 5 and turret.cd < interval, "remaining turrets intensify after losses")
+	var prior_density := 0.0
+	for alive in range(6,0,-1):
+		game.restart_attempt()
+		for i in range(alive,6): game.enemies[i].hp = 0
+		var shooter: Dictionary = game.enemies[0]
+		shooter.shots = 1
+		game.boss.fire(game,shooter,Vector2.RIGHT)
+		var density: float = alive*game.bullets.size()/shooter.cd
+		check(density > prior_density, "total boss fire increases with each turret loss")
+		prior_density = density
+		for b in game.bullets:
+			check(is_equal_approx(b.v.length(),150.0) and b.turn_rate == 2.8 and b.homing_time == 1.0, "slower guided shots with stronger turning")
+		if alive == 1:
+			check(game.bullets.size() == 13 and density >= 6.0*(6.0/2.1), "last turret exceeds six times initial whole-boss fire density")
 	game.bullets.clear()
 	game.emit_shot(game.player+Vector2(0,100),Vector2.RIGHT,180,1,true)
 	var shot: Dictionary = game.bullets[-1]
