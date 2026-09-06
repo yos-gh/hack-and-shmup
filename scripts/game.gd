@@ -599,7 +599,7 @@ func _physics_process(delta: float) -> void:
 	for b in bullets:
 		b.life -= delta
 		if b.get("homing_time",0.0) > 0:
-			var heading: float = rotate_toward(b.v.angle(),b.p.angle_to_point(player),b.get("turn_rate",1.1)*minf(delta,b.homing_time))
+			var heading: float = rotate_toward(b.v.angle(),b.p.angle_to_point(player)+b.get("homing_offset",0.0),b.get("turn_rate",1.1)*minf(delta,b.homing_time))
 			b.v = Vector2.from_angle(heading)*b.v.length()
 			b.homing_time = maxf(0.0,b.homing_time-delta)
 		var travel: Vector2 = b.v * delta

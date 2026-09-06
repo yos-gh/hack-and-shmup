@@ -17,6 +17,7 @@ func run() -> void:
 		# Measure damage and travel budget, not the bot's ability to dodge.
 		game.grace = 999
 		var elapsed := 0.0
+		var prior_positions := {}
 		while not game.stairs_unlocked and elapsed < 30.0:
 			var target: Dictionary = {}
 			var best := INF
@@ -26,6 +27,11 @@ func run() -> void:
 			if not target.is_empty():
 				var aim: Vector2 = game.player.direction_to(target.p)
 				if best > 220: game.player = game.slide(game.player,aim*game.SPEED/60.0,game.PLAYER_HIT_RADIUS)
+				# Lead moving targets by the observed velocity and bullet travel time.
+				var target_id: int = game.enemies.find(target)
+				var velocity: Vector2 = (target.p-prior_positions.get(target_id,target.p))*60.0
+				prior_positions[target_id] = target.p
+				aim = game.player.direction_to(target.p+velocity.limit_length(180.0)*best/1050.0)
 				if game.main_cd <= 0:
 					game.emit_shot(game.player,aim,1050,game.power,false)
 					game.main_cd = 0.09/game.fire_rate

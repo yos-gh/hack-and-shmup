@@ -3,6 +3,23 @@ extends RefCounted
 const TURRETS := 6
 const GUIDED_SPEED := 150.0
 const GUIDED_TURN_RATE := 2.8
+const HUNTER_SPEED := 180.0
+const SUMMON_INTERVAL := 5.5 / 3.0
+
+# Keep dense volleys in lobes, with wide gaps independent of bullet count.
+func fan_angle(index: int, count: int) -> float:
+	if count < 9: return (index-(count-1)*0.5)*0.20
+	var left_count := int(ceil(count*0.5))
+	if index < left_count:
+		return lerpf(-1.2,-0.28,float(index)/maxi(left_count-1,1))
+	return lerpf(0.28,1.2,float(index-left_count)/maxi(count-left_count-1,1))
+
+func radial_angle(index: int, count: int) -> float:
+	# Four 54-degree clusters separated by persistent 36-degree corridors.
+	var sector := index % 4
+	var local_index := index / 4
+	var local_count := (count-1-sector)/4+1
+	return sector*TAU/4.0 + lerpf(-0.47,0.47,float(local_index)/maxi(local_count-1,1))
 # Indexed by surviving turrets minus one. Total fire density rises at each loss.
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
 const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
@@ -43,7 +60,7 @@ func build(game) -> void:
 		game.enemies.append({"p":game.center(positions[i]),"kind":3,"hp":hp if game.boss_variant == 0 else hp*TURRETS,"room":1,
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
-			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":3.0,"laser_cd":2.0,"waypoint":0})
+			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"laser_cd":2.0,"waypoint":0})
 	game.initial_enemies = game.enemies.duplicate(true)
 	game.boss_max_hp = hp * TURRETS
 	game.floor_start_kills = game.kills
@@ -70,12 +87,15 @@ func fire(game, e: Dictionary, toward: Vector2) -> void:
 	var guided: bool = e.shots % 2 == 1
 	var count: int = VOLLEY_COUNTS[stage] * (1 + mini(tier(game),3))
 	for i in range(count):
-		var aim := toward.rotated((i - (count-1)*0.5)*minf(0.20,2.4/maxi(count-1,1)))
+		var offset := fan_angle(i,count)
+		var aim := toward.rotated(offset)
 		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 235.0,1,true,1200)
 		if guided:
 			game.bullets[-1]["homing_time"] = 1.0
 			game.bullets[-1]["turn_rate"] = GUIDED_TURN_RATE
 			game.bullets[-1]["guided"] = true
+			# Prevent homing from collapsing both lobes into the central gap.
+			game.bullets[-1]["homing_offset"] = offset if count >= 9 else 0.0
 	e.shots += 1
 	e.cd = SHOT_INTERVALS[stage]/rate_scale(game)
 
@@ -87,7 +107,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 		e.summon_cd -= delta
 		if e.summon_cd <= 0:
 			summon(game,e)
-			e.summon_cd = 5.5/rate_scale(game)
+			e.summon_cd = SUMMON_INTERVAL/rate_scale(game)
 		if e.cd <= 0:
 			var count := 1 + mini(tier(game),4)
 			for i in range(count):
@@ -102,7 +122,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 		var destination: Vector2 = game.center(points[e.waypoint])
 		if e.p.distance_to(destination) < 12:
 			e.waypoint = (e.waypoint+1)%points.size()
-		return e.p.direction_to(destination)*105.0
+		return e.p.direction_to(destination)*HUNTER_SPEED
 	e.laser_cd -= delta
 	if e.laser_cd <= 0:
 		var count := 1 + mini(tier(game)/2,3)
@@ -122,7 +142,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 		var radial: bool = e.shots % 2 == 1
 		var count := 12+tier(game)*4 if radial else 5+tier(game)*2
 		for i in range(count):
-			var aim := Vector2.from_angle(TAU*i/count+e.shots*0.17) if radial else toward.rotated((i-(count-1)*0.5)*0.13)
+			var aim := Vector2.from_angle(radial_angle(i,count)) if radial else toward.rotated(fan_angle(i,count)*0.65)
 			game.emit_shot(e.p,aim,165.0 if radial else 190.0,1,true,1200)
 		e.shots += 1
 		e.cd = 1.65/rate_scale(game)

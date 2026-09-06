@@ -39,6 +39,12 @@ func run() -> void:
 		check(game.stairs_unlocked and game.enemies.is_empty() and game.boss.lasers.is_empty(), "defeat clears threats and unlocks stairs")
 	game.new_floor(1)
 	var owner: Dictionary = game.enemies[0]
+	owner.cd = 99
+	owner.summon_cd = 0
+	var velocity: Vector2 = game.boss.enemy_velocity(game,owner,0.016,Vector2.RIGHT)
+	check(is_equal_approx(velocity.length(),180.0), "hunter moves faster at fixed speed")
+	check(is_equal_approx(owner.summon_cd,5.5/3.0), "hunter summons three times as frequently")
+	game.boss.reset()
 	game.player = owner.p + Vector2(100,0)
 	game.grace = 0
 	game.boss.add_laser(owner.p,owner.p+Vector2(300,0),0.8,0.35,owner)
@@ -72,7 +78,7 @@ func run() -> void:
 				for b in game.bullets: check(is_equal_approx(b.v.length(),235.0), "turret straight bullet speed fixed")
 			if variant == 2:
 				for b in game.bullets: check(is_equal_approx(b.v.length(),190.0), "halo aimed bullet speed fixed")
-	for depth in [5,10,25,45]:
+	for depth in [5,10,15,25,45]:
 		game.floor_number = depth
 		game.new_floor(0)
 		var previous := 0.0
@@ -86,6 +92,9 @@ func run() -> void:
 			check(density > previous, "turret losses intensify total fire at every tier")
 			if alive == 6: initial_density = density
 			if alive == 1: check(density >= initial_density*6.0, "final turret keeps sixfold overall intensity")
+			if game.bullets.size() >= 9:
+				for b in game.bullets:
+					check(absf(b.v.angle()) >= 0.279, "dense turret fan preserves central escape gap")
 			previous = density
 	game.floor_number = 25
 	game.new_floor(1)
@@ -103,6 +112,18 @@ func run() -> void:
 	game.boss.enemy_velocity(game,owner,0.016,Vector2.RIGHT)
 	check(game.bullets.size() == 28, "halo radial burst grows by tier")
 	for b in game.bullets: check(is_equal_approx(b.v.length(),165.0), "radial speed fixed")
+	for depth in [5,15,45]:
+		game.floor_number = depth
+		game.new_floor(2)
+		owner = game.enemies[0]
+		for volley in [1,3,5]:
+			game.bullets.clear()
+			owner.shots = volley
+			owner.cd = 0
+			game.boss.enemy_velocity(game,owner,0.016,Vector2.RIGHT)
+			for b in game.bullets:
+				var sector_angle := wrapf(b.v.angle(),-PI/4,PI/4)
+				check(absf(sector_angle) <= 0.471, "radial escape corridors remain open across tiers and volleys")
 	for variant in range(3):
 		game.floor_number = 45
 		game.new_floor(variant)
