@@ -177,7 +177,7 @@ func new_floor() -> void:
 			elif n % 11 == 0: kind = 2
 			enemies.append({"p":center(p), "kind":kind, "hp":enemy_health(kind, floor_number),
 				"room":i, "active":false, "searching":false, "notice":rng.randf_range(0.35,0.85), "turn_speed":rng.randf_range(1.8,3.8),
-				"cd":rng.randf_range(0.25,0.65), "charge":0.0, "dir":Vector2.from_angle(rng.randf()*TAU), "push":Vector2.ZERO})
+				"cd":rng.randf_range(0.25,0.65), "charge":0.0, "stun":0.0, "dir":Vector2.from_angle(rng.randf()*TAU), "push":Vector2.ZERO})
 	initial_enemies = enemies.duplicate(true)
 	floor_start_kills = kills
 	player = spawn_point
@@ -205,7 +205,7 @@ func enemy_touches_player(e: Dictionary) -> bool:
 
 func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 	if e.active:
-		if e.charge <= 0: e.dir = e.p.direction_to(player)
+		if e.charge <= 0 and e.get("stun", 0.0) <= 0: e.dir = e.p.direction_to(player)
 		return
 	if e.room == room_id: e.searching = true
 	if not e.searching: return
@@ -426,7 +426,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if choosing and event.button_index == MOUSE_BUTTON_LEFT:
 			var s := get_viewport_rect().size
 			for i in range(3):
-				if Rect2(s.x / 2 - 450 + i * 310, s.y / 2 - 40, 290, 150).has_point(event.position):
+				if upgrade_card_rect(s, i).has_point(event.position):
 					fire_armed = false
 					upgrade(i)
 					return
@@ -439,6 +439,26 @@ func upgrade(index: int) -> void:
 		3: power += 0.2; move_bonus += 10.0
 	floor_number += 1
 	new_floor()
+
+func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
+	if e.get("stun", 0.0) > 0:
+		e.stun = maxf(0.0, e.stun - delta)
+		return Vector2.ZERO
+	if e.charge > 0:
+		e.charge = maxf(0.0, e.charge - delta)
+		var velocity: Vector2 = e.dir * 410
+		var hit_wall := not walkable(e.p + velocity * delta)
+		if e.charge <= 0 or hit_wall:
+			if hit_wall: e.cd = 1.2
+			e.charge = 0.0
+			e.stun = 1.0
+			return Vector2.ZERO
+		return velocity
+	if e.cd <= 0:
+		e.dir = toward
+		e.charge = 1.8
+		e.cd = 2.7
+	return Vector2.ZERO
 
 func emit_shot(p: Vector2, direction: Vector2, speed: float, damage: float, hostile: bool, distance: float = 10000.0) -> void:
 	bullets.append({"p": p, "v": direction * speed, "damage": damage, "hostile": hostile, "life": distance / speed})
@@ -540,14 +560,7 @@ func _physics_process(delta: float) -> void:
 					emit_shot(e.p, toward, ENEMY_BULLET_SPEED, 1, true)
 					e.cd = ENEMY_SHOT_INTERVAL
 			elif e.kind == 2:
-				if e.charge > 0:
-					e.charge -= delta
-					velocity = e.dir * 410
-					if not walkable(e.p + velocity * delta): e.charge = 0; e.cd = 1.2
-				elif e.cd <= 0:
-					e.dir = toward
-					e.charge = 1.8
-					e.cd = 2.7
+				velocity = shield_velocity(e, delta, toward)
 			else:
 				var c := tile(e.p)
 				var target: Vector2 = player if c == tile(player) else center(flow.get(c, c))
@@ -648,7 +661,9 @@ func _draw() -> void:
 			var dir: Vector2 = e.dir
 			var side := dir.orthogonal() * 15
 			draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
-			if e.active and e.charge <= 0 and e.cd < 0.5: draw_line(p, p + dir * 110, Color(1,0.4,0.5,0.5), 2)
+			if e.get("stun", 0.0) > 0:
+				draw_arc(p,22,-PI/2,-PI/2+TAU*e.stun,24,Color("c7eaff"),2)
+			elif e.active and e.charge <= 0 and e.cd < 0.5: draw_line(p, p + dir * 110, Color(1,0.4,0.5,0.5), 2)
 	for b in bullets:
 		if cells.get(tile(b.p), -1) >= 0 and not discovered.has(cells[tile(b.p)]): continue
 		draw_line(b.p, b.p - b.v.normalized() * 12, Color("ffb95e") if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
@@ -737,24 +752,32 @@ func _draw() -> void:
 	draw_arc(mouse, 8, 0, TAU, 16, Color("63f5ce"), 1)
 	if paused or choosing:
 		draw_rect(Rect2(Vector2.ZERO, screen), Color(0.02,0.03,0.06,0.93))
+		var menu_y := menu_origin_y(screen, paused)
 		if paused:
-			centered_title_label(screen,screen.y*0.5-30,"PAUSED",28)
-			centered_title_label(screen,screen.y*0.5+20,"CLICK TO RESUME",22,Color("63f5ce"))
-			centered_title_label(screen,screen.y*0.5+58,"ESC / RETURN TO TITLE",18,Color("8194aa"))
+			centered_title_label(screen,menu_y-30,"PAUSED",28)
+			centered_title_label(screen,menu_y+20,"CLICK TO RESUME",22,Color("63f5ce"))
+			centered_title_label(screen,menu_y+58,"ESC / RETURN TO TITLE",18,Color("8194aa"))
 		else:
-			centered_title_label(screen,screen.y / 2 - 130, "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
-			centered_title_label(screen,screen.y / 2 - 90, "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))
+			centered_title_label(screen,menu_y - 130, "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
+			centered_title_label(screen,menu_y - 90, "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))
 			var names := ["HEAVY ROUNDS", "OVERCLOCK", "QUICKSTEP", "HUNTER"]
 			var descriptions := ["+35% base weapon damage", "+20% base firing speed", "+20 movement speed", "+20% damage / +10 speed"]
 			for i in range(3):
-				var p := Vector2(screen.x / 2 - 450 + i * 310, screen.y / 2 - 40)
+				var p := upgrade_card_rect(screen, i).position
 				draw_rect(Rect2(p,Vector2(290,150)),Color("182735"))
 				draw_rect(Rect2(p,Vector2(290,150)),Color("63f5ce"),false,2)
 				label_at(p + Vector2(18,32), "0%d / %s" % [i + 1, names[choices[i]]], 20)
 				label_at(p + Vector2(18,86), descriptions[choices[i]], 15, Color("a4b3c6"))
-		draw_player_stats(screen, screen.y * 0.5 + 155)
+		draw_player_stats(screen, menu_y + 155)
 
 
+
+func menu_origin_y(screen: Vector2, is_pause: bool) -> float:
+	var top := -30.0 - font.get_ascent(28) if is_pause else -130.0 - font.get_ascent(24)
+	return (screen.y - top - 275.0) * 0.5
+
+func upgrade_card_rect(screen: Vector2, index: int) -> Rect2:
+	return Rect2(screen.x / 2 - 450 + index * 310, menu_origin_y(screen, false) - 40, 290, 150)
 
 func player_stats() -> Array[Dictionary]:
 	return [
