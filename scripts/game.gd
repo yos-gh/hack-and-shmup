@@ -200,13 +200,13 @@ func new_floor(boss_choice: int = -1) -> void:
 		steps += 1
 	# Budget follows the actual navigable shortest route and current movement speed.
 	route_seconds = steps * TILE / (SPEED + move_bonus)
-	time_limit = route_seconds * 1.35 + 2.0
+	time_limit = (route_seconds * 1.35 + 2.0) * 1.5
 	restart_attempt()
 
 func enemy_health(kind: int, depth: int) -> float:
 	if kind == 2: return 1.0
 	# Preserve floor-one HP and interpolate to the requested floor-15 targets.
-	return lerpf(2.3, 6.0, (depth - 1) / 14.0) if kind == 0 else 1.0 + (depth - 1) / 7.0
+	return lerpf(2.3, 4.0, (depth - 1) / 14.0) if kind == 0 else 1.0 + (depth - 1) / 14.0
 
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.kind == 1: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
