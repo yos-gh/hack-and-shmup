@@ -1,222 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>HACK & SHMUP</title>
-		<style>
-html, body, #canvas {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-
-body {
-	color: white;
-	background-color: black;
-	overflow: hidden;
-	touch-action: none;
-}
-
-#canvas {
-	display: block;
-}
-
-#canvas:focus {
-	outline: none;
-}
-
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
-#status {
-	background-color: #242424;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	visibility: hidden;
-}
-
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
-}
-
-#status-splash.show-image--false {
-	display: none;
-}
-
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
-}
-
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
-}
-
-#status-progress, #status-notice {
-	display: none;
-}
-
-#status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
-}
-
-#status-notice {
-	background-color: #5b3943;
-	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
-	line-height: 1.3;
-	margin: 0 2rem;
-	overflow: hidden;
-	padding: 1rem;
-	text-align: center;
-	z-index: 1;
-}
-		</style>
-		<link id="-gd-engine-icon" rel="icon" type="image/png" href="game-v2.icon.png" />
-<link rel="apple-touch-icon" href="game-v2.apple-touch-icon.png"/>
-
-<!-- Automatically added by Sentry SDK -->
-<script src="sentry-bundle.js" crossorigin="anonymous"></script>
-	</head>
-	<body>
-		<canvas id="canvas">
-			Your browser does not support the canvas tag.
-		</canvas>
-
-		<noscript>
-			Your browser does not support JavaScript.
-		</noscript>
-
-		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="game-v2.png" alt="">
-			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
-		</div>
-
-		<script src="game-v2.js"></script>
-		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"game-v2","experimentalVK":false,"fileSizes":{"game-v2.pck":481676,"game-v2.wasm":1508095},"focusCanvas":true,"gdextensionLibs":["libsentry.web.release.wasm32.nothreads.wasm"],"godotPoolSize":4};
-const GODOT_THREADS_ENABLED = false;
-const engine = new Engine(GODOT_CONFIG);
-
-(function () {
-	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
-	const statusNotice = document.getElementById('status-notice');
-
-	let initializing = true;
-	let statusMode = '';
-
-	function setStatusMode(mode) {
-		if (statusMode === mode || !initializing) {
-			return;
-		}
-		if (mode === 'hidden') {
-			statusOverlay.remove();
-			initializing = false;
-			return;
-		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
-	}
-
-	function setStatusNotice(text) {
-		while (statusNotice.lastChild) {
-			statusNotice.removeChild(statusNotice.lastChild);
-		}
-		const lines = text.split('\n');
-		lines.forEach((line) => {
-			statusNotice.appendChild(document.createTextNode(line));
-			statusNotice.appendChild(document.createElement('br'));
-		});
-	}
-
-	function displayFailureNotice(err) {
-		console.error(err);
-		if (err instanceof Error) {
-			setStatusNotice(err.message);
-		} else if (typeof err === 'string') {
-			setStatusNotice(err);
-		} else {
-			setStatusNotice('An unknown error occurred.');
-		}
-		setStatusMode('notice');
-		initializing = false;
-	}
-
-	const missing = Engine.getMissingFeatures({
-		threads: GODOT_THREADS_ENABLED,
-	});
-
-	if (missing.length !== 0) {
-		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			let serviceWorkerRegistrationPromise;
-			try {
-				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
-			} catch (err) {
-				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
-			}
-			// There's a chance that installing the service worker would fix the issue
-			Promise.race([
-				serviceWorkerRegistrationPromise.then((registration) => {
-					if (registration != null) {
-						return Promise.reject(new Error('Service worker already exists.'));
-					}
-					return registration;
-				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
-				new Promise((resolve) => {
-					setTimeout(() => resolve(), 2000);
-				}),
-			]).then(() => {
-				// Reload if there was no error.
-				window.location.reload();
-			}).catch((err) => {
-				console.error('Error while registering service worker:', err);
-			});
-		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-			displayFailureNotice(missingMsg + missing.join('\n'));
-		}
-	} else {
-		setStatusMode('progress');
-		engine.startGame({
-			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
-				}
-			},
-		}).then(() => {
-			setStatusMode('hidden');
-		}, displayFailureNotice);
-	}
-}());
-		</script>
-	</body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b111c">
+  <meta name="description" content="HACK & SHMUP — a fast-paced dungeon shooter. Find your route, fight for more time, and descend into three different boss encounters. Play free in your browser.">
+  <title>HACK & SHMUP — Endless descent</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b111c; --surface:#111e2a; --line:#283b49; --text:#edf5f5; --muted:#a1b3c3; --mint:#63f5ce; --gold:#ffb95e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.7 "Segoe UI",Arial,sans-serif; }
+    a { color:var(--mint); text-underline-offset:4px; }
+    a:hover { color:white; }
+    a:focus-visible, summary:focus-visible { outline:2px solid var(--mint); outline-offset:5px; }
+    .wrap { width:min(1120px,calc(100% - 48px)); margin-inline:auto; }
+    header { border-bottom:1px solid var(--line); }
+    header .wrap { min-height:70px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .brand { font-weight:700; letter-spacing:.14em; color:var(--text); text-decoration:none; }
+    .brand span { color:var(--mint); }
+    nav { display:flex; gap:25px; font-size:13px; }
+    .intro { padding:25px 0 20px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .eyebrow { color:var(--mint); font-size:11px; font-weight:700; letter-spacing:.18em; margin:0 0 4px; }
+    h1 { margin:0; font-size:clamp(26px,3.8vw,42px); line-height:1.2; letter-spacing:-.035em; }
+    .intro p:last-child { color:var(--muted); font-size:14px; max-width:350px; margin:0; }
+    .game-shell { background:#070c13; border:1px solid var(--line); aspect-ratio:8/5; width:100%; }
+    iframe { display:block; border:0; width:100%; height:100%; }
+    .game-note { display:flex; justify-content:space-between; gap:16px; margin:10px 0 34px; color:var(--muted); font-size:12px; }
+    .game-note p { margin:0; }
+    .guide { border-top:1px solid var(--line); padding:40px 0; display:grid; grid-template-columns:1fr 1fr; gap:48px; }
+    h2 { font-size:22px; line-height:1.3; margin:0 0 18px; font-weight:600; }
+    h3 { font-size:16px; margin:0 0 4px; }
+    p { margin:0 0 14px; }
+    .muted, .guide p, .guide li { color:var(--muted); }
+    .rules { padding-left:22px; margin:0; }
+    .rules li { padding:0 0 10px 6px; }
+    .rules li::marker { color:var(--mint); font-weight:bold; }
+    strong { color:var(--text); font-weight:600; }
+    .controls { margin:0; }
+    .controls div { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; }
+    dt { color:var(--muted); } dd { margin:0; text-align:right; }
+    kbd { font:12px "Consolas",monospace; display:inline-block; border:1px solid #385063; border-bottom-width:2px; border-radius:3px; padding:0 6px; color:var(--text); background:var(--surface); }
+    .weapons { border-top:1px solid var(--line); padding:35px 0; }
+    .weapon-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
+    .weapon { padding-left:18px; border-left:2px solid var(--gold); }
+    .weapon:nth-child(2) { border-color:var(--mint); } .weapon:nth-child(3) { border-color:#b6eaff; }
+    .weapon p { font-size:14px; color:var(--muted); margin:0; }
+    .practice { padding:26px; background:var(--surface); border:1px solid var(--line); display:grid; grid-template-columns:1fr 1.5fr; gap:32px; margin-bottom:36px; }
+    .practice h2 { margin:4px 0; } .practice p { margin:0; color:var(--muted); font-size:14px; }
+    details { border-top:1px solid var(--line); padding:20px 0; font-size:14px; color:var(--muted); }
+    summary { cursor:pointer; color:var(--text); } details p { margin:14px 0 0; max-width:780px; }
+    footer { border-top:1px solid var(--line); margin-top:24px; padding:23px 0; font-size:12px; color:var(--muted); }
+    footer .wrap { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; } footer a { margin-left:18px; }
+    .skip { position:absolute; top:-100px; padding:8px; background:var(--bg); z-index:2; } .skip:focus { top:0; }
+    @media(max-width:720px) { .wrap { width:calc(100% - 28px); } header .wrap { min-height:62px; } nav { gap:14px; } .intro { display:block; } .intro p:last-child { margin-top:12px; max-width:none; } .guide { grid-template-columns:1fr; gap:30px; padding:30px 0; } .weapon-grid { grid-template-columns:1fr; gap:22px; } .practice { grid-template-columns:1fr; gap:12px; padding:20px; } .game-note { flex-direction:column; gap:4px; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#how-to-play">Skip to instructions</a>
+  <header><div class="wrap"><a class="brand" href="./">HACK <span>&</span> SHMUP</a><nav aria-label="Page navigation"><a href="#how-to-play">How to play</a><a href="https://github.com/yos-gh/hack-and-shmup">GitHub ↗</a></nav></div></header>
+  <main class="wrap">
+    <div class="intro"><div><p class="eyebrow">DUNGEON SHOOTER / PLAYABLE PROTOTYPE</p><h1>Find your way. Fight your way.</h1></div><p>Push deeper into an ever-changing dungeon.<br>Every kill buys time. Every floor offers a choice.</p></div>
+    <div class="game-shell"><iframe src="game-v2.html" title="HACK & SHMUP playable game" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe></div>
+    <div class="game-note"><p>Desktop keyboard + mouse · Click inside to play and enable audio.</p><a href="game-v2.html">Open game on its own ↗</a></div>
+    <div class="guide" id="how-to-play">
+      <section><p class="eyebrow">01 / THE DESCENT</p><h2>Choose your route.</h2><ol class="rules"><li><strong>Find the stairs before time runs out.</strong> Rush through, or lure enemies out and clear a path. Kills add time; clearing every room is optional.</li><li><strong>Grow stronger between floors.</strong> Choose an upgrade after each clear. Use your machine gun and three switchable subweapons together.</li><li><strong>Face a boss every fifth floor.</strong> Three distinct encounters, no timer. Defeat the boss to reveal the stairs.</li><li><strong>One hit. Another try.</strong> Retry the same floor immediately with your upgrades intact. Enemies and the timer reset.</li></ol><p>Your deepest cleared floor lasts for this session. There is no permanent save.</p></section>
+      <section><p class="eyebrow">02 / TAKE CONTROL</p><h2>Keep moving. Keep aiming.</h2><dl class="controls"><div><dt>Move</dt><dd><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></dd></div><div><dt>Aim</dt><dd>Mouse</dd></div><div><dt>Machine gun</dt><dd>Hold left click</dd></div><div><dt>Subweapon</dt><dd>Right click</dd></div><div><dt>Switch subweapon</dt><dd><kbd>Q</kbd> / <kbd>E</kbd> or wheel</dd></div><div><dt>Choose upgrade</dt><dd>Click card or <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dd></div><div><dt>Pause</dt><dd><kbd>Esc</kbd></dd></div><div><dt>Audio mode</dt><dd><kbd>M</kbd></dd></div></dl><p style="margin-top:14px;font-size:13px">While paused, click to resume or press Esc again for the title. M cycles all audio, effects only, and mute. Fullscreen is available on the title screen.</p></section>
+    </div>
+    <section class="weapons"><p class="eyebrow">03 / YOUR SECOND OPTION</p><h2>Three ways to make space.</h2><div class="weapon-grid"><article class="weapon"><h3>Scatter</h3><p>A close-range spread. Get an angle and clear a cluster.</p></article><article class="weapon"><h3>Shockwave</h3><p>Push enemies back and erase nearby bullets. Use the opening to reposition.</p></article><article class="weapon"><h3>Lance</h3><p>A wide, piercing line. Cut through enemies lined up along your route.</p></article></div><p class="muted" style="font-size:13px;margin:20px 0 0">Walls block attacks. Enter a room before firing into it, and flank shields to deal damage.</p></section>
+    <section class="practice"><div><p class="eyebrow">BOSS PRACTICE</p><h2>Skip straight to the showdown.</h2></div><p>Press <kbd>B</kbd> on the title screen. Choose a boss with <kbd>←</kbd> / <kbd>→</kbd> and a floor with <kbd>↑</kbd> / <kbd>↓</kbd>, then press <kbd>Enter</kbd>. Upgrades are supplied automatically. In practice, <kbd>R</kbd> retries and <kbd>B</kbd> returns to selection. Your session record is unaffected.</p></section>
+    <details><summary>Having trouble playing?</summary><p>This game is designed for a desktop keyboard and mouse; touch controls are not available. Click inside the game if keys do not respond. If audio is quiet, check the audio mode with M. You can also <a href="game-v2.html">open the game directly</a>. For local setup and Web build instructions, see the <a href="https://github.com/yos-gh/hack-and-shmup#readme">README</a>.</p></details>
+  </main>
+  <footer><div class="wrap"><span>HACK & SHMUP · Built with Godot · Work in progress</span><div>More games by yos-gh<a href="https://yos-gh.github.io/peacekeeper/">PEACEKEEPER</a><a href="https://yos-gh.github.io/tint/">TINT</a></div></div></footer>
+</body>
 </html>
-

@@ -57,7 +57,7 @@ From the repository root, run in PowerShell (replace the executable path):
 ./tools/export_web.ps1 -Godot "C:/path/to/Godot_console.exe"
 ```
 
-The output is written to `web/`. To preview it, serve that directory over HTTP rather than opening the HTML file directly. For example, with Python 3 installed:
+The output is written to `web/`. The export preserves the landing page (`index.html`), which embeds the game (`game-v2.html`). To preview it, serve that directory over HTTP rather than opening the HTML file directly. For example, with Python 3 installed:
 
 ```sh
 python -m http.server 8000 --directory web
