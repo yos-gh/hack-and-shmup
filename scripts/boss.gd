@@ -234,14 +234,16 @@ func advance_attacks(game, delta: float) -> void:
 func deploy_options(game, e: Dictionary, phase: int) -> void:
 	# Harmless satellites hold their formation during each firing sequence.
 	options.clear()
-	for i in range(3):
-		var angle := -PI/2+i*TAU/3+phase*0.35+int(e.shots/3)*0.30
-		var origin: Vector2 = e.p+Vector2.from_angle(angle)*145.0
+	var count := 3+mini(tier(game)/2,2)
+	var radius := 215.0+mini(tier(game),7)*5.0
+	for i in range(count):
+		var angle := -PI/2+i*TAU/count+phase*0.35+int(e.shots/3)*0.30
+		var origin: Vector2 = e.p+Vector2.from_angle(angle)*radius
 		options.append({"p":origin,"owner":e,"life":2.5})
-		queue_aimed(e,0.7+i*0.25,3+2*mini(tier(game)/3,1),0.18,110.0)
+		queue_aimed(e,0.45+i*0.28,3+2*mini(tier(game)/3,1),0.18,110.0)
 		var salvo: Dictionary = salvos[-1]
 		salvo.origin = origin
-		if phase == 2: salvo.aim = origin.direction_to(game.player).rotated((i-1)*0.25)
+		if phase == 2: salvo.aim = origin.direction_to(game.player).rotated((i-(count-1)*0.5)*0.18)
 		if origin.distance_to(game.player) < 100: salvo.delay += 0.35
 		# The fast follow-up overtakes the slow fence. Both lock the same aim,
 		# leaving adjacent lanes open instead of tracking every escape movement.

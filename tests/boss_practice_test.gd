@@ -35,7 +35,7 @@ func run() -> void:
 	game.discovered[1] = true
 	var owner: Dictionary = game.enemies[0]
 	game.boss.fire_halo(game,owner,Vector2.LEFT)
-	check(game.boss.options.size() == 3 and game.enemies.size() == 1, "three non-enemy options")
+	check(game.boss.options.size() == 4 and game.enemies.size() == 1, "floor 15 has four non-enemy options")
 	game.rebuild_enemy_buckets()
 	for option in game.boss.options:
 		check(game.bullet_target(option.p).is_empty(), "options do not intercept player shots")
