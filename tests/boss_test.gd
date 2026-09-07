@@ -53,12 +53,12 @@ func run() -> void:
 		shooter.shots = 1
 		game.boss.fire(game,shooter,Vector2.RIGHT)
 		var density: float = alive*game.bullets.size()/shooter.cd
-		check(density > prior_density, "total boss fire increases with each turret loss")
-		prior_density = density
+		check(game.bullets.size() > prior_density, "individual volley grows with turret losses")
+		prior_density = game.bullets.size()
 		for b in game.bullets:
-			check(is_equal_approx(b.v.length(),150.0) and b.turn_rate == 2.8 and b.homing_time == 1.0, "slower guided shots with stronger turning")
+			check(is_equal_approx(b.v.length(),130.0) and b.turn_rate == 2.8 and b.homing_time == (1.0 if game.bullets.size() < 9 else 0.0), "dense volleys stay straight; sparse volleys retain homing")
 		if alive == 1:
-			check(game.bullets.size() == 13 and density >= 6.0*(6.0/2.1), "last turret exceeds six times initial whole-boss fire density")
+			check(game.bullets.size() == 13 and shooter.cd >= 1.0, "last turret preserves recovery interval")
 	game.bullets.clear()
 	game.emit_shot(game.player+Vector2(0,100),Vector2.RIGHT,180,1,true)
 	var shot: Dictionary = game.bullets[-1]

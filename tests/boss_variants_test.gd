@@ -75,7 +75,7 @@ func run() -> void:
 			if depth == 5: baseline[variant] = count
 			else: check(count > baseline[variant], "higher floors increase attack quantity")
 			if variant == 0:
-				for b in game.bullets: check(is_equal_approx(b.v.length(),235.0), "turret straight bullet speed fixed")
+				for b in game.bullets: check(is_equal_approx(b.v.length(),190.0), "turret straight bullet speed fixed")
 			if variant == 2:
 				for b in game.bullets: check(is_equal_approx(b.v.length(),190.0), "halo aimed bullet speed fixed")
 	for depth in [5,10,15,25,45]:
@@ -89,13 +89,13 @@ func run() -> void:
 			owner = game.enemies[0]
 			game.boss.fire(game,owner,Vector2.RIGHT)
 			var density: float = alive*game.bullets.size()/owner.cd
-			check(density > previous, "turret losses intensify total fire at every tier")
+			check(game.bullets.size() > previous, "individual volley increases at each turret loss")
 			if alive == 6: initial_density = density
-			if alive == 1: check(density >= initial_density*6.0, "final turret keeps sixfold overall intensity")
+			if alive == 1: check(game.bullets.size() <= 22 and owner.cd >= 1.0, "final turret has bounded fire density")
 			if game.bullets.size() >= 9:
 				for b in game.bullets:
 					check(absf(b.v.angle()) >= 0.279, "dense turret fan preserves central escape gap")
-			previous = density
+			previous = game.bullets.size()
 	game.floor_number = 25
 	game.new_floor(1)
 	game.player = game.spawn_point
@@ -124,6 +124,26 @@ func run() -> void:
 			for b in game.bullets:
 				var sector_angle := wrapf(b.v.angle()-int(volley/3)*0.20,-PI/4,PI/4)
 				check(absf(sector_angle) <= 0.471, "radial escape corridors retain width while changing direction")
+	game.floor_number = 45
+	game.new_floor(0)
+	for i in range(3,6): game.enemies[i].hp = 0
+	for e in game.enemies:
+		e.cd = 0
+		if e.hp > 0: game.boss.enemy_velocity(game,e,0.016,Vector2.RIGHT)
+	check(game.bullets.size() == 12, "three turrets cannot release fans simultaneously")
+	for b in game.bullets: check(absf(b.v.angle()) <= 0.851, "dense fan has bounded outer angle")
+	game.boss.advance_attacks(game,0.39)
+	game.boss.enemy_velocity(game,game.enemies[1],0.016,Vector2.RIGHT)
+	check(game.bullets.size() == 12, "shared firing gap lasts at least 0.4 seconds")
+	game.boss.advance_attacks(game,0.02)
+	game.boss.enemy_velocity(game,game.enemies[1],0.016,Vector2.RIGHT)
+	check(game.bullets.size() == 24, "next turret fires after shared gap")
+	var full_hp: float = game.boss_max_hp
+	game.new_floor(1)
+	check(is_equal_approx(game.boss_max_hp,full_hp*0.72), "hunter HP reduced without changing movement")
+	game.new_floor(2)
+	game.boss.fire_halo(game,game.enemies[0],Vector2.RIGHT)
+	check(game.boss.salvos.any(func(s): return s.speed == 110.0) and game.boss.salvos.any(func(s): return s.speed == 220.0), "halo layers slow fences and fast follow-up shots")
 	for variant in range(3):
 		game.floor_number = 45
 		game.new_floor(variant)

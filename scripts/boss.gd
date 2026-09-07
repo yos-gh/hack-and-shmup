@@ -1,18 +1,18 @@
 extends RefCounted
 
 const TURRETS := 6
-const GUIDED_SPEED := 150.0
+const GUIDED_SPEED := 130.0
 const GUIDED_TURN_RATE := 2.8
 const HUNTER_SPEED := 180.0
 const SUMMON_INTERVAL := 5.5 / 3.0
 
 # Keep dense volleys in lobes, with wide gaps independent of bullet count.
 func fan_angle(index: int, count: int) -> float:
-	if count < 9: return (index-(count-1)*0.5)*0.20
+	if count < 9: return (index-(count-1)*0.5)*0.13
 	var left_count := int(ceil(count*0.5))
 	if index < left_count:
-		return lerpf(-1.2,-0.28,float(index)/maxi(left_count-1,1))
-	return lerpf(0.28,1.2,float(index-left_count)/maxi(count-left_count-1,1))
+		return lerpf(-0.85,-0.32,float(index)/maxi(left_count-1,1))
+	return lerpf(0.32,0.85,float(index-left_count)/maxi(count-left_count-1,1))
 
 func radial_angle(index: int, count: int) -> float:
 	# Four 54-degree clusters separated by persistent 36-degree corridors.
@@ -20,8 +20,9 @@ func radial_angle(index: int, count: int) -> float:
 	var local_index := index / 4
 	var local_count := (count-1-sector)/4+1
 	return sector*TAU/4.0 + lerpf(-0.47,0.47,float(local_index)/maxi(local_count-1,1))
-# Indexed by surviving turrets minus one. Total fire density rises at each loss.
+# Indexed by surviving turrets minus one. Per-turret volleys grow, with caps.
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
+const MAX_VOLLEY_COUNTS := [22,16,12,9,6,4]
 const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
 const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE"]
 const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b")]
@@ -29,15 +30,21 @@ var lasers: Array[Dictionary] = []
 var pending_summons: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
 var options: Array[Dictionary] = []
+var turret_gap := 0.0
 
 func turret_positions(game) -> Array[Vector2i]:
-	# Evenly spaced ellipse with bounded variations, retaining entry clearance.
-	var phase: float = [0.0,PI/6.0,PI/12.0,-PI/12.0][game.rng.randi_range(0,3)]
-	var rx: float = [8.0,9.0][game.rng.randi_range(0,1)]
+	# Different tactical routes, all with generous spacing and an entry buffer.
+	var formations := [
+		[Vector2i(8,-6),Vector2i(20,-6),Vector2i(8,1),Vector2i(20,1),Vector2i(8,8),Vector2i(20,8)],
+		[Vector2i(6,-6),Vector2i(14,-4),Vector2i(22,-6),Vector2i(6,8),Vector2i(14,6),Vector2i(22,8)],
+		[Vector2i(6,-5),Vector2i(12,-7),Vector2i(20,-5),Vector2i(23,2),Vector2i(17,8),Vector2i(8,7)],
+		[Vector2i(14,-7),Vector2i(6,-3),Vector2i(22,-3),Vector2i(6,6),Vector2i(22,6),Vector2i(14,9)]]
+	var formation: Array = formations[game.rng.randi_range(0,3)]
+	var mirror: bool = game.rng.randi_range(0,1) == 1
+	var shift := Vector2i(game.rng.randi_range(-1,1),0)
 	var positions: Array[Vector2i] = []
-	for i in range(TURRETS):
-		var angle := phase+i*TAU/TURRETS
-		positions.append(Vector2i(roundi(14+cos(angle)*rx),roundi(1+sin(angle)*7.0)))
+	for point: Vector2i in formation:
+		positions.append(Vector2i(28-point.x if mirror else point.x,point.y)+shift)
 	return positions
 
 func reset() -> void:
@@ -45,6 +52,7 @@ func reset() -> void:
 	pending_summons.clear()
 	salvos.clear()
 	options.clear()
+	turret_gap = 0.0
 
 func tier(game) -> int:
 	return clampi(int(game.floor_number / 5) - 1,0,8)
@@ -68,6 +76,7 @@ func build(game) -> void:
 	# About ten seconds of accurate sustained MG fire in total, leaving room
 	# for dodging and repositioning within a roughly 20-30 second encounter.
 	var hp: float = maxf(8.0, game.power * minf(game.fire_rate / 0.09,60.0) * 1.6)
+	if game.boss_variant == 1: hp *= 0.72
 	var positions := turret_positions(game)
 	if game.boss_variant != 0: positions = [Vector2i(14,1)]
 	for i in range(positions.size()):
@@ -99,19 +108,20 @@ func health(game) -> float:
 func fire(game, e: Dictionary, toward: Vector2) -> void:
 	var stage := clampi(remaining(game),1,TURRETS)-1
 	var guided: bool = e.shots % 2 == 1
-	var count: int = VOLLEY_COUNTS[stage] * (1 + mini(tier(game),3))
+	var count := roundi(lerpf(VOLLEY_COUNTS[stage],MAX_VOLLEY_COUNTS[stage],tier(game)/8.0))
 	for i in range(count):
 		var offset := fan_angle(i,count)
 		var aim := toward.rotated(offset)
-		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 235.0,1,true,1200)
+		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 190.0,1,true,900)
 		if guided:
-			game.bullets[-1]["homing_time"] = 1.0
+			game.bullets[-1]["homing_time"] = 1.0 if count < 9 else 0.0
 			game.bullets[-1]["turn_rate"] = GUIDED_TURN_RATE
 			game.bullets[-1]["guided"] = true
 			# Prevent homing from collapsing both lobes into the central gap.
 			game.bullets[-1]["homing_offset"] = offset if count >= 9 else 0.0
 	e.shots += 1
-	e.cd = SHOT_INTERVALS[stage]/rate_scale(game)
+	e.cd = maxf(1.0,SHOT_INTERVALS[stage]/rate_scale(game))
+	if stage <= 2: turret_gap = 0.40
 	if stage == 0 and e.shots % 3 == 0:
 		# A delayed, readable aimed triplet breaks camping without filling the fan.
 		queue_aimed(e,0.45,3,0.11,210.0)
@@ -128,7 +138,7 @@ func emit_salvo(game, salvo: Dictionary) -> void:
 	if aim == Vector2.ZERO: aim = origin.direction_to(game.player)
 	for offset in salvo.offsets:
 		game.emit_shot(origin,aim.rotated(offset),salvo.speed,1,true,1200)
-		game.bullets[-1]["pressure"] = true
+		game.bullets[-1]["pressure"] = salvo.speed > 120.0
 
 func warning(e: Dictionary) -> float:
 	var value := clampf(1.0-e.cd/0.6,0.0,1.0)
@@ -149,7 +159,7 @@ func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
 
 func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	if game.boss_variant == 0:
-		if e.cd <= 0: fire(game,e,toward)
+		if e.cd <= 0 and turret_gap <= 0: fire(game,e,toward)
 		return Vector2.ZERO
 	if game.boss_variant == 1:
 		e.pressure_cd -= delta
@@ -212,6 +222,7 @@ func fire_halo(game, e: Dictionary, toward: Vector2) -> void:
 		queue_aimed(e,1.20,3,0.12,190.0)
 
 func advance_attacks(game, delta: float) -> void:
+	turret_gap = maxf(0.0,turret_gap-delta)
 	for option in options: option.life -= delta
 	options = options.filter(func(option: Dictionary) -> bool: return option.life > 0 and option.owner.hp > 0)
 	for salvo in salvos:
@@ -227,11 +238,17 @@ func deploy_options(game, e: Dictionary, phase: int) -> void:
 		var angle := -PI/2+i*TAU/3+phase*0.35+int(e.shots/3)*0.30
 		var origin: Vector2 = e.p+Vector2.from_angle(angle)*145.0
 		options.append({"p":origin,"owner":e,"life":2.5})
-		queue_aimed(e,0.7+i*0.25,3+2*mini(tier(game)/3,1),0.14,155.0)
+		queue_aimed(e,0.7+i*0.25,3+2*mini(tier(game)/3,1),0.18,110.0)
 		var salvo: Dictionary = salvos[-1]
 		salvo.origin = origin
 		if phase == 2: salvo.aim = origin.direction_to(game.player).rotated((i-1)*0.25)
 		if origin.distance_to(game.player) < 100: salvo.delay += 0.35
+		# The fast follow-up overtakes the slow fence. Both lock the same aim,
+		# leaving adjacent lanes open instead of tracking every escape movement.
+		salvo.aim = origin.direction_to(game.player) if phase != 2 else salvo.aim
+		queue_aimed(e,salvo.delay+0.55,3,0.18,220.0)
+		salvos[-1].origin = origin
+		salvos[-1].aim = salvo.aim
 
 func draw_options(game) -> void:
 	for option in options:

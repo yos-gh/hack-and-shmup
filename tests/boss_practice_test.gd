@@ -30,7 +30,7 @@ func run() -> void:
 		layouts[str(positions)] = true
 		game.restart_attempt()
 		check(game.enemies == game.initial_enemies, "retry preserves layout")
-	check(layouts.size() == 8, "eight bounded turret layouts")
+	check(layouts.size() >= 12, "multiple distinct formations and bounded variations")
 	game.new_floor(2)
 	game.discovered[1] = true
 	var owner: Dictionary = game.enemies[0]

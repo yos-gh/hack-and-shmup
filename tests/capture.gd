@@ -120,7 +120,7 @@ func capture() -> void:
 		root.get_texture().get_image().save_png("res://docs/halo-pattern-%d.png" % phase)
 	game.practice.open(game)
 	game.practice.variant = 2
-	game.practice.depth = 15
+	game.practice.depth = 45
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw

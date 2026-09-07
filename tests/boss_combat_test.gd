@@ -6,13 +6,17 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.title_screen = false
-	for level in range(6):
+	for level in range(9):
 		var variant := level%3
 		var upgrade_level := int(level/3)
 		game.floor_number = 5 + upgrade_level*5
 		game.power = 1.0 + upgrade_level*1.4
 		game.fire_rate = 1.0 + upgrade_level*0.8
 		game.new_floor(variant)
+		if level >= 6:
+			game.practice.variant = variant
+			game.practice.depth = 45
+			game.practice.start(game)
 		game.player = game.center(Vector2i(1,1))
 		# Measure damage and travel budget, not the bot's ability to dodge.
 		game.grace = 999
@@ -26,7 +30,7 @@ func run() -> void:
 				if e.kind == 3 and e.hp > 0 and distance < best: target = e; best = distance
 			if not target.is_empty():
 				var aim: Vector2 = game.player.direction_to(target.p)
-				if best > 220: game.player = game.slide(game.player,aim*game.SPEED/60.0,game.PLAYER_HIT_RADIUS)
+				if best > 220: game.player = game.slide(game.player,aim*(game.SPEED+game.move_bonus)/60.0,game.PLAYER_HIT_RADIUS)
 				# Lead moving targets by the observed velocity and bullet travel time.
 				var target_id: int = game.enemies.find(target)
 				var velocity: Vector2 = (target.p-prior_positions.get(target_id,target.p))*60.0
