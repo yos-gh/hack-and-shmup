@@ -28,11 +28,23 @@ const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b")]
 var lasers: Array[Dictionary] = []
 var pending_summons: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
+var options: Array[Dictionary] = []
+
+func turret_positions(game) -> Array[Vector2i]:
+	# Evenly spaced ellipse with bounded variations, retaining entry clearance.
+	var phase: float = [0.0,PI/6.0,PI/12.0,-PI/12.0][game.rng.randi_range(0,3)]
+	var rx: float = [8.0,9.0][game.rng.randi_range(0,1)]
+	var positions: Array[Vector2i] = []
+	for i in range(TURRETS):
+		var angle := phase+i*TAU/TURRETS
+		positions.append(Vector2i(roundi(14+cos(angle)*rx),roundi(1+sin(angle)*7.0)))
+	return positions
 
 func reset() -> void:
 	lasers.clear()
 	pending_summons.clear()
 	salvos.clear()
+	options.clear()
 
 func tier(game) -> int:
 	return clampi(int(game.floor_number / 5) - 1,0,8)
@@ -56,7 +68,7 @@ func build(game) -> void:
 	# About ten seconds of accurate sustained MG fire in total, leaving room
 	# for dodging and repositioning within a roughly 20-30 second encounter.
 	var hp: float = maxf(8.0, game.power * minf(game.fire_rate / 0.09,60.0) * 1.6)
-	var positions := [Vector2i(8,-6),Vector2i(18,-6),Vector2i(23,1),Vector2i(18,8),Vector2i(8,8),Vector2i(5,1)]
+	var positions := turret_positions(game)
 	if game.boss_variant != 0: positions = [Vector2i(14,1)]
 	for i in range(positions.size()):
 		game.enemies.append({"p":game.center(positions[i]),"kind":3,"hp":hp if game.boss_variant == 0 else hp*TURRETS,"room":1,
@@ -111,16 +123,17 @@ func queue_aimed(e: Dictionary, delay: float, count: int, spacing: float, speed:
 
 func emit_salvo(game, salvo: Dictionary) -> void:
 	var owner: Dictionary = salvo.owner
+	var origin: Vector2 = salvo.get("origin",owner.p)
 	var aim: Vector2 = salvo.aim
-	if aim == Vector2.ZERO: aim = owner.p.direction_to(game.player)
+	if aim == Vector2.ZERO: aim = origin.direction_to(game.player)
 	for offset in salvo.offsets:
-		game.emit_shot(owner.p,aim.rotated(offset),salvo.speed,1,true,1200)
+		game.emit_shot(origin,aim.rotated(offset),salvo.speed,1,true,1200)
 		game.bullets[-1]["pressure"] = true
 
 func warning(e: Dictionary) -> float:
 	var value := clampf(1.0-e.cd/0.6,0.0,1.0)
 	for salvo in salvos:
-		if salvo.owner == e:
+		if salvo.owner == e and not salvo.has("origin"):
 			value = maxf(value,clampf(1.0-salvo.delay/0.45,0.0,1.0))
 	return value
 
@@ -168,6 +181,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 
 func fire_halo(game, e: Dictionary, toward: Vector2) -> void:
 	var phase: int = e.shots % 3
+	deploy_options(game,e,phase)
 	if phase == 0:
 		# Re-aim each short fan: small deliberate movement streams the bullets.
 		var opening := salvos.size()
@@ -198,11 +212,38 @@ func fire_halo(game, e: Dictionary, toward: Vector2) -> void:
 		queue_aimed(e,1.20,3,0.12,190.0)
 
 func advance_attacks(game, delta: float) -> void:
+	for option in options: option.life -= delta
+	options = options.filter(func(option: Dictionary) -> bool: return option.life > 0 and option.owner.hp > 0)
 	for salvo in salvos:
 		salvo.delay -= delta
 		if salvo.delay <= 0 and salvo.owner.hp > 0: emit_salvo(game,salvo)
 	salvos = salvos.filter(func(salvo: Dictionary) -> bool: return salvo.delay > 0 and salvo.owner.hp > 0)
 	advance_lasers(game,delta)
+
+func deploy_options(game, e: Dictionary, phase: int) -> void:
+	# Harmless satellites hold their formation during each firing sequence.
+	options.clear()
+	for i in range(3):
+		var angle := -PI/2+i*TAU/3+phase*0.35+int(e.shots/3)*0.30
+		var origin: Vector2 = e.p+Vector2.from_angle(angle)*145.0
+		options.append({"p":origin,"owner":e,"life":2.5})
+		queue_aimed(e,0.7+i*0.25,3+2*mini(tier(game)/3,1),0.14,155.0)
+		var salvo: Dictionary = salvos[-1]
+		salvo.origin = origin
+		if phase == 2: salvo.aim = origin.direction_to(game.player).rotated((i-1)*0.25)
+		if origin.distance_to(game.player) < 100: salvo.delay += 0.35
+
+func draw_options(game) -> void:
+	for option in options:
+		var charge := 0.0
+		for salvo in salvos:
+			if salvo.get("origin",Vector2.INF) == option.p:
+				charge = maxf(charge,clampf(1.0-salvo.delay/0.7,0.0,1.0))
+		var ink := Color("ffc46b").lerp(Color("fff5e2"),charge)
+		game.draw_circle(option.p,11,Color("263847"))
+		game.draw_arc(option.p,11,0,TAU,16,ink,1.5)
+		var half := 5.0-charge*2.0
+		game.draw_rect(Rect2(option.p-Vector2.ONE*half,Vector2.ONE*half*2),ink)
 
 func summon(game, e: Dictionary) -> void:
 	var adds := 0

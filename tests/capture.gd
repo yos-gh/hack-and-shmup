@@ -118,6 +118,25 @@ func capture() -> void:
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://docs/halo-pattern-%d.png" % phase)
+	game.practice.open(game)
+	game.practice.variant = 2
+	game.practice.depth = 15
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://docs/boss-practice-menu.png")
+	game.practice.start(game)
+	game.player = game.center(Vector2i(6,1))
+	game.discovered[1] = true
+	game.grace = 999
+	game.enemies[0].active = true
+	game.enemies[0].cd = 0
+	for frame in range(80): game._physics_process(1.0/60)
+	game.camera_pos = game.center(game.rooms[1].get_center())
+	game.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://docs/boss-practice-play.png")
 	game.queue_free()
 	await process_frame
 	await process_frame

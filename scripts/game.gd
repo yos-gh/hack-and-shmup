@@ -75,6 +75,7 @@ var boss_floor := false
 var stairs_unlocked := true
 var boss_max_hp := 0.0
 var boss_variant := 0
+var practice = preload("res://scripts/boss_practice.gd").new()
 
 func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
@@ -377,6 +378,8 @@ func audio_button_rect() -> Rect2:
 	return Rect2(get_viewport_rect().size.x-390,22,172,42)
 
 func start_run() -> void:
+	practice.active = false
+	practice.selecting = false
 	floor_number = 1
 	kills = 0
 	deaths = 0
@@ -394,6 +397,8 @@ func start_run() -> void:
 	new_floor()
 
 func return_to_title() -> void:
+	practice.active = false
+	practice.selecting = false
 	title_screen = true
 	paused = false
 	choosing = false
@@ -402,13 +407,23 @@ func return_to_title() -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if practice.selecting:
+		practice.input(self,event)
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_M:
 			cycle_audio()
 			return
 		if title_screen:
 			if event.keycode in [KEY_ENTER, KEY_SPACE]: start_run()
+			elif event.keycode == KEY_B: practice.open(self)
 			elif event.keycode == KEY_ESCAPE and not OS.has_feature("web"): get_tree().quit()
+			return
+		if practice.active and event.keycode == KEY_B:
+			practice.open(self)
+			return
+		if practice.active and event.keycode == KEY_R:
+			restart_attempt()
 			return
 		if event.keycode == KEY_ESCAPE:
 			if paused: return_to_title()
@@ -445,13 +460,16 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 
 func upgrade(index: int) -> void:
-	match choices[index]:
+	apply_upgrade(choices[index])
+	floor_number += 1
+	new_floor()
+
+func apply_upgrade(kind: int) -> void:
+	match kind:
 		0: power += 0.35
 		1: fire_rate += 0.2
 		2: move_bonus += 20.0
 		3: power += 0.2; move_bonus += 10.0
-	floor_number += 1
-	new_floor()
 
 func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	if e.get("stun", 0.0) > 0:
@@ -637,6 +655,9 @@ func _physics_process(delta: float) -> void:
 		p.p += p.v * delta
 	particles = particles.filter(func(p: Dictionary) -> bool: return p.life > 0)
 	if stairs_unlocked and player.distance_to(stairs) < 24:
+		if practice.active:
+			practice.open(self)
+			return
 		choices.assign([0, 1, 2, 3])
 		choices.shuffle()
 		choices.resize(3)
@@ -684,6 +705,7 @@ func _draw() -> void:
 		for i in range(4): draw_line(stairs + Vector2(-16 + i * 4, -12 + i * 8), stairs + Vector2(16, -12 + i * 8), Color("65ffcf"), 3)
 		label_at(stairs + Vector2(-30,-34), "DESCEND", 13, Color("65ffcf"))
 	boss.draw_lasers(self)
+	boss.draw_options(self)
 	for e in enemies:
 		if cells.get(tile(e.p), -1) >= 0 and not discovered.has(cells[tile(e.p)]): continue
 		var p: Vector2 = e.p
@@ -795,6 +817,7 @@ func _draw() -> void:
 		if i == goal_room and stairs_unlocked: draw_circle(mp+Vector2(rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
 	draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
 	label_at(Vector2(26,screen.y - 15), "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO", 13, Color("a4b3c6"))
+	if practice.active: label_at(Vector2(screen.x-240,screen.y-15),"PRACTICE / R RETRY / B SELECT",12,Color("63f5ce"))
 	if banner > 0:
 		centered_title_label(screen,110,("BOSS DEFEATED / DESCEND" if stairs_unlocked else boss.NAMES[boss_variant]) if boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
 	if hit_flash > 0:
@@ -867,6 +890,9 @@ func toggle_fullscreen() -> void:
 	queue_redraw()
 
 func draw_title(screen: Vector2) -> void:
+	if practice.selecting:
+		practice.draw(self,screen)
+		return
 	draw_rect(Rect2(Vector2.ZERO,screen),Color("0b111c"))
 	var audio_button := audio_button_rect()
 	draw_rect(audio_button,Color("182735"))
@@ -892,4 +918,5 @@ func draw_title(screen: Vector2) -> void:
 	centered_title_label(screen,origin.y+148,"WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
 	centered_title_label(screen,origin.y+176,"M AUDIO / RECORD LASTS UNTIL YOU QUIT",14,Color("8194aa"))
 	if not OS.has_feature("web"):
-		centered_title_label(screen,origin.y+204,"ESC / QUIT",14,Color("8194aa"))
+		centered_title_label(screen,origin.y+232,"ESC / QUIT",14,Color("8194aa"))
+	centered_title_label(screen,origin.y+204,"B / BOSS PRACTICE",14,Color("63f5ce"))
