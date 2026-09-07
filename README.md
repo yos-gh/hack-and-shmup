@@ -1,120 +1,66 @@
-[Web版で遊ぶ](https://yos-gh.github.io/hack-and-shmup/) · [GitHub](https://github.com/yos-gh/hack-and-shmup)
+# HACK & SHMUP
 
-# HACK / SHMUP プロトタイプ
+A fast-paced, top-down dungeon shooter built with Godot 4.7.
 
-Godot 4.7で project.godot を開き、F5で実行してください。
+**[Play in your browser](https://yos-gh.github.io/hack-and-shmup/)** — desktop keyboard and mouse required. Click the game to enable audio. Use the title screen button to toggle fullscreen.
 
-## 操作
+## How to play
 
-- WASD: 移動 / マウス: 照準
-- 左クリック長押し: マシンガン
-- 右クリック: サブ武器 / ホイール / Q・E: 切り替え（Qは前、Eは次）
-- タイトル: クリック / Enterで新規プレイ
-- Esc: ポーズ。ポーズ中にもう一度Escでタイトルへ、マウスクリックで復帰
-- 階段で強化カードをクリック、または1・2・3で選択
+- Reach the stairs before time runs out. You do not need to defeat every enemy; kills grant extra time.
+- Choose an upgrade after each floor. Deeper floors bring tougher encounters.
+- Every fifth floor features one of three bosses. Boss fights have no timer; defeat the boss to unlock the stairs.
+- One hit means an immediate retry of the same floor. Enemies and the timer reset, but your upgrades remain.
+- Walls and unexplored rooms block attacks. Flank shielded enemies to deal damage.
+- Your deepest cleared floor is tracked for the current session only. Progress is not saved after closing the game.
 
-## フロアとリトライ
+## Controls
 
-7〜10部屋を不規則に配置し、全室をつなぐ通路と追加の回り道を生成。長方形・L字・十字・角落とし・くびれ型の部屋と障害物をランダム生成します。開始地点から歩行距離が最も遠い部屋にある階段へ駆け抜けてください。敵の全滅は不要です。
+| Input | Action |
+| --- | --- |
+| WASD | Move |
+| Mouse | Aim |
+| Hold left mouse button | Fire machine gun |
+| Right mouse button | Use subweapon |
+| Q / E or mouse wheel | Switch subweapon |
+| 1 / 2 / 3 or click a card | Choose an upgrade |
+| Esc | Pause; press again to return to title |
+| Click while paused | Resume |
+| M | Cycle all audio, sound effects only, and mute |
+| Esc on the native title screen | Quit |
 
-部屋に突入すると内部が見え、敵が索敵を開始。0.35〜0.85秒の認識時間と個別の旋回速度を持ち、こちらに向き直り、壁に遮られず視認してから反応します。索敵中の向きは線で表示。未突入室には全武器の攻撃が入らず、弾や範囲攻撃は壁にも遮られます。一度入った部屋は外から攻撃できます。
+Subweapons: **Scatter** fires a close-range spread, **Shockwave** pushes enemies back and clears nearby bullets, and **Lance** pierces enemies in a straight line.
 
-一撃死で待ち時間なく復帰。敵の配置・HP・行動、探索状態、弾、クールダウン、制限時間、そのフロアの撃破数をリセット。同じマップで再挑戦します。前フロアまでに獲得した強化は維持。開始時・復帰後1秒間は無敵です。
+## Boss practice
 
-制限時間は生成後の最短歩行経路を探索し、経路タイル数×32÷現在の移動速度×1.35＋2秒で計算。移動時間に35%と2秒の戦闘猶予を加える暫定調整です。敵数による時間延長はなく、遠回りや長い殲滅戦は不利になります。時間切れは無敵中も死亡。ポーズ・強化選択では時間停止。
+Press **B** on the title screen. Select a boss with **Left / Right** or **1 / 2 / 3**, select a floor with **Up / Down**, then press **Enter**. Mouse selection is also available.
 
-## 武器
+Practice automatically grants upgrades for the selected floor. During play, **R** retries the same encounter and **B** returns to selection. Practice does not update your deepest-floor record.
 
-敵の移動速度・弾速・射撃間隔は全階層でフロア1相当に固定（追跡86px/秒、敵弾238px/秒、射撃間隔1.665秒）。索敵の反応時間・旋回速度・盾持ちの突進速度も階層では変化しません。階層による敵の強化は出現数（上限あり）とHPだけで、盾持ちの本体HP1は維持します。
+## Run locally
 
-- MACHINE GUN: 遠距離の連射・小さなノックバック。
-- SCATTER: 近距離の扇状散弾。再使用1.1秒。
-- SHOCKWAVE: 半径165の範囲表示と広がる波紋。3倍ダメージ、強い押し返し、敵弾消去。壁・未突入室で遮蔽され、表示にも反映。再使用2秒。
-- LANCE: 射程520、幅39px（従来の3倍）の即時貫通攻撃。装備プレビューと発射表示も同じ幅。一直線の複数の敵に9倍ダメージ。太めの半透明な淡い水色の帯と三角形の穂先が0.28秒残る、フラットな表示。再使用1.7秒。
+1. Install **Godot 4.7 (standard edition)** and clone this repository:
+   ```sh
+   git clone https://github.com/yos-gh/hack-and-shmup.git
+   cd hack-and-shmup
+   ```
+2. Import `project.godot` into Godot and press **F5**.
 
-スピアを含む全武器のダメージを正面の盾で防御しますが、盾持ち本体は全階層でHP1、側面・背面ならマシンガン1発で撃破。盾の上からもノックバックを受け、突進中は突進速度とノックバック速度を加算して減速・押し戻しを表現します。深い階層ほど敵が強くなり、クリア時のランダム3択で強化できます。
+The bundled Sentry addon includes Windows x64 and Web binaries. Other native platforms require the corresponding Sentry Godot addon binaries.
 
-## 未実装・仮仕様
+## Build for Web
 
-BGMはオリジナルの150 BPMチップチューン／クラブ風ループ（4小節・6.4秒）。SEは射撃・各サブ武器・盾・撃破・死亡・クリア・時間切れの9種。Mまたはタイトルの音ボタンで「全部ON → SEのみ → 全ミュート」を切り替え、Escのポーズ中は再生停止。追加ツール不要の波形合成で生成し、素材は assets/audio に保存。ボスは固定砲台型・移動召喚型・固定弾幕型の3種類を実装。ストレージへのセーブは未実装。タイトルにはアプリ起動中の最深踏破階数を表示。終了時に進行はリセット。敵同士は重なります。UIは暫定英語。制限時間や戦闘バランスはプレイ調整段階です。
+Install the matching Godot export templates through **Editor > Manage Export Templates**. The included `Web` preset uses GDExtension support without threads.
 
-## 検証
+From the repository root, run in PowerShell (replace the executable path):
 
-高階層の負荷対策: 自機弾の当たり判定は64px区画の空間索引を使用し、命中半径が隣の区画にまたがる敵も候補に含めます。命中順と7px刻みの移動判定は維持。未突入室の徘徊は部屋ごとにタイミングを分散して通常10Hzで更新し、突入済み・索敵中・追跡中の敵は毎物理フレーム更新します。経路表はプレーヤーがタイルを移動した場合だけ、従来の更新間隔で再構築します。
+```powershell
+./tools/export_web.ps1 -Godot "C:/path/to/Godot_console.exe"
+```
 
-tests/performance_rules_test.gd: 総当たり判定との2000点比較、負座標を含む区画境界、重なった敵への命中順、死亡・未突入室の判定、リスポーン時のキャッシュ破棄、突入時の即時索敵を検証。
+The output is written to `web/`. To preview it, serve that directory over HTTP rather than opening the HTML file directly. For example, with Python 3 installed:
 
-tests/prototype_test.gd: 100シードの階段・敵への経路、敵配置・HP復元、盾、強化と階層更新、300フレームの敵稼働、未突入室・壁の攻撃遮断、貫通複数ヒット、衝撃波の押し返しと弾消し、時間切れとポーズを検証。
-tests/capture.gd: 実描画を docs/prototype.png に保存。
+```sh
+python -m http.server 8000 --directory web
+```
 
-敵はすべての部屋入口から96px（3タイル）以上離して配置。未発見時の徘徊でもこの距離を維持します。発見後の追跡は入口の制限を受けません。100シードの初期配置と600フレームの徘徊をテスト済み。
-
-
-部屋サイズは18〜25×16〜22タイルへ拡大し、各部屋に最大18個の障害物を配置。自機の被弾・接触・壁判定は中央の半径5pxが基準。ミニマップの橙点は階段の方向を示します。
-
-追加検証: 全室の到達性、部屋数変動、敵の旋回・視線・反応遅延、中央判定、スピアの盾防御、本体HP1、BGMと9種のSE再生、ポーズ・ミュート復帰。
-
-被弾ダメージは敵の上に0.65秒表示。整数は整数、小数は小数点以下1桁で表示し、盾で防がれた攻撃には表示しません。BGM末尾にソ♯を加え、先頭のラにつながる構成です。圧縮データのバイト数ではなく音源の長さからループ終点を設定し、descent.wav全体を再生します。
-
-BGMはAm / F / E / Amの4小節で完結するループに改訂。ランスは照準方向の半透明の帯、散弾は射程320・角度0.9radの扇形を常時表示。残り5秒で自機の周囲に減っていく赤い円弧だけを表示します。時間切れ専用SEとTIME UP表示を追加。
-
-通常ミスには0.25秒の赤いフラッシュと画面縁、HIT / RETRY表示、強めの専用音を追加。即復帰は維持。ゲーム名はタイトルだけに表示。最深踏破記録は階段に到達した時点で更新し、新規プレイでも維持、アプリ終了時に消えます。
-
-スナイパー型はフロア1でHP1（初期マシンガン1発）。以後は階層ごとにHP+1/7で、フロア15ではHP3。追跡型はフロア1のHP2.3から線形に増え、フロア15でHP6。タイトル右上のFULLSCREEN / WINDOWEDボタンで表示モードを切り替えます。
-
-## Web公開
-
-PCのキーボードとマウス向け。Webでは初回クリック後に音声が有効になります。Godot 4.7のWebプリセットで web/index.html に書き出し、生成物を含めてmainへpushするとGitHub ActionsでPagesへ公開します。再書き出し時はWebテンプレート（スレッドなし）が必要です。
-
-Web音声の注意: Sample再生で毎フレームポーズ解除すると音が再スタートするため、sound.gdではポーズ状態の変化時だけ音声APIを呼びます。
-
-Web固有の連続ノイズ対策として、BGM・SEともにStream再生を明示し、Godotのミキサー経由で再生します。WAVは16-bit PCMで取り込み、WebのSample再生と圧縮音声デコードを避けます。
-
-更新時は tools/export_web.ps1 を実行してください。拡張対応前のエンジンがブラウザーキャッシュから混ざらないよう、game-v2というファイル名で書き出し、入口のHTMLをindex.htmlにもコピーします。
-
-## Sentry
-
-公式Sentry Godot SDK 2.1.1を addons/sentry に導入。指定プロジェクトへの自動初期化と構造化ログを有効にしています。Windows x64とWeb用バイナリを同梱し、Web書き出しにはGDExtension対応・スレッドなしのテンプレートを使用します。他OS向けの書き出しには公式リリースから対応バイナリを追加してください。
-
-tests/sentry_test.gdを明示的に実行すると確認用メッセージと構造化ログを1回送信します。通常のプレイでは確認用イベントを送信しません。ログファイル・シーンツリーの添付、デフォルトPII送信は無効です。
-
-撃破時の時間ボーナスは追跡型+0.1秒、スナイパー型+0.2秒、盾持ち+0.3秒。致死ダメージの瞬間に1回加算し、初期制限時間を超えて延長できます。リスポーンでは延長分もリセットします。ポーズ・カード選択画面には共通の現在ステータス欄（攻撃力倍率、連射倍率、移動速度と強化分）を表示。ネイティブ版のタイトル画面ではEscで終了します。
-
-盾持ちは突進終了時（壁への衝突を含む）に1秒間スタンし、自発的な移動・突進・盾の旋回を停止します。ノックバックは引き続き有効。スタン中の装飾は表示しません。ポーズと強化選択はステータス欄を含めた全体を垂直中央に配置し、カードの描画とクリック判定で同じ矩形を使用します。
-
-## 攻撃予兆とボス
-
-スナイパーは発砲前0.45秒に本体が白くなり中心の穴が縮みます。盾持ちは突進前0.55秒に本体が白くなり少し縮みます。索敵完了直後にも0.55秒以上の攻撃猶予を確保。スタン中の円弧と突進前の長い線は廃止しました。
-
-5の倍数のフロアは3種類のボスからランダムに選択。同じフロアでのリトライは同じ種類です。固定砲台型は「SIEGE ARRAY」。開始部屋とボス部屋の2部屋で、時間制限はありません。砲台型は6基すべて、他2種類は本体を倒すと、敵弾・レーザー・召喚敵が消え、階段が出現します。階段から従来の強化選択を経て次の通常フロアへ進みます。ミス時は砲台HP・配置・弾・攻撃段階をすべてリセットします。
-
-砲台は固定。通常弾190px/秒、低速弾130px/秒。8発以下の低速弾は1秒追尾し、9発以上の密集弾は曲がらず進みます。LV45の残存6→1基で斉射数は4・6・9・12・16・22発。各砲台の間隔は最低1秒、残り3基以下は全体で0.4秒の射撃間隔を共有し、同時の扇状弾を抑えます。砲台HPは現在のマシンガン火力の約1.6秒分（最低8）です。
-
-tests/boss_test.gdで出現周期・経路・時間制限なし・攻撃・追尾終了・砲台減少時の強化・再挑戦・討伐と通常フロア復帰を検証。tests/boss_combat_test.gdは実際のマシンガン弾を用いてHPと移動時間の予算を検証します（回避難度の試験ではありません）。
-
-### 追加ボスと階層強化
-
-- VECTOR HUNTER: 速度180px/秒。近づかれると離れ、遠ざかると接近し、約260pxの間合いで回り込みます。壁際では室内へ戻り、レーザーごとに回り込み方向を反転。0.8秒予告・0.35秒照射のレーザーと、基本1.83秒間隔の追跡型／スナイパー型召喚を維持。さらに0.45秒の予兆後に自機狙いの3-wayを3連射します。レーザー予告中は止まり、反撃の機会を作ります。召喚位置は自機から96px以上、認識時間0.65秒。
-- HALO ENGINE: 本体固定、レーザー廃止。2.5秒ごとに「自機狙いの扇状弾を4〜6連射」「隙間付き放射弾＋遅れて自機狙い」「開始時の位置を左右から挟む3波＋遅れて自機狙い」を交代。連射はその都度狙い直し、挟撃の方向は固定するため、少しずつ避ける／誘導して大きく切り返す判断ができます。放射の隙間は周期ごとに約11度ずつ移動。本体の攻撃終了後は少なくとも1.3秒の発射休止があり、次の位置取りに使えます。
-
-階層強化は5フロアごと、LV45で上限。砲台型の最後の斉射はLV5の13発からLV45の22発へ増加。移動型の行動と召喚、弾幕型の主攻撃の量による強化は維持。弾速は階層では変えません。同時召喚敵は24体までです。
-
-3種類とも時間制限なし。移動型のHPを従来比72%へ調整。LV45のボス練習と同じ44回の自動強化で、回避を省いた実弾・移動テストは砲台型約12.3秒、移動型約11.9秒、弾幕型約11.6秒です。これは耐久の比較で、実プレイの回避難度が同じという意味ではありません。
-
-tests/boss_variants_test.gdはランダム選択、再挑戦時の種類維持、移動・召喚、レーザーの予告/命中、討伐時の消去、弾速固定と段階強化、フロア45の継続攻撃を検証します。
-
-砲台型の密集弾は外角を左右約49度までに制限し、中央約37度を空けます。最後の1台は3斉射ごとの遅延狙い弾で静止を防ぎます。弾幕型は放射弾の約36度の通路と挟撃の中央通路を維持。発射予兆は本体・オプションの白化と収縮です。
-
-設計参考: [Boghog's bullet hell shmup 101](https://shmups.wiki/library/Boghog%27s_bullet_hell_shmup_101)の自機狙いと固定弾幕の組み合わせ・移動レーン、[Sparen's Danmaku Design Studio A2](https://sparen.github.io/ph3tutorials/ddsga2.html)の固定角と狙い角・固定パターンの安全地帯。既存作品の素材やコードは使用せず、パターンの考え方を全方向移動のアリーナ向けに実装しています。
-
-tests/boss_patterns_test.gdは距離に応じた移動・壁回避、遅延狙い弾、連射の再照準と挟撃の照準固定、予兆、撃破・リトライ時の予約攻撃破棄を検証。実際の弾移動・当たり判定で、狙い連射に静止すると被弾し、横移動で回避できることも確認します。
-
-### 発射オプション・配置変化・ボス練習
-
-HALO ENGINEは周囲145pxに3基の発射オプションを展開。110px/秒の3〜5-wayで移動範囲を狭め、その0.55秒後に220px/秒の3-wayが同じ方向へ追い越します。照準は展開時に固定し、隣の通路へ避ける余地を維持。本体の190px/秒の再照準連射と異なるタイミングで圧力をかけます。低速弾は橙、速い狙い弾は赤寄り。オプションは無HP・非衝突で、近距離展開では予兆を0.35秒延長し、討伐・再挑戦時に消去します。
-
-SIEGE ARRAYは二列・千鳥・弧状・中央包囲の4つの配置に、左右反転と横への小移動を組み合わせます。砲台間190px以上・入口から140px以上の余裕は維持。同じ挑戦のリトライでは配置を固定、新しい戦闘では抽選し直します。
-
-タイトルで **B** を押すとボス練習の選択画面に入ります。左右または1/2/3で種類、上下でフロア5〜100（5刻み）を選び、Enterで開始。各ボタンはマウスでも操作できます。フロア数−1回分の通常カード強化を、威力・連射・複合・移動の順に自動適用します。無敵化はせず通常の被弾・リトライ挙動。戦闘中は **R** で同じ配置をやり直し、**B** で選択画面へ戻れます。撃破後に階段へ進むと選択画面へ戻り、最深踏破記録は更新しません。Escでタイトルへ戻り通常プレイを始めると、練習用の強化は解除されます。
-
-tests/boss_practice_test.gdで配置の変化と間隔、オプションからの発射・非衝突、キーボード／マウス選択、自動強化、リトライ、記録の分離を検証します。
+Open [localhost:8000](http://localhost:8000). To publish a build, commit the updated `web/` files and push to `main`; the included GitHub Actions workflow deploys them to GitHub Pages.
