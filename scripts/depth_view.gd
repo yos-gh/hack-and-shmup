@@ -40,11 +40,12 @@ func _ready() -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
 	make_batch("floor", box)
+	make_batch("contact", box)
 	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
 	make_batch("square", beveled_square())
 	var ring := TorusMesh.new()
-	ring.inner_radius = 0.48
+	ring.inner_radius = 5.0/12.0
 	ring.outer_radius = 1.0
 	ring.rings = 16
 	ring.ring_segments = 8
@@ -56,12 +57,17 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 0.65
 	material.metallic = 0.15
-	if key == "floor": material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if key in ["floor", "contact"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
+	if key == "ring":
+		var iris := ShaderMaterial.new()
+		iris.shader = preload("res://scripts/sniper_iris.gdshader")
+		instance.material_override = iris
 	instance.multimesh = MultiMesh.new()
 	instance.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	instance.multimesh.use_colors = true
+	instance.multimesh.use_custom_data = key == "ring"
 	instance.multimesh.mesh = mesh
 	stage.add_child(instance)
 	batches[key] = instance.multimesh
@@ -92,9 +98,9 @@ func triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, normal: 
 func project_point(point: Vector2, height: float = 0.0) -> Vector3:
 	return Vector3(point.x, -point.y, height)
 
-func entry(point: Vector2, scale_value: Vector3, color: Color, height: float = 0.0, ring: bool = false) -> Dictionary:
+func entry(point: Vector2, scale_value: Vector3, color: Color, height: float = 0.0, ring: bool = false, warning: float = 0.0) -> Dictionary:
 	var basis := Basis(Vector3.RIGHT, PI/2) if ring else Basis.IDENTITY
-	return {"transform": Transform3D(basis.scaled(scale_value), project_point(point, height)), "color": color}
+	return {"transform": Transform3D(basis.scaled(scale_value), project_point(point, height)), "color": color, "warning": warning}
 
 func upload(key: String, entries: Array) -> void:
 	var mesh: MultiMesh = batches[key]
@@ -104,6 +110,7 @@ func upload(key: String, entries: Array) -> void:
 	for i in range(entries.size()):
 		mesh.set_instance_transform(i, entries[i].transform)
 		mesh.set_instance_color(i, entries[i].color)
+		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, 0, 0, 0))
 
 func set_active(value: bool) -> void:
 	active = value
@@ -135,11 +142,13 @@ func sync(game) -> void:
 		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
 		if enemy.kind == 1:
-			rings.append(entry(enemy.p, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 7, true))
+			rings.append(entry(enemy.p, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 7, true, warning))
 		else:
 			var radius: float = 10.0 if enemy.kind == 0 else 12.0-warning*2.0
 			var color := Color("f3637a") if enemy.kind == 0 else Color("ad8fff").lerp(Color("fff4dd"), warning)
-			squares.append(entry(enemy.p, Vector3(radius,radius,7), color, 2))
+			# A quiet chassis and raised inset plate retain the original footprint.
+			squares.append(entry(enemy.p, Vector3(radius,radius,2), color.darkened(0.65), 1))
+			squares.append(entry(enemy.p, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 	upload("square", squares)
@@ -150,6 +159,7 @@ func sync(game) -> void:
 func rebuild_floor(game) -> void:
 	var started := Time.get_ticks_usec()
 	var floors: Array = []
+	var contacts: Array = []
 	var vertical_walls: Array = []
 	var horizontal_walls: Array = []
 	for cell in game.cells:
@@ -157,16 +167,22 @@ func rebuild_floor(game) -> void:
 		var p: Vector2 = game.center(cell)
 		# Nearly continuous floor; only a quiet seam every four cells.
 		var shade := Color("182432") if known else Color("0c1420")
+		var panel := Vector2i(floori(cell.x/4.0), floori(cell.y/4.0))
+		# Coordinate-derived variation cannot consume simulation or effects RNG.
+		shade = shade.lightened(posmod(panel.x*17+panel.y*31,4)*0.003) if known else shade
 		var seam_x := 0.7 if posmod(cell.x,4) == 0 else 0.0
 		var seam_y := 0.7 if posmod(cell.y,4) == 0 else 0.0
 		floors.append(entry(p+Vector2(seam_x,seam_y)*0.5, Vector3(32-seam_x,32-seam_y,2), shade, -2))
 		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 			if game.cells.has(cell+direction): continue
 			var wall_center: Vector2 = p+Vector2(direction)*18
+			var contact_size := Vector3(5,32,0.1) if direction.x != 0 else Vector3(32,5,0.1)
+			contacts.append(entry(p+Vector2(direction)*13.5, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
 			var size_value := Vector3(2,16,8) if direction.x != 0 else Vector3(16,2,8)
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
 			target.append(entry(wall_center, size_value, Color("426477") if known else Color("172736"), -1))
 	upload("floor", floors)
+	upload("contact", contacts)
 	upload("wall_v", vertical_walls)
 	upload("wall_h", horizontal_walls)
 	last_rebuild_ms = (Time.get_ticks_usec()-started)/1000.0
