@@ -131,7 +131,7 @@ func run() -> void:
 	check(not game.enemy_touches_player(contact), "outer player ring is not hurtbox")
 	contact.p = game.player+Vector2(14,0)
 	check(game.enemy_touches_player(contact), "central five pixel core collides")
-	check(game.sound.clips.size()==9 and game.sound.music.stream.loop_end > 0, "audio assets and loop loaded")
+	check(game.sound.clips.size()==10 and game.sound.clips.has("warning") and game.sound.music.stream.loop_end > 0, "audio assets and loop loaded")
 	check(not game.attack_reaches(game.player,foe.p), "walls block area effects")
 	print("PASS: combat entry barrier, lance piercing, shock push and bullet clear, timeout and pause")
 	print("PASS: 100 connected maps; respawn persistence; shield; upgrades; 300 simulation frames")

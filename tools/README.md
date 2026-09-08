@@ -30,7 +30,11 @@ The read-only `WorldView` and `GameHud` render during the host Game's draw callb
 
 Determinism is scoped to the same engine, fixture, seed, weapon and frame count. This is not cross-version replay. Particle RNG is independent from gameplay RNG; fixtures seed both. Changing particle counts cannot change combat or later floor generation. Map generation and combat still share the gameplay stream. Digests from before this separation are not expected to match new runs.
 
-## Publication
+## HUD and warning audio
+
+`python tools/generate_warning.py` regenerates only the original 0.16-second warning WAV (mono 16-bit PCM, 22050 Hz). Keep its Godot import compression disabled, as with the existing effects. The countdown warns once at each 5-to-1-second threshold per attempt; time bonuses do not repeat a threshold. Death/timeout and clear effects have a reserved voice, and countdown has another. Use `tools/play_study.ps1` to check the cooldown bar while switching weapons and judge the warning level during firing. `hud_audio_test.gd` checks priority, saturation, mute, retry and pause behavior; listening remains necessary for the final mix.
+
+## Publication workflow
 
 The Pages workflow is manual (`workflow_dispatch`). The repository's default branch must receive this workflow change before remote main pushes stop deploying. Local edits alone do not change GitHub behavior. Develop on short `codex/` branches. Review and merge playable changes, then explicitly run **Publish game to Pages** for a reviewed ref with matching `web/` artifacts. This workflow still uploads checked-in files; it does not build them.
 

@@ -38,7 +38,7 @@ func run() -> void:
 	assert(sound.music.volume_db == -80 and not sound.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing), "mute audio")
 	sound.set_audio_mode(0)
 	assert(sound.music.volume_db == -10, "restore music")
-	print("PASS: BGM, nine SE clips, pause, mute and restore")
+	print("PASS: BGM, SE clips, pause, mute and restore")
 	sound.music.stop()
 	for voice in sound.voices: voice.stop()
 	sound.queue_free()

@@ -20,6 +20,7 @@ var room_links: Array[Vector2i] = []
 var sound: Node
 var audio_mode := 0
 const SUB_NAMES := ["SCATTER", "SHOCKWAVE", "LANCE"]
+const SUB_COOLDOWNS := [1.1, 2.0, 1.7]
 const ENTRY_CLEARANCE := 96.0
 var entrances: Dictionary = {}
 
@@ -57,6 +58,7 @@ var stairs := Vector2.ZERO
 var camera_pos := Vector2.ZERO
 var main_cd := 0.0
 var sub_cd := 0.0
+var sub_cd_total := 0.0
 var grace := 0.0
 var flow_cd := 0.0
 var sub_weapon := 0
@@ -276,6 +278,8 @@ func restart_attempt() -> void:
 	kills = floor_start_kills
 	main_cd = 0.0
 	sub_cd = 0.0
+	sub_cd_total = 0.0
+	sound.reset_time_warning()
 	grace = 1.0
 	flow_cd = 0.0
 	pending_respawn = false
@@ -300,17 +304,18 @@ func attack_reaches(origin: Vector2, target: Vector2) -> bool:
 
 func fire_sub(aim: Vector2) -> void:
 	sound.play_sfx(["scatter","shock","lance"][sub_weapon])
+	sub_cd_total = SUB_COOLDOWNS[sub_weapon]
 	match sub_weapon:
 		0:
 			for i in range(13): emit_shot(player, aim.rotated((i - 6) * 0.075), 850, power * 2.5, false, 320)
-			sub_cd = 1.1
+			sub_cd = sub_cd_total
 		1:
 			for e in enemies:
 				if e.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, e.p):
 					hurt_enemy(e, power * 3, player.direction_to(e.p), 650.0)
 			bullets = bullets.filter(func(b: Dictionary) -> bool: return not (b.hostile and b.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, b.p)))
 			effects.append({"kind": 0, "p": player, "end": player, "life": 0.4})
-			sub_cd = 2.0
+			sub_cd = sub_cd_total
 		2:
 			var end := attack_end(player, aim, LANCE_RANGE)
 			for e in enemies:
@@ -318,7 +323,7 @@ func fire_sub(aim: Vector2) -> void:
 				if nearest.distance_to(e.p) <= LANCE_WIDTH * 0.5 + 12.5 and attack_reaches(player, e.p):
 					hurt_enemy(e, power * 9, aim, 260.0)
 			effects.append({"kind": 1, "p": player, "end": end, "life": 0.28})
-			sub_cd = 1.7
+			sub_cd = sub_cd_total
 
 func connect_rooms(a: int, b: int) -> void:
 	var p := rooms[a].get_center()
@@ -560,6 +565,7 @@ func _physics_process(delta: float) -> void:
 	timeout_banner = maxf(0, timeout_banner - delta)
 	if not boss_floor:
 		time_left = maxf(0, time_left - delta)
+		sound.update_time_warning(time_left)
 		if time_left <= 0:
 			die("TIME UP")
 			return
