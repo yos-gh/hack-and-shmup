@@ -69,6 +69,8 @@ var fire_armed := false
 var choices: Array[int] = []
 var banner := 4.0
 var rng := RandomNumberGenerator.new()
+# Development replay input. Empty uses the normal keyboard and mouse.
+var replay_input: Dictionary = {}
 var font := ThemeDB.fallback_font
 var boss = preload("res://scripts/boss.gd").new()
 var boss_floor := false
@@ -378,6 +380,7 @@ func audio_button_rect() -> Rect2:
 	return Rect2(get_viewport_rect().size.x-390,22,172,42)
 
 func start_run() -> void:
+	replay_input.clear()
 	practice.active = false
 	practice.selecting = false
 	floor_number = 1
@@ -538,7 +541,9 @@ func _physics_process(delta: float) -> void:
 		return
 	hit_flash = maxf(0,hit_flash-delta)
 	hit_banner = maxf(0,hit_banner-delta)
-	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT): fire_armed = true
+	var primary: bool = replay_input.get("primary", Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	var secondary: bool = replay_input.get("secondary", Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
+	if not primary and not secondary: fire_armed = true
 	timeout_banner = maxf(0, timeout_banner - delta)
 	if not boss_floor:
 		time_left = maxf(0, time_left - delta)
@@ -556,16 +561,18 @@ func _physics_process(delta: float) -> void:
 	grace = maxf(0, grace - delta)
 	banner -= delta
 	var movement := Vector2(float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)), float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W)))
+	movement = replay_input.get("movement", movement)
 	player = slide(player, movement.normalized() * (SPEED + move_bonus) * delta, PLAYER_HIT_RADIUS)
 	camera_pos = camera_pos.lerp(player, 1.0 - exp(-12 * delta))
 	var room_id: int = cells.get(tile(player), -1)
 	if room_id >= 0: discovered[room_id] = true
 	var aim := (get_global_mouse_position() - get_viewport_rect().size * 0.5 + camera_pos - player).normalized()
-	if fire_armed and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and main_cd <= 0:
+	aim = replay_input.get("aim", aim)
+	if fire_armed and primary and main_cd <= 0:
 		emit_shot(player, aim.rotated(rng.randf_range(-0.025, 0.025)), 1050, power, false)
 		sound.play_sfx("shot")
 		main_cd = 0.09 / fire_rate
-	if fire_armed and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and sub_cd <= 0:
+	if fire_armed and secondary and sub_cd <= 0:
 		fire_sub(aim)
 	flow_cd -= delta
 	if flow_cd <= 0 and flow.get(tile(player), Vector2i(-999999, -999999)) != tile(player):
@@ -740,6 +747,7 @@ func _draw() -> void:
 		var bullet_ink := Color("ff788e") if b.get("pressure",false) else (Color("d996ed") if b.get("guided",false) else Color("ffb95e"))
 		draw_line(b.p, b.p - b.v.normalized() * 12, bullet_ink if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
 	var preview_aim := (get_global_mouse_position() - offset - player).normalized()
+	preview_aim = replay_input.get("aim", preview_aim)
 	var preview_alpha := 0.18 if sub_cd <= 0 else 0.06
 	if sub_weapon == 0:
 		var fan := PackedVector2Array([player])
@@ -784,6 +792,7 @@ func _draw() -> void:
 		draw_circle(player, 12, Color("63f5ce"))
 		draw_circle(player, PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim := (get_global_mouse_position() - offset - player).normalized()
+	aim = replay_input.get("aim", aim)
 	draw_line(player + aim * 8, player + aim * 23, Color.WHITE, 5)
 	if grace > 0: draw_arc(player, 21, 0, TAU, 32, Color("63f5ce"), 1)
 	if not boss_floor and time_left <= 5.0:
