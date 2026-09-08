@@ -3,21 +3,24 @@ extends RefCounted
 # Read-only 2D presentation. All commands use the host CanvasItem during _draw.
 # Combat coordinates and attack clipping remain owned by the simulation.
 func draw(game, screen: Vector2) -> void:
+	if game.depth_enabled:
+		game.draw_texture_rect(game.depth_view.viewport.get_texture(), Rect2(Vector2.ZERO, screen), false)
 	var offset = screen * 0.5 - game.camera_pos
 	game.draw_set_transform(offset)
 	var view = Rect2(-offset - Vector2(32,32), screen + Vector2(64,64))
-	for c in game.cells:
-		var p = Vector2(c) * game.TILE
-		if not view.has_point(p): continue
-		var id: int = game.cells[c]
-		var visible = id == -1 or game.discovered.has(id)
-		var color = Color("182735") if visible else Color("0b121c")
-		game.draw_rect(Rect2(p + Vector2.ONE, Vector2.ONE * 30), color)
-		for d in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
-			if not game.cells.has(c + d):
-				var edge = p + Vector2(16,16) + Vector2(d) * 16
-				var side = Vector2(-d.y, d.x) * 16
-				game.draw_line(edge - side, edge + side, Color("354858") if visible else Color("16202d"), 3)
+	if not game.depth_enabled:
+		for c in game.cells:
+			var p = Vector2(c) * game.TILE
+			if not view.has_point(p): continue
+			var id: int = game.cells[c]
+			var visible = id == -1 or game.discovered.has(id)
+			var color = Color("182735") if visible else Color("0b121c")
+			game.draw_rect(Rect2(p + Vector2.ONE, Vector2.ONE * 30), color)
+			for d in [Vector2i.UP, Vector2i.LEFT, Vector2i.DOWN, Vector2i.RIGHT]:
+				if not game.cells.has(c + d):
+					var edge = p + Vector2(16,16) + Vector2(d) * 16
+					var side = Vector2(-d.y, d.x) * 16
+					game.draw_line(edge - side, edge + side, Color("354858") if visible else Color("16202d"), 3)
 	if game.stairs_unlocked and game.discovered.has(game.goal_room):
 		game.draw_rect(Rect2(game.stairs - Vector2(23,23), Vector2(46,46)), Color("24493c"))
 		for i in range(4): game.draw_line(game.stairs + Vector2(-16 + i * 4, -12 + i * 8), game.stairs + Vector2(16, -12 + i * 8), Color("65ffcf"), 3)
@@ -30,6 +33,13 @@ func draw(game, screen: Vector2) -> void:
 		var warning = game.attack_warning(e)
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
+		if game.depth_enabled and e.kind < 3:
+			if e.kind == 1: game.draw_circle(p, lerpf(5.0,1.5,warning), Color("342338"))
+			if e.kind == 2:
+				var facing: Vector2 = e.dir
+				var edge: Vector2 = facing.orthogonal()*15
+				game.draw_line(p+facing*16-edge, p+facing*16+edge, Color("c7eaff"), 4)
+			continue
 		if e.kind == 0:
 			game.draw_rect(Rect2(p - Vector2(10,10), Vector2(20,20)), Color("f3637a"))
 		elif e.kind == 1:
@@ -99,7 +109,7 @@ func draw(game, screen: Vector2) -> void:
 		game.label_at(entry.p + Vector2(1,1), number, 17, Color(0.02,0.03,0.05,alpha))
 		game.label_at(entry.p, number, 17, Color(1.0,0.95,0.75,alpha))
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
-		game.draw_circle(game.player, 12, Color("63f5ce"))
+		if not game.depth_enabled: game.draw_circle(game.player, 12, Color("63f5ce"))
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
 	game.draw_line(game.player + aim * 8, game.player + aim * 23, Color.WHITE, 5)

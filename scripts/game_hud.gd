@@ -3,6 +3,8 @@ extends RefCounted
 # Presentation only; input and shared hit-region calculations stay on the host.
 func draw(game, screen: Vector2) -> void:
 	game.draw_set_transform(Vector2.ZERO)
+	if game.view_comparison:
+		label_at(game, Vector2(26,108), "F6 / " + ("3D STUDY" if game.depth_enabled else "CLASSIC 2D"), 13, Color("8194aa"))
 	game.draw_rect(Rect2(0,0,screen.x,76), Color("0b111c"))
 	label_at(game, Vector2(26,32), "DEPTH  %02d" % game.floor_number, 23)
 	label_at(game, Vector2(26,56), "KILLS %d   /   RETRIES %d" % [game.kills, game.deaths], 13, Color("8194aa"))

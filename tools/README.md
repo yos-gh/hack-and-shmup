@@ -2,6 +2,8 @@
 
 Run from the project root with Godot 4.7 stable. These tools are excluded from Web exports.
 
+For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario halo45`). F6 switches between the same live game's classic and 3D presentation. Normal damage, time and input remain enabled. This is an early appearance study: terrain, player shell and three regular enemy bodies are 3D; bullets, attack ranges, boss bodies and UI retain the established 2D presentation. Initial 3D rendering can stall briefly; Web performance and final art are not yet validated.
+
 ```powershell
 # All regression tests; audio and view-state checks use a display.
 ./tools/test.ps1
@@ -11,6 +13,9 @@ Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal
 
 # Play HALO ENGINE at Lv45 with the same seed and balanced automatic upgrades.
 Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=halo45 --frames=0
+
+# Direct 3D study launch (F6 toggles presentation).
+Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal19 --frames=0 --view=3d
 
 # 3600 fixed simulation steps, one per rendered frame, capped at 60 FPS.
 # Create docs/validation first (test.ps1 also creates it).

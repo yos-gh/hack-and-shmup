@@ -41,6 +41,10 @@ var floor_number := 1
 var deaths := 0
 var kills := 0
 var cells: Dictionary = {}
+var floor_revision := 0
+var depth_view: Node
+var depth_enabled := false
+var view_comparison := false
 var rooms: Array[Rect2i] = []
 var discovered: Dictionary = {}
 var enemies: Array[Dictionary] = []
@@ -97,6 +101,7 @@ func center(p: Vector2i) -> Vector2:
 	return Vector2(p) * TILE + Vector2.ONE * TILE * 0.5
 
 func new_floor(boss_choice: int = -1) -> void:
+	floor_revision += 1
 	cells.clear()
 	rooms.clear()
 	room_shapes.clear()
@@ -415,6 +420,9 @@ func return_to_title() -> void:
 	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if view_comparison and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F6:
+		set_depth_view(not depth_enabled)
+		return
 	if practice.selecting:
 		practice.input(self,event)
 		return
@@ -692,6 +700,14 @@ func _draw() -> void:
 		return
 	world_view.draw(self, screen)
 	hud.draw(self, screen)
+
+func set_depth_view(enabled: bool) -> void:
+	if enabled and depth_view == null:
+		depth_view = preload("res://scripts/depth_view.gd").new()
+		add_child(depth_view)
+	depth_enabled = enabled
+	if depth_view != null: depth_view.set_active(enabled)
+	queue_redraw()
 
 
 
