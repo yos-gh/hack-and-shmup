@@ -76,4 +76,3 @@ func die(game, reason: String = "HIT") -> void:
 	game.death_reason = reason
 	game.pending_respawn = true
 	game.queue_redraw()
-

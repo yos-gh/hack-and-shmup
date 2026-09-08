@@ -77,4 +77,3 @@ func handle_event(game, event: InputEvent) -> void:
 					game.fire_armed = false
 					game.upgrade(i)
 					return
-

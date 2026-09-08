@@ -92,6 +92,7 @@ var rng := RandomNumberGenerator.new()
 var effects_rng := RandomNumberGenerator.new()
 # Development replay input. Empty uses the normal keyboard and mouse.
 var replay_input: Dictionary = {}
+var floor_generator = preload("res://scripts/floor_generator.gd").new()
 var session = preload("res://scripts/game_session.gd").new()
 var controls = preload("res://scripts/player_input.gd").new()
 var world_view = preload("res://scripts/world_view.gd").new()
@@ -118,118 +119,7 @@ func center(p: Vector2i) -> Vector2:
 	return Vector2(p) * TILE + Vector2.ONE * TILE * 0.5
 
 func new_floor(boss_choice: int = -1) -> void:
-	floor_revision += 1
-	cells.clear()
-	rooms.clear()
-	room_shapes.clear()
-	entrances.clear()
-	effects.clear()
-	damage_labels.clear()
-	discovered.clear()
-	enemies.clear()
-	bullets.clear()
-	particles.clear()
-	room_links.clear()
-	corridor_cells.clear()
-	boss_floor = floor_number % 5 == 0
-	if boss_floor:
-		boss_variant = rng.randi_range(0,2) if boss_choice < 0 else clampi(boss_choice,0,2)
-		boss.build(self)
-		return
-	# Scatter larger rooms without overlap, then connect a spanning tree and loops.
-	var target_count := rng.randi_range(7, 10)
-	for attempt in range(600):
-		if rooms.size() >= target_count: break
-		var r := Rect2i(rng.randi_range(-52, 52), rng.randi_range(-44, 44), rng.randi_range(18, 25), rng.randi_range(16, 22))
-		var overlaps := false
-		for other in rooms:
-			if r.grow(5).intersects(other): overlaps = true; break
-		if overlaps: continue
-		rooms.append(r)
-		var shape := rng.randi_range(0, 4)
-		room_shapes.append(shape)
-		for cy in range(r.position.y, r.end.y):
-			for cx in range(r.position.x, r.end.x):
-				if room_contains(Vector2i(cx,cy),r,shape): cells[Vector2i(cx,cy)] = rooms.size() - 1
-	var connected: Array[int] = [0]
-	while connected.size() < rooms.size():
-		var best := Vector2i(-1,-1)
-		var best_distance := INF
-		for a in connected:
-			for b in range(rooms.size()):
-				if b in connected: continue
-				var distance := Vector2(rooms[a].get_center()).distance_squared_to(Vector2(rooms[b].get_center()))
-				if distance < best_distance: best_distance = distance; best = Vector2i(a,b)
-		connect_rooms(best.x,best.y)
-		room_links.append(best)
-		connected.append(best.y)
-	for extra in range(2):
-		var a := rng.randi_range(0,rooms.size()-1)
-		var b := rng.randi_range(0,rooms.size()-1)
-		if a != b and not Vector2i(a,b) in room_links and not Vector2i(b,a) in room_links:
-			connect_rooms(a,b)
-			room_links.append(Vector2i(a,b))
-	for i in range(rooms.size()):
-		var r := rooms[i]
-		var c := r.get_center()
-		var obstacle_candidates: Array[Vector2i] = []
-		for cell in cells:
-			if cells[cell] == i and not corridor_cells.has(cell) and absi(cell.x-c.x)>2 and absi(cell.y-c.y)>2:
-				obstacle_candidates.append(cell)
-		for n in range(mini(18,obstacle_candidates.size())):
-			var pick := rng.randi_range(0,obstacle_candidates.size()-1)
-			cells.erase(obstacle_candidates[pick])
-			obstacle_candidates.remove_at(pick)
-	spawn_point = center(rooms[0].get_center())
-	player = spawn_point
-	build_flow()
-	# Remove isolated pockets left by obstacles, before choosing enemy positions.
-	for c in cells.keys():
-		if not flow.has(c): cells.erase(c)
-	goal_room = 1
-	var longest := 0
-	for i in range(1,rooms.size()):
-		var cursor := rooms[i].get_center()
-		var distance := 0
-		while cursor != tile(spawn_point) and flow.has(cursor):
-			cursor = flow[cursor]
-			distance += 1
-		if distance > longest: longest = distance; goal_room = i
-	stairs = center(rooms[goal_room].get_center())
-	for i in range(1,rooms.size()):
-		entrances[i] = []
-		for cell in cells:
-			if cells[cell] != i: continue
-			for d in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
-				if cells.has(cell+d) and cells[cell+d] != i:
-					entrances[i].append(center(cell))
-					break
-		var candidates: Array[Vector2i] = []
-		for cell in cells:
-			if cells[cell] == i and entry_safe(center(cell),i): candidates.append(cell)
-		for n in range(mini(18+floor_number*4,85)):
-			if candidates.is_empty(): break
-			var candidate_index := rng.randi_range(0,candidates.size()-1)
-			var p := candidates[candidate_index]
-			candidates.remove_at(candidate_index)
-			var kind := 0
-			if n % 7 == 0: kind = 1
-			elif n % 11 == 0: kind = 2
-			enemies.append({"p":center(p), "kind":kind, "hp":enemy_health(kind, floor_number),
-				"room":i, "active":false, "searching":false, "notice":rng.randf_range(0.35,0.85), "turn_speed":rng.randf_range(1.8,3.8),
-				"cd":rng.randf_range(0.25,0.65), "charge":0.0, "stun":0.0, "dir":Vector2.from_angle(rng.randf()*TAU), "push":Vector2.ZERO})
-	player = spawn_point
-	build_flow()
-	var cursor := tile(stairs)
-	var steps := 0
-	while cursor != tile(spawn_point) and flow.has(cursor):
-		cursor = flow[cursor]
-		steps += 1
-	# Budget follows the actual navigable shortest route and current movement speed.
-	route_seconds = steps * TILE / (SPEED + move_bonus)
-	time_limit = (route_seconds * 1.35 + 2.0) * 1.5
-	session.floor_snapshot.capture(self)
-	restart_attempt()
+	floor_generator.generate(self,boss_choice)
 
 func enemy_health(kind: int, depth: int) -> float:
 	if kind == 2: return 1.0
@@ -263,16 +153,7 @@ func entry_safe(p: Vector2, room_id: int) -> bool:
 	return walkable(p)
 
 func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
-	var local := p - r.position
-	var mid := r.get_center() - r.position
-	var dx := absi(local.x - mid.x)
-	var dy := absi(local.y - mid.y)
-	match shape:
-		1: return local.x <= mid.x + 1 or local.y >= mid.y - 1 # L
-		2: return dx <= 4 or dy <= 4 # cross
-		3: return float(dx) / (r.size.x * 0.5) + float(dy) / (r.size.y * 0.5) < 1.35 # bevelled
-		4: return dy <= 3 or local.x < 6 or local.x >= r.size.x - 6 # two chambers
-	return true
+	return floor_generator.room_contains(self,p,r,shape)
 
 func restart_attempt() -> void:
 	session.restart_attempt(self)
@@ -316,16 +197,7 @@ func fire_sub(aim: Vector2) -> void:
 			sub_cd = sub_cd_total
 
 func connect_rooms(a: int, b: int) -> void:
-	var p := rooms[a].get_center()
-	var goal := rooms[b].get_center()
-	while p != goal:
-		for dy in range(-1, 2):
-			for dx in range(-1, 2):
-				corridor_cells[p + Vector2i(dx,dy)] = true
-				if not cells.has(p + Vector2i(dx, dy)):
-					cells[p + Vector2i(dx, dy)] = -1
-		if p.x != goal.x: p.x += 1 if goal.x > p.x else -1
-		else: p.y += 1 if goal.y > p.y else -1
+	floor_generator.connect_rooms(self,a,b)
 
 func walkable(p: Vector2, radius: float = 10.0) -> bool:
 	for offset in [Vector2(-radius,-radius), Vector2(radius,-radius), Vector2(-radius,radius), Vector2(radius,radius)]:

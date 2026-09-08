@@ -39,3 +39,9 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 The Pages workflow is manual (`workflow_dispatch`). The repository's default branch must receive this workflow change before remote main pushes stop deploying. Local edits alone do not change GitHub behavior. Develop on short `codex/` branches. Review and merge playable changes, then explicitly run **Publish game to Pages** for a reviewed ref with matching `web/` artifacts. This workflow still uploads checked-in files; it does not build them.
 
 Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prepare rollback, restore `web/` from that tag into a new branch, review the diff, merge and explicitly deploy. No history rewrite is required. Tags, merges, pushes and publication are separate operations; this foundation change has not been pushed or deployed.
+
+## Input and session regression
+
+Existing keyboard bindings now live in `project.godot` InputMap (physical WASD for movement). `PlayerInput` routes events, `GameSession` owns transitions, and `FloorSnapshot` keeps the in-memory retry baseline. `FloorGenerator` writes the existing floor model in the original RNG order. Key-binding settings and independent FloorData are not implemented yet.
+
+`session_input_test.gd` checks InputMap bindings/remapping, held inputs and echo suppression, pause/resume shot gating, card/practice transitions and 50 retries across normal floors and all three bosses. Audio regression waits by elapsed time rather than uncapped render frames and exits with a failure result instead of hanging on an assertion.
