@@ -31,6 +31,7 @@ func draw(game, screen: Vector2) -> void:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
 		var warning = game.attack_warning(e)
+		if game.depth_enabled and e.kind == 3 and game.boss_variant == 2: continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and e.kind < 3:
@@ -123,11 +124,9 @@ func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color:
 			game.draw_colored_polygon(PackedVector2Array([origin, outline[i], outline[i + 1]]), color)
 
 func draw_options(game) -> void:
+	if game.depth_enabled and game.boss_variant == 2: return
 	for option in game.boss.options:
-		var charge := 0.0
-		for salvo in game.boss.salvos:
-			if salvo.get("origin",Vector2.INF) == option.p:
-				charge = maxf(charge,clampf(1.0-salvo.delay/0.7,0.0,1.0))
+		var charge: float = game.boss.option_warning(option)
 		var ink := Color("ffc46b").lerp(Color("fff5e2"),charge)
 		game.draw_circle(option.p,11,Color("263847"))
 		game.draw_arc(option.p,11,0,TAU,16,ink,1.5)

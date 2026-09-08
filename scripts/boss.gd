@@ -147,6 +147,13 @@ func warning(e: Dictionary) -> float:
 			value = maxf(value,clampf(1.0-salvo.delay/0.45,0.0,1.0))
 	return value
 
+func option_warning(option: Dictionary) -> float:
+	var charge := 0.0
+	for salvo in salvos:
+		if salvo.owner == option.owner and salvo.get("origin",Vector2.INF) == option.p:
+			charge = maxf(charge,clampf(1.0-salvo.delay/0.7,0.0,1.0))
+	return charge
+
 func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
 	var distance: float = e.p.distance_to(game.player)
 	# Retreat when crowded, approach a distant player, strafe at weapon range.

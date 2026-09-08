@@ -50,6 +50,19 @@ func _ready() -> void:
 	ring.rings = 16
 	ring.ring_segments = 8
 	make_batch("ring", ring)
+	var halo_ring := TorusMesh.new()
+	halo_ring.inner_radius = 24.0/29.0
+	halo_ring.outer_radius = 1.0
+	halo_ring.rings = 48
+	halo_ring.ring_segments = 8
+	make_batch("halo_ring", halo_ring)
+	var disk := CylinderMesh.new()
+	disk.top_radius = 1.0
+	disk.bottom_radius = 1.0
+	disk.height = 1.0
+	disk.radial_segments = 48
+	make_batch("halo_base", disk)
+	make_batch("halo_core", beveled_square())
 	sync(get_parent())
 
 func make_batch(key: String, mesh: Mesh) -> void:
@@ -153,8 +166,35 @@ func sync(game) -> void:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 	upload("square", squares)
 	upload("ring", rings)
+	sync_halo(game)
 	game.queue_redraw()
 	max_sync_ms = maxf(max_sync_ms, (Time.get_ticks_usec()-started)/1000.0)
+
+func sync_halo(game) -> void:
+	var shells: Array = []
+	var bases: Array = []
+	var cores: Array = []
+	if game.boss_floor and game.boss_variant == 2:
+		var ink: Color = game.boss.COLORS[2]
+		for enemy in game.enemies:
+			if enemy.kind != 3 or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
+			var warning: float = game.attack_warning(enemy)
+			var extent := lerpf(12.0,7.0,warning)
+			bases.append(entry(enemy.p,Vector3(24,24,4),ink.darkened(0.75),3,true))
+			shells.append(entry(enemy.p,Vector3(29,29,12),ink,7,true))
+			cores.append(entry(enemy.p,Vector3(extent,extent,6),ink.lerp(Color.WHITE,warning),7))
+		for option in game.boss.options:
+			if option.life <= 0 or option.owner.hp <= 0 or not game.attack_open(option.p): continue
+			var charge: float = game.boss.option_warning(option)
+			var extent := 5.0-charge*2.0
+			var color := ink.lerp(Color("fff5e2"),charge)
+			bases.append(entry(option.p,Vector3(10,10,3),Color("263847"),3,true))
+			shells.append(entry(option.p,Vector3(11,11,7),color,5,true))
+			cores.append(entry(option.p,Vector3(extent,extent,4),color,6))
+	# Upload empty lists as well, so defeat, retry and floor changes leave no ghosts.
+	upload("halo_ring",shells)
+	upload("halo_base",bases)
+	upload("halo_core",cores)
 
 func rebuild_floor(game) -> void:
 	var started := Time.get_ticks_usec()
