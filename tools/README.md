@@ -3,7 +3,7 @@
 Run from the project root with Godot 4.7 stable. These tools are excluded from Web exports.
 
 ```powershell
-# All regression tests; audio uses a display, the rest run headless.
+# All regression tests; audio and view-state checks use a display.
 ./tools/test.ps1
 
 # Play a repeatable Lv19 floor. Weapon: 0 scatter, 1 shockwave, 2 lance.
@@ -20,6 +20,8 @@ Godot_console.exe --path . --disable-crash-handler --log-file scenario.log --max
 Measurement mode disables live gameplay input, keeps the player stationary and protected, rotates aim, and fires both weapons whenever ready. Time is replenished. Interactive mode (`frames=0`) uses normal damage, time and controls. These fixtures measure a defined encounter, not maximum load or survival difficulty. Normal19 enters room 1; other rooms retain normal sleeping behavior.
 
 Reports contain engine, CPU, display backend, sample count, CPU-update p95/p99/max, frame-interval p95/p99/max, initial enemies, peak bullets, and a final simulation digest. `--headless` can measure CPU work but cannot capture images or validate rendered frame performance. Fixed-step simulation time is frames/60; wall time can differ. Startup/import is not included; the first update is included. Record GPU, driver, browser and competing workloads separately when comparing hardware.
+
+The read-only `WorldView` and `GameHud` render during the host Game's draw callback. `PlayerInput` shares aim conversion between firing and visualization. Replay input accepts a screen-space `cursor`; an explicit `aim` overrides its derived world direction. The view-state regression checks that drawing combat and menus leaves simulation state and both RNG streams unchanged.
 
 Determinism is scoped to the same engine, fixture, seed, weapon and frame count. This is not cross-version replay. Particle RNG is independent from gameplay RNG; fixtures seed both. Changing particle counts cannot change combat or later floor generation. Map generation and combat still share the gameplay stream. Digests from before this separation are not expected to match new runs.
 

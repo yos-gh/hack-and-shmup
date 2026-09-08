@@ -252,17 +252,6 @@ func deploy_options(game, e: Dictionary, phase: int) -> void:
 		salvos[-1].origin = origin
 		salvos[-1].aim = salvo.aim
 
-func draw_options(game) -> void:
-	for option in options:
-		var charge := 0.0
-		for salvo in salvos:
-			if salvo.get("origin",Vector2.INF) == option.p:
-				charge = maxf(charge,clampf(1.0-salvo.delay/0.7,0.0,1.0))
-		var ink := Color("ffc46b").lerp(Color("fff5e2"),charge)
-		game.draw_circle(option.p,11,Color("263847"))
-		game.draw_arc(option.p,11,0,TAU,16,ink,1.5)
-		var half := 5.0-charge*2.0
-		game.draw_rect(Rect2(option.p-Vector2.ONE*half,Vector2.ONE*half*2),ink)
 
 func summon(game, e: Dictionary) -> void:
 	var adds := 0
@@ -291,12 +280,3 @@ func advance_lasers(game, delta: float) -> void:
 			var nearest := Geometry2D.get_closest_point_to_segment(game.player,beam.a,beam.b)
 			if nearest.distance_to(game.player) < 6.0+game.PLAYER_HIT_RADIUS: game.die()
 	lasers = lasers.filter(func(beam: Dictionary) -> bool: return beam.duration > 0)
-
-func draw_lasers(game) -> void:
-	for beam in lasers:
-		if beam.owner.hp <= 0: continue
-		if beam.warning > 0:
-			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5)
-		else:
-			game.draw_line(beam.a,beam.b,Color(1,0.35,0.25,0.35),12)
-			game.draw_line(beam.a,beam.b,Color("ffe2c9"),4)
