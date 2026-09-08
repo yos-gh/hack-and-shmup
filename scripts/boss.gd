@@ -84,13 +84,12 @@ func build(game) -> void:
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
 			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"pressure_cd":1.1,"orbit_side":1.0,"laser_cd":2.0})
-	game.initial_enemies = game.enemies.duplicate(true)
 	game.boss_max_hp = hp * TURRETS
-	game.floor_start_kills = game.kills
 	game.time_limit = 0.0
 	game.route_seconds = 0.0
 	game.player = game.spawn_point
 	game.build_flow()
+	game.session.floor_snapshot.capture(game)
 	game.restart_attempt()
 
 func remaining(game) -> int:

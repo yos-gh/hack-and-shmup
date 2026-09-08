@@ -29,6 +29,93 @@ window/size/viewport_width=1280
 window/size/viewport_height=800
 window/stretch/mode="canvas_items"
 
+[input]
+
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":65)]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":68)]
+}
+move_up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":87)]
+}
+move_down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":83)]
+}
+fire_primary={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"button_index":1)]
+}
+fire_secondary={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"button_index":2)]
+}
+confirm={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194309), Object(InputEventKey,"keycode":32)]
+}
+back={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194305)]
+}
+cycle_audio={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":77)]
+}
+boss_practice={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":66)]
+}
+retry_attempt={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":82)]
+}
+weapon_previous={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":81), Object(InputEventMouseButton,"button_index":5)]
+}
+weapon_next={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":69), Object(InputEventMouseButton,"button_index":4)]
+}
+compare_view={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194337)]
+}
+select_1={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":49)]
+}
+select_2={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":50)]
+}
+select_3={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":51)]
+}
+practice_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194319)]
+}
+practice_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194321)]
+}
+practice_up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194320)]
+}
+practice_down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":4194322)]
+}
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

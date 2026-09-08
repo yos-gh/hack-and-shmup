@@ -27,17 +27,23 @@ var entrances: Dictionary = {}
 const SHOCK_RADIUS := 165.0
 const LANCE_RANGE := 520.0
 const LANCE_WIDTH := 39.0
-var initial_enemies: Array[Dictionary] = []
+var initial_enemies: Array[Dictionary]:
+	get: return session.floor_snapshot.enemies
+	set(value): session.floor_snapshot.enemies = value
 var effects: Array[Dictionary] = []
 var damage_labels: Array[Dictionary] = []
 var room_shapes: Array[int] = []
-var pending_respawn := false
+var pending_respawn: bool:
+	get: return session.pending_respawn
+	set(value): session.pending_respawn = value
 var death_reason := ""
 var timeout_banner := 0.0
 var time_limit := 0.0
 var time_left := 0.0
 var route_seconds := 0.0
-var floor_start_kills := 0
+var floor_start_kills: int:
+	get: return session.floor_snapshot.kills
+	set(value): session.floor_snapshot.kills = value
 var floor_number := 1
 var deaths := 0
 var kills := 0
@@ -65,19 +71,28 @@ var sub_weapon := 0
 var power := 1.0
 var fire_rate := 1.0
 var move_bonus := 0.0
-var choosing := false
-var paused := false
-var title_screen := true
+var choosing: bool:
+	get: return session.choosing
+	set(value): session.choosing = value
+var paused: bool:
+	get: return session.paused
+	set(value): session.paused = value
+var title_screen: bool:
+	get: return session.title_screen
+	set(value): session.title_screen = value
 var best_cleared := 0
 var hit_flash := 0.0
 var hit_banner := 0.0
-var fire_armed := false
+var fire_armed: bool:
+	get: return session.fire_armed
+	set(value): session.fire_armed = value
 var choices: Array[int] = []
 var banner := 4.0
 var rng := RandomNumberGenerator.new()
 var effects_rng := RandomNumberGenerator.new()
 # Development replay input. Empty uses the normal keyboard and mouse.
 var replay_input: Dictionary = {}
+var session = preload("res://scripts/game_session.gd").new()
 var controls = preload("res://scripts/player_input.gd").new()
 var world_view = preload("res://scripts/world_view.gd").new()
 var hud = preload("res://scripts/game_hud.gd").new()
@@ -203,8 +218,6 @@ func new_floor(boss_choice: int = -1) -> void:
 			enemies.append({"p":center(p), "kind":kind, "hp":enemy_health(kind, floor_number),
 				"room":i, "active":false, "searching":false, "notice":rng.randf_range(0.35,0.85), "turn_speed":rng.randf_range(1.8,3.8),
 				"cd":rng.randf_range(0.25,0.65), "charge":0.0, "stun":0.0, "dir":Vector2.from_angle(rng.randf()*TAU), "push":Vector2.ZERO})
-	initial_enemies = enemies.duplicate(true)
-	floor_start_kills = kills
 	player = spawn_point
 	build_flow()
 	var cursor := tile(stairs)
@@ -215,6 +228,7 @@ func new_floor(boss_choice: int = -1) -> void:
 	# Budget follows the actual navigable shortest route and current movement speed.
 	route_seconds = steps * TILE / (SPEED + move_bonus)
 	time_limit = (route_seconds * 1.35 + 2.0) * 1.5
+	session.floor_snapshot.capture(self)
 	restart_attempt()
 
 func enemy_health(kind: int, depth: int) -> float:
@@ -261,31 +275,7 @@ func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
 	return true
 
 func restart_attempt() -> void:
-	boss.reset()
-	stairs_unlocked = not boss_floor
-	enemies = initial_enemies.duplicate(true)
-	enemy_buckets.clear()
-	patrol_elapsed.clear()
-	simulation_tick = 0
-	bullets.clear()
-	particles.clear()
-	effects.clear()
-	damage_labels.clear()
-	discovered.clear()
-	discovered[0] = true
-	player = spawn_point
-	camera_pos = player
-	kills = floor_start_kills
-	main_cd = 0.0
-	sub_cd = 0.0
-	sub_cd_total = 0.0
-	sound.reset_time_warning()
-	grace = 1.0
-	flow_cd = 0.0
-	pending_respawn = false
-	time_left = time_limit
-	banner = 3.0
-	choosing = false
+	session.restart_attempt(self)
 
 func attack_open(p: Vector2) -> bool:
 	var c := tile(p)
@@ -395,90 +385,13 @@ func audio_button_rect() -> Rect2:
 	return Rect2(get_viewport_rect().size.x-390,22,172,42)
 
 func start_run() -> void:
-	replay_input.clear()
-	practice.active = false
-	practice.selecting = false
-	floor_number = 1
-	kills = 0
-	deaths = 0
-	power = 1.0
-	fire_rate = 1.0
-	move_bonus = 0.0
-	sub_weapon = 0
-	title_screen = false
-	paused = false
-	fire_armed = false
-	timeout_banner = 0
-	hit_banner = 0
-	hit_flash = 0
-	sound.set_paused(false)
-	new_floor()
+	session.start_run(self)
 
 func return_to_title() -> void:
-	practice.active = false
-	practice.selecting = false
-	title_screen = true
-	paused = false
-	choosing = false
-	pending_respawn = false
-	sound.set_paused(false)
-	queue_redraw()
+	session.return_to_title(self)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if view_comparison and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F6:
-		set_depth_view(not depth_enabled)
-		return
-	if practice.selecting:
-		practice.input(self,event)
-		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_M:
-			cycle_audio()
-			return
-		if title_screen:
-			if event.keycode in [KEY_ENTER, KEY_SPACE]: start_run()
-			elif event.keycode == KEY_B: practice.open(self)
-			elif event.keycode == KEY_ESCAPE and not OS.has_feature("web"): get_tree().quit()
-			return
-		if practice.active and event.keycode == KEY_B:
-			practice.open(self)
-			return
-		if practice.active and event.keycode == KEY_R:
-			restart_attempt()
-			return
-		if event.keycode == KEY_ESCAPE:
-			if paused: return_to_title()
-			else: paused = true
-			return
-		if paused: return
-		if event.keycode == KEY_Q: sub_weapon = (sub_weapon + 2) % 3
-		if event.keycode == KEY_E: sub_weapon = (sub_weapon + 1) % 3
-		if choosing and event.keycode >= KEY_1 and event.keycode <= KEY_3:
-			upgrade(event.keycode - KEY_1)
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index in [MOUSE_BUTTON_LEFT,MOUSE_BUTTON_RIGHT]:
-			if title_screen:
-				if audio_button_rect().has_point(event.position):
-					if event.button_index == MOUSE_BUTTON_LEFT: cycle_audio()
-				elif fullscreen_button_rect().has_point(event.position):
-					if event.button_index == MOUSE_BUTTON_LEFT: toggle_fullscreen()
-				else: start_run()
-				return
-			if paused:
-				paused = false
-				fire_armed = false
-				sound.set_paused(false)
-				return
-		if title_screen or paused: return
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP: sub_weapon = (sub_weapon + 1) % 3
-		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN: sub_weapon = (sub_weapon + 2) % 3
-		if choosing and event.button_index == MOUSE_BUTTON_LEFT:
-			var s := get_viewport_rect().size
-			for i in range(3):
-				if upgrade_card_rect(s, i).has_point(event.position):
-					fire_armed = false
-					upgrade(i)
-					return
+	controls.handle_event(self,event)
 
 func upgrade(index: int) -> void:
 	apply_upgrade(choices[index])
@@ -537,16 +450,7 @@ func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: flo
 	burst(e.p, Color("ff647c"), 3)
 
 func die(reason: String = "HIT") -> void:
-	if pending_respawn or (grace > 0 and reason != "TIME UP"): return
-	deaths += 1
-	sound.play_sfx("timeout" if reason == "TIME UP" else "death")
-	if reason == "TIME UP": timeout_banner = 1.0
-	else:
-		hit_flash = 0.25
-		hit_banner = 0.8
-	death_reason = reason
-	pending_respawn = true
-	queue_redraw()
+	session.die(self, reason)
 
 func _physics_process(delta: float) -> void:
 	sound.set_paused(paused)
