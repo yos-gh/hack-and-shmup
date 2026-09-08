@@ -23,11 +23,15 @@ func run() -> void:
 			check(game.walkable(game.player, game.PLAYER_HIT_RADIUS), "fixture starts on walkable ground")
 			check(game.sub_weapon == 1 and game.floor_number == (19 if scenario == "normal19" else 45), "requested equipment and depth")
 			for frame in range(180):
+				if repeat == 1: game.burst(game.player, Color.WHITE, 3)
 				Scenario.input_frame(game, frame)
 				game._physics_process(1.0 / 60.0)
 			var result := Scenario.digest(game)
 			if repeat == 0: expected = result
-			else: check(result == expected, "same seed and input reproduce " + scenario)
+			else: check(result == expected, "extra presentation particles preserve combat in " + scenario)
+			var gameplay_state: int = game.rng.state
+			game.burst(game.player, Color.WHITE, 100)
+			check(game.rng.state == gameplay_state, "particles do not consume gameplay RNG")
 	Scenario.configure(game, "normal19", 1, 0)
 	var first := Scenario.digest(game)
 	Scenario.configure(game, "normal19", 2, 2)

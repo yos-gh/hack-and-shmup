@@ -69,6 +69,7 @@ var fire_armed := false
 var choices: Array[int] = []
 var banner := 4.0
 var rng := RandomNumberGenerator.new()
+var effects_rng := RandomNumberGenerator.new()
 # Development replay input. Empty uses the normal keyboard and mouse.
 var replay_input: Dictionary = {}
 var font := ThemeDB.fallback_font
@@ -83,6 +84,7 @@ func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
 	add_child(sound)
 	rng.randomize()
+	effects_rng.randomize()
 	new_floor()
 
 func tile(p: Vector2) -> Vector2i:
@@ -499,7 +501,7 @@ func emit_shot(p: Vector2, direction: Vector2, speed: float, damage: float, host
 
 func burst(p: Vector2, color: Color, count: int = 8) -> void:
 	for i in range(count):
-		particles.append({"p": p, "v": Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30, 180), "life": 0.35, "color": color})
+		particles.append({"p": p, "v": Vector2.from_angle(effects_rng.randf() * TAU) * effects_rng.randf_range(30, 180), "life": 0.35, "color": color})
 
 func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: float = 180.0) -> void:
 	if e.hp <= 0: return

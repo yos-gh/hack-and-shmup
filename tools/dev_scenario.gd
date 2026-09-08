@@ -6,6 +6,7 @@ static func configure(game, scenario: String, seed_value: int, weapon: int) -> v
 	game.floor_number = 19 if scenario == "normal19" else 45
 	for i in range(game.floor_number - 1): game.apply_upgrade([0, 1, 3, 2][i % 4])
 	game.rng.seed = seed_value
+	game.effects_rng.seed = seed_value ^ 0x5EED
 	game.sub_weapon = weapon
 	game.new_floor(2 if scenario == "halo45" else -1)
 	game.player = game.center(Vector2i(3, 1)) if game.boss_floor else game.entrances[1][0]

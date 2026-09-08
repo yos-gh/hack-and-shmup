@@ -21,7 +21,7 @@ Measurement mode disables live gameplay input, keeps the player stationary and p
 
 Reports contain engine, CPU, display backend, sample count, CPU-update p95/p99/max, frame-interval p95/p99/max, initial enemies, peak bullets, and a final simulation digest. `--headless` can measure CPU work but cannot capture images or validate rendered frame performance. Fixed-step simulation time is frames/60; wall time can differ. Startup/import is not included; the first update is included. Record GPU, driver, browser and competing workloads separately when comparing hardware.
 
-Determinism is scoped to the same engine, fixture, seed, weapon and frame count. This is not cross-version replay. Presentation and gameplay RNG are still shared; their separation is the next migration step.
+Determinism is scoped to the same engine, fixture, seed, weapon and frame count. This is not cross-version replay. Particle RNG is independent from gameplay RNG; fixtures seed both. Changing particle counts cannot change combat or later floor generation. Map generation and combat still share the gameplay stream. Digests from before this separation are not expected to match new runs.
 
 ## Publication
 
