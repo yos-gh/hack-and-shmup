@@ -95,3 +95,7 @@ The workflow retains diagnostic logs on failure as a separate artifact. Local en
 ## Asset provenance verification
 
 Run python tools/audit_assets.py --regenerate-audio to verify the catalog and regenerate audio in an isolated temporary directory; --write explicitly refreshes reviewed inventory changes. Run python tools/test_asset_audit.py for drift and nonmutation checks. See assets/README.md for source locations and the remaining provenance scope. Fixed-commit builds run the auditor when present in that revision.
+
+## Authored docs backup
+
+Run python tools/backup_docs.py --output-dir <directory-outside-docs> to create a unique ZIP and SHA-256 sidecar. It covers authored docs and captures/references, excluding generated builds/validation/ci. Run --verify <zip> to check every member against the embedded manifest. python tools/test_backup_docs.py checks round-trip bytes, exclusions, non-overwrite behavior and invalid destinations/extra members. A same-PC ZIP is not off-device storage; no automatic schedule is created.
