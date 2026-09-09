@@ -1,4 +1,5 @@
 {
   "godot_version": "4.7.stable.official.5b4e0cb0f",
-  "export_preset": "Web"
+  "export_preset": "Web",
+  "windows_preset": "Windows"
 }

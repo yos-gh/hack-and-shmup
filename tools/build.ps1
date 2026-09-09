@@ -1,6 +1,7 @@
 param(
     [string]$Godot = 'C:/Users/ysyki/Godot/Godot_console.exe',
-    [string]$Ref = 'HEAD'
+    [string]$Ref = 'HEAD',
+    [ValidateSet('Web','Windows')][string]$Target = 'Web'
 )
 $ErrorActionPreference = 'Stop'
 $projectPath = Split-Path -Parent $PSScriptRoot
@@ -37,21 +38,40 @@ Invoke-CheckedGodot @('--editor','--import') (Join-Path $buildRoot 'import.log')
 & (Join-Path $sourcePath 'tools/test.ps1') -Godot $enginePath
 $testResults = @(Get-Content -LiteralPath (Join-Path $validationPath 'tests.json') -Raw | ConvertFrom-Json)
 if ($testResults.Count -eq 0 -or @($testResults | Where-Object { -not $_.Passed }).Count -gt 0) { throw 'Regression report is empty or failed' }
-$exportPath = Join-Path $buildRoot 'web'
+$folder = $Target.ToLowerInvariant()
+$preset = $lock.export_preset
+$entryFile = 'game-v2.html'
+if ($Target -eq 'Windows') {
+    if (-not $lock.windows_preset) { throw 'This commit has no Windows preset lock' }
+    $preset = $lock.windows_preset
+    $entryFile = 'hack-and-shmup.exe'
+}
+$exportPath = Join-Path $buildRoot $folder
 New-Item -ItemType Directory -Path $exportPath | Out-Null
-Invoke-CheckedGodot @('--export-release', $lock.export_preset, (Join-Path $exportPath 'game-v2.html')) (Join-Path $buildRoot 'export.log')
+Invoke-CheckedGodot @('--export-release', $preset, (Join-Path $exportPath $entryFile)) (Join-Path $buildRoot 'export.log')
 # Package the commit's landing page along with its freshly built engine files.
-Copy-Item -LiteralPath (Join-Path $sourcePath 'web/index.html') -Destination $exportPath
+if ($Target -eq 'Web') { Copy-Item -LiteralPath (Join-Path $sourcePath 'web/index.html') -Destination $exportPath }
 [ordered]@{ revision = $revision; engine = $version; release = $release } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $exportPath 'build-info.json')
 $required = @('index.html','game-v2.html','game-v2.js','game-v2.wasm','game-v2.pck')
+if ($Target -eq 'Windows') { $required = @('hack-and-shmup.exe','hack-and-shmup.pck','libsentry.windows.release.x86_64.dll','crashpad_handler.exe','crashpad_wer.dll') }
 foreach ($name in $required) {
     $file = Join-Path $exportPath $name
     if (-not (Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -eq 0) { throw "Missing or empty artifact: $name" }
 }
+$startupVerified = $false
+if ($Target -eq 'Windows') {
+    $startupLog = Join-Path $buildRoot 'windows-startup.log'
+    $process = Start-Process -FilePath (Join-Path $exportPath $entryFile) -WorkingDirectory $exportPath -ArgumentList @('--headless','--disable-crash-handler','--log-file',('"' + $startupLog + '"'),'--quit-after','30') -WindowStyle Hidden -PassThru
+    if (-not $process.WaitForExit(30000)) { $process.Kill(); throw 'Exported Windows executable timed out' }
+    $process.Refresh()
+    $startupText = Get-Content -LiteralPath $startupLog -Raw
+    if ($process.ExitCode -ne 0 -or $startupText -match 'SCRIPT ERROR:|ERROR:' -or $startupText -notmatch 'Godot Engine') { throw 'Exported Windows startup failed' }
+    $startupVerified = $true
+}
 $files = @(Get-ChildItem -LiteralPath $exportPath -File -Recurse | Sort-Object FullName | ForEach-Object {
     [ordered]@{ path = [IO.Path]::GetRelativePath($exportPath,$_.FullName).Replace('\','/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
 })
-$package = Join-Path $buildRoot 'web.zip'
+$package = Join-Path $buildRoot ($folder + '.zip')
 Compress-Archive -Path (Join-Path $exportPath '*') -DestinationPath $package
 $manifest = [ordered]@{
     schema = 1; revision = $revision; engine = $version; release = $release
@@ -59,8 +79,8 @@ $manifest = [ordered]@{
     engine_sha256 = (Get-FileHash -LiteralPath $enginePath -Algorithm SHA256).Hash.ToLowerInvariant()
     source_sha256 = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
     package_sha256 = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
-    preset = $lock.export_preset; tests = $testResults; files = $files
-    verification = 'Local import, native regressions and Web export; browser playback and deployment are not verified.'
+    target = $Target; startup_verified = $startupVerified; preset = $preset; tests = $testResults; files = $files
+    verification = 'Local import, native regressions and target export. Windows startup is headless only; interactive playback and deployment are not verified.'
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $buildRoot 'manifest.json')
 Write-Output "PASS: verified commit build $revision"

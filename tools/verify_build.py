@@ -18,10 +18,14 @@ def verify(directory):
     tests = manifest.get('tests', [])
     if not tests or any(t.get('Passed') is not True or t.get('ExitCode') != 0 for t in tests):
         raise ValueError('Build does not contain a passing regression report')
-    for name, field in [('source.zip', 'source_sha256'), ('web.zip', 'package_sha256')]:
+    target = manifest.get('target', 'Web')
+    if target not in ('Web', 'Windows'):
+        raise ValueError('Unsupported target')
+    folder = target.lower()
+    for name, field in [('source.zip', 'source_sha256'), (folder + '.zip', 'package_sha256')]:
         if digest((root / name).read_bytes()) != manifest[field]:
             raise ValueError(f'Hash mismatch: {name}')
-    artifact_root = root / 'web'
+    artifact_root = root / folder
     expected = {}
     for item in manifest['files']:
         name = item['path']
@@ -33,12 +37,16 @@ def verify(directory):
             raise ValueError(f'Artifact mismatch: {name}')
         expected[name] = item
     required = {'index.html', 'game-v2.html', 'game-v2.js', 'game-v2.wasm', 'game-v2.pck'}
+    if target == 'Windows':
+        required = {'hack-and-shmup.exe', 'hack-and-shmup.pck', 'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll'}
+        if manifest.get('startup_verified') is not True:
+            raise ValueError('Windows startup was not verified')
     if not required <= expected.keys():
-        raise ValueError('Missing required Web artifact')
+        raise ValueError('Missing required target artifact')
     actual = {p.relative_to(artifact_root).as_posix() for p in artifact_root.rglob('*') if p.is_file()}
     if actual != expected.keys():
         raise ValueError('Unexpected loose artifact files')
-    with zipfile.ZipFile(root / 'web.zip') as archive:
+    with zipfile.ZipFile(root / (folder + '.zip')) as archive:
         names = [i.filename for i in archive.infolist() if not i.is_dir()]
         if len(names) != len(set(names)) or set(names) != expected.keys():
             raise ValueError('ZIP file list does not match manifest')
