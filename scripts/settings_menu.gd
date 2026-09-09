@@ -172,8 +172,14 @@ func _save() -> void:
 	if storage_path.is_empty():
 		status.text = "Session only / 開発・テスト起動では保存しません"
 		return
+	if not storage_is_persistent():
+		status.text = "Session only: browser storage unavailable / ブラウザー保存が使えないため今回のみ有効です"
+		return
 	var error: Error = game.preferences.save_file(storage_path)
 	status.text = "Saved / 保存しました" if error == OK else "Save failed / 保存失敗: " + error_string(error)
+
+func storage_is_persistent() -> bool:
+	return not OS.has_feature("web") or OS.is_userfs_persistent()
 
 func _reset() -> void:
 	game.preferences.reset()

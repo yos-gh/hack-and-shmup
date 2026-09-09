@@ -1,5 +1,8 @@
 extends SceneTree
 
+class NoStorageMenu extends "res://scripts/settings_menu.gd":
+	func storage_is_persistent() -> bool: return false
+
 var failures := 0
 func _initialize() -> void: call_deferred("run")
 func check(ok: bool, message: String) -> void:
@@ -88,6 +91,13 @@ func run() -> void:
 	check(is_equal_approx(game.preferences.music_volume,0.3) and is_equal_approx(sound.music.volume_db,-10 + linear_to_db(0.3)), "main scene restores and applies saved preferences")
 	current_scene = null
 	DirAccess.remove_absolute(menu.storage_path)
+	var unavailable := NoStorageMenu.new()
+	game.add_child(unavailable)
+	unavailable.setup(game)
+	unavailable.storage_path = menu.storage_path
+	unavailable._save()
+	check(unavailable.status.text.contains("browser storage unavailable") and not FileAccess.file_exists(menu.storage_path), "unavailable browser storage does not report persistent save or write file")
+	unavailable.queue_free()
 	game.queue_free()
 	await process_frame
 	if failures == 0: print("PASS: settings audio levels, mute modes, ducking and combat isolation")

@@ -79,3 +79,5 @@ GameMenus owns Control-based title, pause and upgrade screens using MenuTheme. C
 
 
 Key settings offer individual default restoration with collision checks, distinguish reserved/unsupported/conflicting inputs, and reject modifier chords. InputMap-derived captions drive the remapped controls guide in title/HUD. Individual resets preserve volume and other settings.
+
+On Web, Save checks OS.is_userfs_persistent before claiming a persistent save. Unavailable storage leaves preferences active for the session and displays that limitation. This check does not verify asynchronous IndexedDB completion or browser reload behavior.
