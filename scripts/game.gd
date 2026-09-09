@@ -322,6 +322,18 @@ func return_to_title() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	controls.handle_event(self,event)
 
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_APPLICATION_FOCUS_OUT: return
+	if not is_node_ready(): return
+	fire_armed = false
+	if settings_menu != null and not settings_menu.waiting_action.is_empty():
+		settings_menu.waiting_action = ""
+		settings_menu.status.text = "Rebinding cancelled / フォーカスが外れたため割当を取り消しました"
+	if not title_screen and not choosing:
+		paused = true
+		sound.set_paused(true)
+	queue_redraw()
+
 func upgrade(index: int) -> void:
 	apply_upgrade(choices[index])
 	floor_number += 1
