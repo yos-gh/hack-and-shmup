@@ -91,3 +91,7 @@ On Web, Save checks OS.is_userfs_persistent before claiming a persistent save. U
 A failed target stops the entry point; it never emits the successful artifact output list for a partial run. Local logs remain under `docs/builds/`. Successful workflow artifacts include original source ZIPs and release ZIPs with manifests and regression logs; extract a release ZIP into its target folder beside the manifest/source ZIP to use the standalone verifier. Interactive browser and exported Windows playback remain separate gates.
 
 The workflow retains diagnostic logs on failure as a separate artifact. Local end-to-end validation of ci.ps1 succeeded for commit 698788a on both targets (25 native regressions each, Web 15 files, Windows 6 files and exported headless startup). GitHub runner execution remains unverified.
+
+## Asset provenance verification
+
+Run python tools/audit_assets.py --regenerate-audio to verify the catalog and regenerate audio in an isolated temporary directory; --write explicitly refreshes reviewed inventory changes. Run python tools/test_asset_audit.py for drift and nonmutation checks. See assets/README.md for source locations and the remaining provenance scope. Fixed-commit builds run the auditor when present in that revision.

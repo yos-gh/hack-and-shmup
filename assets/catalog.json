@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "scope": "assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader",
+  "rights_status": "Project-local source identified; this inventory does not assign a license or establish ownership.",
+  "assets": [
+    {
+      "path": "assets/audio/clear.wav",
+      "bytes": 26504,
+      "sha256": "bc898ec9474c8cb9c72507ca525017b27b9b9d07c60e19ac0510ecf4c9b58afe",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 13230
+    },
+    {
+      "path": "assets/audio/death.wav",
+      "bytes": 17684,
+      "sha256": "72692957be94afa1cb786678e5373e905795ed3f8e76e4665d5ca1f2764e0e22",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 8820
+    },
+    {
+      "path": "assets/audio/descent.wav",
+      "bytes": 282284,
+      "sha256": "59b79bd6e798f116726279713a2b40fb1937ab40075d4f83c066bc41802b6662",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 141120
+    },
+    {
+      "path": "assets/audio/kill.wav",
+      "bytes": 3352,
+      "sha256": "b387f8cd44c296c7d3b6cac28d6db6427a4f697d2dc6015b8e63216e43ce2b5f",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 1654
+    },
+    {
+      "path": "assets/audio/lance.wav",
+      "bytes": 8864,
+      "sha256": "4d76c60859fe011da3f581c339c3fc1c5914cc3594d6f5c8c3694085bd47a4c4",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 4410
+    },
+    {
+      "path": "assets/audio/scatter.wav",
+      "bytes": 6218,
+      "sha256": "c57c7a4e8db00d3e43d73f6f2bcb46bb4a16fae55764a64985494d965e9d1959",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 3087
+    },
+    {
+      "path": "assets/audio/shield.wav",
+      "bytes": 4012,
+      "sha256": "5cf0957836ce6cbe63b144037f65d87719169e0fc1a8806b3866bfedd2d5620e",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 1984
+    },
+    {
+      "path": "assets/audio/shock.wav",
+      "bytes": 14156,
+      "sha256": "e1dec38b3ef11555adec8b6d212922200be98f6bbd44f6ab66a8e50c42880322",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 7056
+    },
+    {
+      "path": "assets/audio/shot.wav",
+      "bytes": 2910,
+      "sha256": "0ed7bfa3ad0edddcf369bb7fce4d506d744f1446257cfb60936387945434b3a7",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 1433
+    },
+    {
+      "path": "assets/audio/timeout.wav",
+      "bytes": 28708,
+      "sha256": "f173d62120bcd25573f805d879e4432ca7cc1348616758f691d583b506ba9251",
+      "kind": "generated_audio",
+      "source": "tools/generate_audio.py",
+      "source_sha256": "2b5d0dd9425dd29af2ebc828bb4e74b8546f2cd42fcc16ecc555aaf26fa71156",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 14332
+    },
+    {
+      "path": "assets/audio/warning.wav",
+      "bytes": 7100,
+      "sha256": "8e8b6e7c9c0d4d48ca148a1e51750e65b3b4b59f7ba8284b898ef91ca592f72c",
+      "kind": "generated_audio",
+      "source": "tools/generate_warning.py",
+      "source_sha256": "007dd0650b13b83dafde91cc0f874e2f031fe084523699bce88401734726daf2",
+      "channels": 1,
+      "sample_bytes": 2,
+      "sample_rate": 22050,
+      "frames": 3528
+    },
+    {
+      "path": "assets/definitions/enemy_chaser.tres",
+      "bytes": 251,
+      "sha256": "e927b0f4840353dc16093755449666e6154879932205859f829a369574caf602",
+      "kind": "authored_definition",
+      "source": "assets/definitions/enemy_chaser.tres"
+    },
+    {
+      "path": "assets/definitions/enemy_shield.tres",
+      "bytes": 367,
+      "sha256": "f734e303781edde94cffcff84efde3ca434a3412ee29c216c1491b413174694c",
+      "kind": "authored_definition",
+      "source": "assets/definitions/enemy_shield.tres"
+    },
+    {
+      "path": "assets/definitions/enemy_sniper.tres",
+      "bytes": 302,
+      "sha256": "08e1634fe0a5fd694a49eab77475b8e1a83b7abc5c40902223d85f39d03da383",
+      "kind": "authored_definition",
+      "source": "assets/definitions/enemy_sniper.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_damage.tres",
+      "bytes": 255,
+      "sha256": "3b9382a8d15a952a02e0a3395ed2eaa83c61021546d3e8cb5bcf15cf61a20914",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_damage.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_hybrid.tres",
+      "bytes": 267,
+      "sha256": "0fd8290c360d5b48f5bcb16a60cc5df0873fe627fc995bb99a6e514f363782ee",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_hybrid.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_move.tres",
+      "bytes": 252,
+      "sha256": "9ccaa0978a2666b47ddf53fe8137b238be4f40d815ae576e52520fd25c8bf115",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_move.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_rate.tres",
+      "bytes": 254,
+      "sha256": "a1147ba68539b1d6068423187ac67f94b1de45d63734b9258f290eb591f301e9",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_rate.tres"
+    },
+    {
+      "path": "assets/definitions/weapon_lance.tres",
+      "bytes": 287,
+      "sha256": "66c0239ea4f4d287e99fbe21cdcd2db4e2b473022eaea3433ce667949ac18463",
+      "kind": "authored_definition",
+      "source": "assets/definitions/weapon_lance.tres"
+    },
+    {
+      "path": "assets/definitions/weapon_primary.tres",
+      "bytes": 294,
+      "sha256": "850d4af47700aaa100e5a3cdb083af75ffb83db1f39494130bc563f2c19c561a",
+      "kind": "authored_definition",
+      "source": "assets/definitions/weapon_primary.tres"
+    },
+    {
+      "path": "assets/definitions/weapon_scatter.tres",
+      "bytes": 303,
+      "sha256": "b55b67ebb647cfc1a3b83211fde68e71a1128bbed6d100e33e4139c575c82bd4",
+      "kind": "authored_definition",
+      "source": "assets/definitions/weapon_scatter.tres"
+    },
+    {
+      "path": "assets/definitions/weapon_shock.tres",
+      "bytes": 277,
+      "sha256": "145ba115be71e70d4ec749185ea9d37fe75788202ea227407fd8127ca6f98e99",
+      "kind": "authored_definition",
+      "source": "assets/definitions/weapon_shock.tres"
+    },
+    {
+      "path": "scripts/sniper_iris.gdshader",
+      "bytes": 644,
+      "sha256": "85c4fe0f240445e6ffdc4eaa259bce6807aa593d410c835e1756fba2b3886256",
+      "kind": "authored_shader",
+      "source": "scripts/sniper_iris.gdshader"
+    }
+  ]
+}

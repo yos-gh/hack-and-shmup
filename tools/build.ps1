@@ -16,6 +16,11 @@ $sourceZip = Join-Path $buildRoot 'source.zip'
 if ($LASTEXITCODE -ne 0) { throw 'Cannot archive source commit' }
 $sourcePath = Join-Path $buildRoot 'source'
 Expand-Archive -LiteralPath $sourceZip -DestinationPath $sourcePath
+$assetAudit = Join-Path $sourcePath 'tools/audit_assets.py'
+if (Test-Path -LiteralPath $assetAudit) {
+    & python $assetAudit --regenerate-audio
+    if ($LASTEXITCODE -ne 0) { throw 'Asset inventory or source regeneration failed' }
+}
 $lockPath = Join-Path $sourcePath 'tools/toolchain.json'
 if (-not (Test-Path -LiteralPath $lockPath)) { throw 'This commit has no toolchain lock' }
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
