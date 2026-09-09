@@ -11,7 +11,7 @@ var footer: HBoxContainer
 var sliders: Dictionary = {}
 var waiting_action := ""
 var binding_buttons: Dictionary = {}
-const ACTION_LABELS := {"move_left":"Left / 左へ移動", "move_right":"Right / 右へ移動", "move_up":"Up / 上へ移動", "move_down":"Down / 下へ移動", "fire_primary":"Primary / 主射撃", "fire_secondary":"Secondary / 副射撃", "weapon_previous":"Previous weapon / 前の武器", "weapon_next":"Next weapon / 次の武器"}
+const ACTION_LABELS := {"move_left":"Left", "move_right":"Right", "move_up":"Up", "move_down":"Down", "fire_primary":"Primary", "fire_secondary":"Secondary", "weapon_previous":"Previous weapon", "weapon_next":"Next weapon"}
 
 func setup(host: Node) -> void:
 	game = host
@@ -49,7 +49,7 @@ func setup(host: Node) -> void:
 	footer = HBoxContainer.new()
 	footer.add_theme_constant_override("separation",10)
 	layout.add_child(footer)
-	for entry in [["Save / 保存",_save],["Reset / 初期値",_reset],["Close / 閉じる",close]]:
+	for entry in [["Save",_save],["Reset",_reset],["Close",close]]:
 		var button := Button.new()
 		button.text = entry[0]
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -96,10 +96,10 @@ func _rebuild(focus_action: String = "") -> void:
 		child.queue_free()
 	binding_buttons.clear()
 	sliders.clear()
-	status.text = "Esc: close / 閉じる"
-	_label("SETTINGS / 設定")
-	_label("Changes apply immediately. Save to keep them. / 即時反映・保存で次回も有効")
-	for entry in [["master_volume","Master / 全体"],["music_volume","Music / 音楽"],["effects_volume","Effects / 効果音"]]:
+	status.text = "Esc: close"
+	_label("SETTINGS")
+	_label("Changes apply immediately. Save to keep them.")
+	for entry in [["master_volume","Master"],["music_volume","Music"],["effects_volume","Effects"]]:
 		_label(entry[1])
 		var value_label: Label = body.get_child(body.get_child_count()-1)
 		var caption: String = entry[1]
@@ -117,27 +117,27 @@ func _rebuild(focus_action: String = "") -> void:
 		body.add_child(slider)
 		sliders[property] = slider
 	var flash := CheckButton.new()
-	flash.text = "Reduce death flash / 死亡時の閃光を軽減"
+	flash.text = "Reduce death flash"
 	flash.button_pressed = game.preferences.reduce_flash
 	flash.toggled.connect(func(value: bool): game.preferences.reduce_flash = value; game.queue_redraw())
 	body.add_child(flash)
-	_label("Keys / キー割当 — A-Z, 0-9 (reserved keys excluded). Esc cancels.")
+	_label("Keys — A-Z, 0-9 (reserved keys excluded). Esc cancels.")
 	for action in game.preferences.ACTIONS:
 		var row := HBoxContainer.new()
 		body.add_child(row)
 		var button := Button.new()
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.text = ACTION_LABELS[action] + " : " + game.preferences.binding_caption(action)
-		button.pressed.connect(func(): waiting_action = action; status.text = "Press a new key / キーを押してください (Esc: cancel)")
+		button.pressed.connect(func(): waiting_action = action; status.text = "Press a new key (Esc: cancel)")
 		row.add_child(button)
 		var restore := Button.new()
-		restore.text = "Default / 初期値"
+		restore.text = "Default"
 		restore.disabled = not game.preferences.bindings.has(action)
 		restore.pressed.connect(func():
 			if game.preferences.reset_binding(action):
 				game.apply_preferences()
 				_rebuild(action)
-			else: status.text = "Default key is in use / 初期キーが他の操作で使用されています")
+			else: status.text = "Default key is in use")
 		row.add_child(restore)
 		binding_buttons[action] = button
 	if binding_buttons.has(focus_action): binding_buttons[focus_action].grab_focus()
@@ -148,10 +148,10 @@ func handle_event(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE:
 			if waiting_action.is_empty(): close()
-			else: waiting_action = ""; status.text = "Cancelled / 取り消しました"
+			else: waiting_action = ""; status.text = "Cancelled"
 		elif not waiting_action.is_empty():
 			if event.ctrl_pressed or event.alt_pressed or event.meta_pressed or event.shift_pressed:
-				status.text = "Use a single key / Ctrl・Alt・Shiftなどを離してください"
+				status.text = "Release Ctrl, Alt, Shift and other modifiers; use a single key."
 				return true
 			var problem: String = game.preferences.binding_problem(waiting_action,event.physical_keycode)
 			if game.preferences.set_binding(waiting_action,event.physical_keycode):
@@ -160,7 +160,7 @@ func handle_event(event: InputEvent) -> bool:
 				waiting_action = ""
 				_rebuild(completed_action)
 			else:
-				status.text = {"reserved":"Menu key is reserved / メニュー操作に予約されたキーです", "unsupported":"Use A-Z or 0-9 / 英字・数字の単独キーを指定してください", "collision":"Key already assigned / 他の操作に割り当て済みです"}.get(problem,"Key unavailable / 使用できないキーです")
+				status.text = {"reserved":"Menu key is reserved", "unsupported":"Use A-Z or 0-9", "collision":"Key already assigned"}.get(problem,"Key unavailable")
 	return true
 
 func _input(event: InputEvent) -> void:
@@ -170,13 +170,13 @@ func _input(event: InputEvent) -> void:
 
 func _save() -> void:
 	if storage_path.is_empty():
-		status.text = "Session only / 開発・テスト起動では保存しません"
+		status.text = "Session only: development and test sessions do not save settings"
 		return
 	if not storage_is_persistent():
-		status.text = "Session only: browser storage unavailable / ブラウザー保存が使えないため今回のみ有効です"
+		status.text = "Session only: browser storage unavailable"
 		return
 	var error: Error = game.preferences.save_file(storage_path)
-	status.text = "Saved / 保存しました" if error == OK else "Save failed / 保存失敗: " + error_string(error)
+	status.text = "Saved" if error == OK else "Save failed: " + error_string(error)
 
 func storage_is_persistent() -> bool:
 	return not OS.has_feature("web") or OS.is_userfs_persistent()

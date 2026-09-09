@@ -328,7 +328,7 @@ func _notification(what: int) -> void:
 	fire_armed = false
 	if settings_menu != null and not settings_menu.waiting_action.is_empty():
 		settings_menu.waiting_action = ""
-		settings_menu.status.text = "Rebinding cancelled / フォーカスが外れたため割当を取り消しました"
+		settings_menu.status.text = "Rebinding cancelled: window lost focus"
 	if not title_screen and not choosing:
 		paused = true
 		sound.set_paused(true)

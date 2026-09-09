@@ -73,9 +73,9 @@ func _title(screen: Vector2) -> void:
 	_label(Rect2(24,y-130,screen.x-48,65),"HACK / SHMUP",48,Color("63f5ce"))
 	_label(Rect2(24,y-65,screen.x-48,30),"ENDLESS DESCENT / PROTOTYPE",18,Color("8194aa"))
 	_label(Rect2(24,y-12,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
-	_button(Rect2(screen.x*0.5-190,y+50,380,46),"START / 開始 (Enter)",func():
+	_button(Rect2(screen.x*0.5-190,y+50,380,46),"START (Enter)",func():
 		if game.title_screen and not game.settings_menu.panel.visible: game.start_run(); sync())
-	_button(Rect2(screen.x*0.5-190,y+108,380,42),"BOSS PRACTICE / 練習 (B)",func():
+	_button(Rect2(screen.x*0.5-190,y+108,380,42),"BOSS PRACTICE (B)",func():
 		if game.title_screen: game.practice.open(game); sync())
 	_label(Rect2(24,y+160,screen.x-48,45),"WASD MOVE / MOUSE AIM / Q & E WEAPONS" if game.preferences.bindings.is_empty() else game.preferences.controls_caption(),14,Color("8194aa"))
 	_label(Rect2(24,y+205,screen.x-48,40),"M AUDIO / RECORD LASTS UNTIL YOU QUIT" + (" / ESC QUIT" if not OS.has_feature("web") else ""),14,Color("8194aa"))
@@ -86,18 +86,18 @@ func _title(screen: Vector2) -> void:
 func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 	var y: float = game.menu_origin_y(screen,is_pause)
 	if is_pause:
-		_label(Rect2(24,y-65,screen.x-48,40),"PAUSED / 一時停止",28)
-		_button(Rect2(screen.x*0.5-170,y-10,340,44),"RESUME / 再開",func():
+		_label(Rect2(24,y-65,screen.x-48,40),"PAUSED",28)
+		_button(Rect2(screen.x*0.5-170,y-10,340,44),"RESUME",func():
 			if game.paused and not game.settings_menu.panel.visible:
 				game.paused = false
 				game.fire_armed = false
 				game.sound.set_paused(false)
 				sync())
-		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE / タイトルへ (Esc)",func():
+		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (Esc)",func():
 			if game.paused: game.return_to_title(); sync())
 	else:
-		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED / 強化を選択",24,Color("63f5ce"))
-		_label(Rect2(24,y-115,screen.x-48,35),"CLICK / 1・2・3 / TAB + ENTER",16,Color("8194aa"))
+		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",24,Color("63f5ce"))
+		_label(Rect2(24,y-115,screen.x-48,35),"CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
 		for i in range(3):
 			var rect: Rect2 = game.upgrade_card_rect(screen,i)
 			var definition = Catalog.UPGRADES[game.choices[i]]
@@ -120,10 +120,10 @@ func choose(index: int) -> void:
 
 func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
-	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE / ボス練習",30,Color("63f5ce"))
+	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
 	_label(Rect2(24,y-177,screen.x-48,45),"← / → BOSS   ↑ / ↓ FLOOR   TAB + ENTER",15,Color("8194aa"))
 	for i in range(7):
-		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START / 開始","BACK / 戻る (Esc)"][i-3]
+		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (Esc)"][i-3]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())
 		if i < 3:
 			button.toggle_mode = true
