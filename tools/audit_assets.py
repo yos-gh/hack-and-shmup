@@ -12,8 +12,12 @@ import wave
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / 'assets/catalog.json'
 
+def content(path):
+    data = path.read_bytes()
+    return data.replace(b'\r\n', b'\n') if path.suffix in {'.py', '.tres', '.gdshader'} else data
+
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(content(path)).hexdigest()
 
 def inventory():
     rows = []
@@ -22,7 +26,7 @@ def inventory():
     paths += sorted((ROOT / 'scripts').glob('*.gdshader'))
     for path in paths:
         relative = path.relative_to(ROOT).as_posix()
-        row = {'path': relative, 'bytes': path.stat().st_size, 'sha256': digest(path)}
+        row = {'path': relative, 'bytes': len(content(path)), 'sha256': digest(path)}
         if path.suffix == '.wav':
             source = 'tools/generate_warning.py' if path.stem == 'warning' else 'tools/generate_audio.py'
             row.update(kind='generated_audio', source=source, source_sha256=digest(ROOT / source))
