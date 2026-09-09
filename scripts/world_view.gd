@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 # Read-only 2D presentation. All commands use the host CanvasItem during _draw.
 # Combat coordinates and attack clipping remain owned by the simulation.
 func draw(game, screen: Vector2) -> void:
@@ -72,7 +74,7 @@ func draw(game, screen: Vector2) -> void:
 	var preview_alpha = 0.18 if game.sub_cd <= 0 else 0.06
 	if game.sub_weapon == 0:
 		var fan = PackedVector2Array([game.player])
-		for i in range(25): fan.append(game.attack_end(game.player, preview_aim.rotated((i / 24.0 - 0.5) * 0.9), 320.0))
+		for i in range(25): fan.append(game.attack_end(game.player, preview_aim.rotated((i / 24.0 - 0.5) * Catalog.WEAPONS[0].spread * (Catalog.WEAPONS[0].pellets-1)), Catalog.WEAPONS[0].reach))
 		fan.append(game.player)
 		draw_radial_fill(game, game.player, fan, Color(1,0.75,0.4,preview_alpha * 0.4))
 		game.draw_polyline(fan,Color(1,0.75,0.4,preview_alpha * 2),1)

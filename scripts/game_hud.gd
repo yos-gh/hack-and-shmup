@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 # Presentation only; input and shared hit-region calculations stay on the host.
 func draw(game, screen: Vector2) -> void:
 	game.draw_set_transform(Vector2.ZERO)
@@ -15,7 +17,7 @@ func draw(game, screen: Vector2) -> void:
 	var ready: bool = game.sub_cd <= 0
 	var weapon_ink := Color("63f5ce") if ready else Color("ffb95e")
 	draw_weapon_icon(game, weapon.position+Vector2(15,20), game.sub_weapon, weapon_ink)
-	label_at(game, weapon.position+Vector2(42,20), game.SUB_NAMES[game.sub_weapon], 20 if weapon.size.x >= 250 else 16, weapon_ink)
+	label_at(game, weapon.position+Vector2(42,20), Catalog.WEAPONS[game.sub_weapon].title, 20 if weapon.size.x >= 250 else 16, weapon_ink)
 	label_at(game, weapon.position+Vector2(42,40), "RMB / READY" if ready else "WAIT %.1fs" % game.sub_cd, 12, Color("8194aa"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x,3)),Color("263847"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x*cooldown_fraction(game),3)),weapon_ink)
@@ -68,14 +70,12 @@ func draw(game, screen: Vector2) -> void:
 		else:
 			centered_title_label(game, screen,menu_y - 130, "FLOOR CLEARED / CHOOSE AN UPGRADE", 24, Color("63f5ce"))
 			centered_title_label(game, screen,menu_y - 90, "CLICK A CARD OR PRESS 1 / 2 / 3", 16, Color("8194aa"))
-			var names = ["HEAVY ROUNDS", "OVERCLOCK", "QUICKSTEP", "HUNTER"]
-			var descriptions = ["+35% base weapon damage", "+20% base firing speed", "+20 movement speed", "+20% damage / +10 speed"]
 			for i in range(3):
 				var p = game.upgrade_card_rect(screen, i).position
 				game.draw_rect(Rect2(p,Vector2(290,150)),Color("182735"))
 				game.draw_rect(Rect2(p,Vector2(290,150)),Color("63f5ce"),false,2)
-				label_at(game, p + Vector2(18,32), "0%d / %s" % [i + 1, names[game.choices[i]]], 20)
-				label_at(game, p + Vector2(18,86), descriptions[game.choices[i]], 15, Color("a4b3c6"))
+				label_at(game, p + Vector2(18,32), "0%d / %s" % [i + 1, Catalog.UPGRADES[game.choices[i]].title], 20)
+				label_at(game, p + Vector2(18,86), Catalog.UPGRADES[game.choices[i]].description, 15, Color("a4b3c6"))
 		draw_player_stats(game, screen, menu_y + 155)
 
 func draw_title(game, screen: Vector2) -> void:

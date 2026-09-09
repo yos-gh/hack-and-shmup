@@ -1,5 +1,7 @@
 extends Node2D
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 const Queries = preload("res://scripts/floor_queries.gd")
 
 const TILE := 32.0
@@ -12,7 +14,8 @@ const ENEMY_SHOT_INTERVAL := 1.665
 const ENEMY_BUCKET_SIZE := 64.0
 const BULLET_HIT_RADIUS := 14.0
 const IDLE_UPDATE_PHASES := 6
-const KILL_TIME_BONUS := [0.1, 0.2, 0.3]
+var KILL_TIME_BONUS: Array:
+	get: return Catalog.ENEMIES.map(func(definition): return definition.time_bonus)
 var enemy_buckets: Dictionary = {}
 var patrol_elapsed: Dictionary = {}
 var simulation_tick := 0
@@ -21,14 +24,19 @@ var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
 var audio_mode := 0
-const SUB_NAMES := ["SCATTER", "SHOCKWAVE", "LANCE"]
-const SUB_COOLDOWNS := [1.1, 2.0, 1.7]
+var SUB_NAMES: Array:
+	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
+var SUB_COOLDOWNS: Array:
+	get: return Catalog.WEAPONS.map(func(definition): return definition.cooldown)
 const ENTRY_CLEARANCE := 96.0
 var entrances: Dictionary = {}
 
-const SHOCK_RADIUS := 165.0
-const LANCE_RANGE := 520.0
-const LANCE_WIDTH := 39.0
+var SHOCK_RADIUS: float:
+	get: return Catalog.WEAPONS[1].reach
+var LANCE_RANGE: float:
+	get: return Catalog.WEAPONS[2].reach
+var LANCE_WIDTH: float:
+	get: return Catalog.WEAPONS[2].width
 var initial_enemies: Array[Dictionary]:
 	get: return session.floor_snapshot.enemies
 	set(value): session.floor_snapshot.enemies = value
@@ -114,6 +122,8 @@ var effects_rng := RandomNumberGenerator.new()
 var replay_input: Dictionary = {}
 var floor_generator = preload("res://scripts/floor_generator.gd").new()
 var session = preload("res://scripts/game_session.gd").new()
+var combat_events = preload("res://scripts/combat_events.gd").new()
+var combat_feedback = preload("res://scripts/combat_feedback.gd").new()
 var controls = preload("res://scripts/player_input.gd").new()
 var world_view = preload("res://scripts/world_view.gd").new()
 var hud = preload("res://scripts/game_hud.gd").new()
@@ -128,6 +138,7 @@ var practice = preload("res://scripts/boss_practice.gd").new()
 func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
 	add_child(sound)
+	combat_feedback.bind_to(self)
 	rng.randomize()
 	effects_rng.randomize()
 	new_floor()
@@ -216,16 +227,17 @@ func attack_reaches(origin: Vector2, target: Vector2) -> bool:
 	return attack_end(origin, origin.direction_to(target), origin.distance_to(target)).distance_to(target) < 1.0
 
 func fire_sub(aim: Vector2) -> void:
-	sound.play_sfx(["scatter","shock","lance"][sub_weapon])
-	sub_cd_total = SUB_COOLDOWNS[sub_weapon]
+	var definition = Catalog.WEAPONS[sub_weapon]
+	sound.play_sfx(definition.sound)
+	sub_cd_total = definition.cooldown
 	match sub_weapon:
 		0:
-			for i in range(13): emit_shot(player, aim.rotated((i - 6) * 0.075), 850, power * 2.5, false, 320)
+			for i in range(definition.pellets): emit_shot(player, aim.rotated((i - (definition.pellets-1)*0.5) * definition.spread), definition.speed, power * definition.damage, false, definition.reach)
 			sub_cd = sub_cd_total
 		1:
 			for e in enemies:
 				if e.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, e.p):
-					hurt_enemy(e, power * 3, player.direction_to(e.p), 650.0)
+					hurt_enemy(e, power * definition.damage, player.direction_to(e.p), definition.knockback)
 			bullets = bullets.filter(func(b: Dictionary) -> bool: return not (b.hostile and b.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, b.p)))
 			effects.append({"kind": 0, "p": player, "end": player, "life": 0.4})
 			sub_cd = sub_cd_total
@@ -234,7 +246,7 @@ func fire_sub(aim: Vector2) -> void:
 			for e in enemies:
 				var nearest := Geometry2D.get_closest_point_to_segment(e.p, player, end)
 				if nearest.distance_to(e.p) <= LANCE_WIDTH * 0.5 + 12.5 and attack_reaches(player, e.p):
-					hurt_enemy(e, power * 9, aim, 260.0)
+					hurt_enemy(e, power * definition.damage, aim, definition.knockback)
 			effects.append({"kind": 1, "p": player, "end": end, "life": 0.28})
 			sub_cd = sub_cd_total
 
@@ -332,18 +344,14 @@ func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: flo
 	if e.hp <= 0: return
 	if e.kind != 3: e.push += direction * knockback
 	if e.kind == 2 and direction.dot(e.dir) < -0.35:
-		sound.play_sfx("shield")
-		burst(e.p, Color.SKY_BLUE, 3)
+		combat_events.enemy_hit.emit(e.p,0.0,true,false)
 		return
-	if e.hp <= 0: return
-	var offset := Vector2((damage_labels.size() % 3 - 1) * 13, -18)
-	damage_labels.append({"p": e.p + offset, "damage": damage, "life": 0.65})
-	if damage_labels.size() > 96: damage_labels.pop_front()
 	e.hp -= damage
-	if e.hp <= 0:
-		if not boss_floor and e.kind < 3: time_left += KILL_TIME_BONUS[e.kind]
-		sound.play_sfx("kill")
-	burst(e.p, Color("ff647c"), 3)
+	var killed: bool = e.hp <= 0
+	if killed and not boss_floor and e.kind < 3:
+		time_left += Catalog.ENEMIES[e.kind].time_bonus
+	combat_events.enemy_hit.emit(e.p,damage,false,killed)
+
 
 func die(reason: String = "HIT") -> void:
 	session.die(self, reason)

@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 # Mutable progress for one run; session record and preferences live outside it.
 var floor_number: int = 1
 var deaths: int = 0
@@ -21,8 +23,8 @@ func reset() -> void:
 	choices.clear()
 
 func apply_upgrade(kind: int) -> void:
-	match kind:
-		0: power += 0.35
-		1: fire_rate += 0.2
-		2: move_bonus += 20.0
-		3: power += 0.2; move_bonus += 10.0
+	if kind < 0 or kind >= Catalog.UPGRADES.size(): return
+	var definition = Catalog.UPGRADES[kind]
+	power += definition.power
+	fire_rate += definition.fire_rate
+	move_bonus += definition.move_speed

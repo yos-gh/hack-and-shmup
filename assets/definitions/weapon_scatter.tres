@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+title = "SCATTER"
+sound = "scatter"
+cooldown = 1.1
+damage = 2.5
+reach = 320.0
+pellets = 13
+spread = 0.075
+speed = 850.0

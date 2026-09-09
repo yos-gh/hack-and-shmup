@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 # Shared geometry queries for live Game and standalone FloorData.
 
 static func tile(model, p: Vector2) -> Vector2i:
@@ -35,9 +37,7 @@ static func build_flow(model) -> void:
 				queue.append(n)
 
 static func enemy_health(_model, kind: int, depth: int) -> float:
-	if kind == 2: return 1.0
-	# Preserve floor-one HP and interpolate to the requested floor-15 targets.
-	return lerpf(2.3, 4.0, (depth - 1) / 14.0) if kind == 0 else 1.0 + (depth - 1) / 14.0
+	return Catalog.ENEMIES[kind].health(depth)
 
 static func room_contains(_model, p: Vector2i, r: Rect2i, shape: int) -> bool:
 	var local := p - r.position

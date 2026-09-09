@@ -47,3 +47,9 @@ Existing keyboard bindings now live in `project.godot` InputMap (physical WASD f
 `session_input_test.gd` checks InputMap bindings/remapping, held inputs and echo suppression, pause/resume shot gating, card/practice transitions and 50 retries across normal floors and all three bosses. Audio regression waits by elapsed time rather than uncapped render frames and exits with a failure result instead of hanging on an assertion.
 
 `floor_data_test.gd` builds normal and all boss floors without a game scene, verifies connectivity/entrance safety/time budgets, and checks that settings, caller RNG and independently generated results cannot affect each other.
+
+## Combat definitions
+
+Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy behavior timings and primary fire still have code-owned values pending T13c.
+
+`combat_events_test.gd` checks shield, damage, kill and death notifications, duplicate suppression, and combat parity with the standard feedback listener disconnected. Signals carry values rather than mutable enemy dictionaries.

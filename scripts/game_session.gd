@@ -64,11 +64,7 @@ func return_to_title(game) -> void:
 func die(game, reason: String = "HIT") -> void:
 	if game.pending_respawn or (game.grace > 0 and reason != "TIME UP"): return
 	game.deaths += 1
-	game.sound.play_sfx("timeout" if reason == "TIME UP" else "death")
-	if reason == "TIME UP": game.timeout_banner = 1.0
-	else:
-		game.hit_flash = 0.25
-		game.hit_banner = 0.8
 	game.death_reason = reason
 	game.pending_respawn = true
+	game.combat_events.player_died.emit(reason)
 	game.queue_redraw()
