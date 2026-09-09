@@ -19,6 +19,13 @@ func run() -> void:
 	check(not settings.set_binding("move_right", KEY_W), "default binding collision rejected")
 	check(not settings.set_binding("move_left", KEY_ESCAPE), "escape remains available")
 	check(not settings.set_binding("confirm", KEY_K), "menu controls remain protected")
+	check(settings.binding_problem("move_right",KEY_J) == "collision" and settings.binding_problem("move_right",KEY_M) == "reserved" and settings.binding_problem("move_right",KEY_F12) == "unsupported", "binding diagnostics distinguish causes")
+	var isolated := Settings.new()
+	isolated.music_volume = 0.25
+	isolated.set_binding("move_left",KEY_J)
+	isolated.set_binding("move_right",KEY_A)
+	check(not isolated.reset_binding("move_left") and isolated.bindings.move_left == KEY_J, "individual reset rejects conflict without losing binding")
+	check(isolated.reset_binding("move_right") and isolated.reset_binding("move_left") and isolated.bindings.is_empty() and isolated.music_volume == 0.25, "individual reset preserves other preferences")
 	check(settings.save_file(path) == OK, "first save succeeds")
 	var restored := Settings.new()
 	check(restored.load_file(path) == OK and restored.serialize() == settings.serialize(), "disk round trip preserves settings")
@@ -28,6 +35,7 @@ func run() -> void:
 	copy.bindings.clear()
 	check(settings.bindings.size() == 1, "serialized data is independent")
 	settings.apply_bindings()
+	check(settings.binding_caption("move_left") == "J" and settings.controls_caption().contains("W/J/S/D"), "help follows actual remapped input")
 	var event := InputEventKey.new()
 	event.physical_keycode = KEY_J
 	check(event.is_action("move_left"), "physical remap is applied")

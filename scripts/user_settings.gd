@@ -81,6 +81,34 @@ func set_binding(action: String, physical_key: int) -> bool:
 	bindings = candidate
 	return true
 
+func reset_binding(action: String) -> bool:
+	if action not in ACTIONS: return false
+	var candidate := bindings.duplicate()
+	candidate.erase(action)
+	if not _unique_keys(candidate): return false
+	bindings = candidate
+	return true
+
+func binding_problem(action: String, physical_key: int) -> String:
+	if action not in ACTIONS: return "unsupported"
+	if physical_key in RESERVED_KEYS: return "reserved"
+	if not _valid_key(physical_key): return "unsupported"
+	var candidate := bindings.duplicate()
+	candidate[action] = physical_key
+	return "" if _unique_keys(candidate) else "collision"
+
+func binding_caption(action: String) -> String:
+	var captions: PackedStringArray = []
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey:
+			captions.append(OS.get_keycode_string(event.physical_keycode if event.physical_keycode else event.keycode))
+		elif event is InputEventMouseButton:
+			captions.append({MOUSE_BUTTON_LEFT:"LMB",MOUSE_BUTTON_RIGHT:"RMB",MOUSE_BUTTON_WHEEL_UP:"Wheel Up",MOUSE_BUTTON_WHEEL_DOWN:"Wheel Down"}.get(event.button_index,event.as_text()))
+	return "/".join(captions)
+
+func controls_caption() -> String:
+	return "%s/%s/%s/%s MOVE   %s FIRE   %s SUB   %s / %s SWITCH" % [binding_caption("move_up"),binding_caption("move_left"),binding_caption("move_down"),binding_caption("move_right"),binding_caption("fire_primary"),binding_caption("fire_secondary"),binding_caption("weapon_previous"),binding_caption("weapon_next")]
+
 func apply_bindings() -> void:
 	for action in ACTIONS:
 		InputMap.action_erase_events(action)

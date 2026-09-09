@@ -123,18 +123,25 @@ func _rebuild(focus_action: String = "") -> void:
 	body.add_child(flash)
 	_label("Keys / キー割当 — A-Z, 0-9 (reserved keys excluded). Esc cancels.")
 	for action in game.preferences.ACTIONS:
+		var row := HBoxContainer.new()
+		body.add_child(row)
 		var button := Button.new()
-		button.text = ACTION_LABELS[action] + " : " + _binding_text(action)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.text = ACTION_LABELS[action] + " : " + game.preferences.binding_caption(action)
 		button.pressed.connect(func(): waiting_action = action; status.text = "Press a new key / キーを押してください (Esc: cancel)")
-		body.add_child(button)
+		row.add_child(button)
+		var restore := Button.new()
+		restore.text = "Default / 初期値"
+		restore.disabled = not game.preferences.bindings.has(action)
+		restore.pressed.connect(func():
+			if game.preferences.reset_binding(action):
+				game.apply_preferences()
+				_rebuild(action)
+			else: status.text = "Default key is in use / 初期キーが他の操作で使用されています")
+		row.add_child(restore)
 		binding_buttons[action] = button
 	if binding_buttons.has(focus_action): binding_buttons[focus_action].grab_focus()
 	else: sliders.master_volume.grab_focus()
-
-func _binding_text(action: String) -> String:
-	var captions: PackedStringArray = []
-	for event in InputMap.action_get_events(action): captions.append(event.as_text())
-	return " / ".join(captions)
 
 func handle_event(event: InputEvent) -> bool:
 	if not panel.visible: return false
@@ -143,12 +150,17 @@ func handle_event(event: InputEvent) -> bool:
 			if waiting_action.is_empty(): close()
 			else: waiting_action = ""; status.text = "Cancelled / 取り消しました"
 		elif not waiting_action.is_empty():
+			if event.ctrl_pressed or event.alt_pressed or event.meta_pressed or event.shift_pressed:
+				status.text = "Use a single key / Ctrl・Alt・Shiftなどを離してください"
+				return true
+			var problem: String = game.preferences.binding_problem(waiting_action,event.physical_keycode)
 			if game.preferences.set_binding(waiting_action,event.physical_keycode):
 				game.apply_preferences()
 				var completed_action := waiting_action
 				waiting_action = ""
 				_rebuild(completed_action)
-			else: status.text = "Key unavailable or already assigned / 予約済み・重複したキーです"
+			else:
+				status.text = {"reserved":"Menu key is reserved / メニュー操作に予約されたキーです", "unsupported":"Use A-Z or 0-9 / 英字・数字の単独キーを指定してください", "collision":"Key already assigned / 他の操作に割り当て済みです"}.get(problem,"Key unavailable / 使用できないキーです")
 	return true
 
 func _input(event: InputEvent) -> void:

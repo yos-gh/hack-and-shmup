@@ -77,7 +77,7 @@ func _title(screen: Vector2) -> void:
 		if game.title_screen and not game.settings_menu.panel.visible: game.start_run(); sync())
 	_button(Rect2(screen.x*0.5-190,y+108,380,42),"BOSS PRACTICE / 練習 (B)",func():
 		if game.title_screen: game.practice.open(game); sync())
-	_label(Rect2(24,y+160,screen.x-48,45),"WASD MOVE / MOUSE AIM / Q & E WEAPONS" if game.preferences.bindings.is_empty() else "CUSTOM KEYS ACTIVE / F10 SETTINGS / MOUSE AIM",14,Color("8194aa"))
+	_label(Rect2(24,y+160,screen.x-48,45),"WASD MOVE / MOUSE AIM / Q & E WEAPONS" if game.preferences.bindings.is_empty() else game.preferences.controls_caption(),14,Color("8194aa"))
 	_label(Rect2(24,y+205,screen.x-48,40),"M AUDIO / RECORD LASTS UNTIL YOU QUIT" + (" / ESC QUIT" if not OS.has_feature("web") else ""),14,Color("8194aa"))
 	_button(game.audio_button_rect(),["AUDIO: ALL","AUDIO: SE ONLY","AUDIO: OFF"][game.audio_mode],func(): game.cycle_audio(); sync())
 	var fullscreen := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN,DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]

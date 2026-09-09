@@ -27,6 +27,10 @@ func run() -> void:
 	remap.keycode = KEY_J
 	remap.physical_keycode = KEY_J
 	remap.pressed = true
+	remap.ctrl_pressed = true
+	menu.handle_event(remap)
+	check(not game.preferences.bindings.has("move_left") and menu.waiting_action == "move_left", "modified shortcut is not silently saved as a plain key")
+	remap.ctrl_pressed = false
 	menu.handle_event(remap)
 	check(menu.binding_buttons.move_left.has_focus(), "rebind retains focus on edited action")
 	game.preferences.reset()

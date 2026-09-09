@@ -49,7 +49,7 @@ func draw(game, screen: Vector2) -> void:
 			if i == game.goal_room and game.stairs_unlocked: game.draw_circle(mp+Vector2(game.rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
 	game.draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
 	var help := "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
-	if not game.preferences.bindings.is_empty(): help = "CUSTOM KEYS ACTIVE / SETTINGS IN PAUSE MENU     MOUSE AIM     ESC PAUSE     M AUDIO"
+	if not game.preferences.bindings.is_empty(): help = game.preferences.controls_caption() + "   ESC PAUSE   M AUDIO"
 	label_at(game, Vector2(26,screen.y - 15), help, 13, Color("a4b3c6"))
 	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-15),"PRACTICE / R RETRY / B SELECT",12,Color("63f5ce"))
 	if game.banner > 0:
