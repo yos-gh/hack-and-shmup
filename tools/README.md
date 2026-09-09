@@ -72,3 +72,5 @@ For an x86-64 Windows package, run `./tools/build.ps1 -Target Windows -Ref HEAD`
 
 T15b connects the backend to a scrollable Control/Theme menu (title or pause: button/F10). Levels apply immediately, with explicit Save for persistence. Normal main-scene startup loads preferences; SceneTree-script tests and embedded studies stay session-only. Esc cancels rebinding, then closes settings while preserving pause. Reduced flash suppresses the death overlay only. Master/music/effect gain retains the original audio modes and priority ducking. `settings_effects_test.gd` verifies these state transitions, saved preference application and combat/RNG isolation. Existing drawn menus, Web persistence and interactive audio checks remain separate work.
 
+
+Settings use a fixed action footer and status area, focus-following scroll content, percentage volume labels and a shared MenuTheme. The settings regression also checks footer bounds, focus scrolling and focus retention after remapping.

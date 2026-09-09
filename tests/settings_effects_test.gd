@@ -14,6 +14,23 @@ func run() -> void:
 	var menu = game.settings_menu
 	menu.open()
 	check(menu.panel.visible and game.title_screen, "title settings open without starting run")
+	await process_frame
+	await process_frame
+	check(menu.footer.get_global_rect().end.y <= menu.panel.size.y, "footer stays within viewport")
+	check(menu.footer.position.y >= menu.scroll.position.y + menu.scroll.size.y, "footer stays outside scrolling content")
+	menu.binding_buttons.weapon_next.grab_focus()
+	await process_frame
+	await process_frame
+	check(menu.scroll.scroll_vertical > 0, "keyboard focus reveals lower settings")
+	menu.waiting_action = "move_left"
+	var remap := InputEventKey.new()
+	remap.keycode = KEY_J
+	remap.physical_keycode = KEY_J
+	remap.pressed = true
+	menu.handle_event(remap)
+	check(menu.binding_buttons.move_left.has_focus(), "rebind retains focus on edited action")
+	game.preferences.reset()
+	game.apply_preferences()
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
 	escape.pressed = true

@@ -6,6 +6,9 @@ var panel: PanelContainer
 var launcher: Button
 var status: Label
 var body: VBoxContainer
+var scroll: ScrollContainer
+var footer: HBoxContainer
+var sliders: Dictionary = {}
 var waiting_action := ""
 var binding_buttons: Dictionary = {}
 const ACTION_LABELS := {"move_left":"Left / 左へ移動", "move_right":"Right / 右へ移動", "move_up":"Up / 上へ移動", "move_down":"Down / 下へ移動", "fire_primary":"Primary / 主射撃", "fire_secondary":"Secondary / 副射撃", "weapon_previous":"Previous weapon / 前の武器", "weapon_next":"Next weapon / 次の武器"}
@@ -19,31 +22,38 @@ func setup(host: Node) -> void:
 	launcher.pressed.connect(open)
 	add_child(launcher)
 	panel = PanelContainer.new()
-	var theme := Theme.new()
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color("0b111c")
-	theme.set_stylebox("panel", "PanelContainer", background)
-	for state in ["normal", "hover", "pressed", "focus"]:
-		var box := StyleBoxFlat.new()
-		box.bg_color = Color("263847") if state in ["hover","pressed"] else Color("182735")
-		box.border_color = Color("63f5ce")
-		box.set_border_width_all(1 if state in ["hover","focus"] else 0)
-		box.content_margin_top = 4
-		box.content_margin_bottom = 4
-		theme.set_stylebox(state,"Button",box)
-	panel.theme = theme
+	panel.theme = preload("res://scripts/menu_theme.gd").create()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.visible = false
 	add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left","right","top","bottom"]: margin.add_theme_constant_override("margin_" + side,24)
 	panel.add_child(margin)
-	var scroll := ScrollContainer.new()
-	margin.add_child(scroll)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation",12)
+	margin.add_child(layout)
+	status = Label.new()
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.custom_minimum_size.y = 40
+	layout.add_child(status)
+	scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	layout.add_child(scroll)
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation",10)
 	scroll.add_child(body)
+	footer = HBoxContainer.new()
+	footer.add_theme_constant_override("separation",10)
+	layout.add_child(footer)
+	for entry in [["Save / 保存",_save],["Reset / 初期値",_reset],["Close / 閉じる",close]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.pressed.connect(entry[1])
+		footer.add_child(button)
 	call_deferred("_load_main_preferences")
 
 func _load_main_preferences() -> void:
@@ -74,27 +84,35 @@ func close() -> void:
 func _label(text: String) -> void:
 	var label := Label.new()
 	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(label)
 
-func _rebuild() -> void:
+func _rebuild(focus_action: String = "") -> void:
 	for child in body.get_children():
 		body.remove_child(child)
 		child.queue_free()
 	binding_buttons.clear()
+	sliders.clear()
+	status.text = "Esc: close / 閉じる"
 	_label("SETTINGS / 設定")
 	_label("Changes apply immediately. Save to keep them. / 即時反映・保存で次回も有効")
 	for entry in [["master_volume","Master / 全体"],["music_volume","Music / 音楽"],["effects_volume","Effects / 効果音"]]:
 		_label(entry[1])
+		var value_label: Label = body.get_child(body.get_child_count()-1)
+		var caption: String = entry[1]
 		var slider := HSlider.new()
 		slider.max_value = 1.0
 		slider.step = 0.05
 		slider.value = game.preferences.get(entry[0])
+		value_label.text = caption + "  %d%%" % roundi(slider.value*100)
 		slider.custom_minimum_size.y = 28
 		var property: String = entry[0]
 		slider.value_changed.connect(func(value: float):
+			value_label.text = caption + "  %d%%" % roundi(value*100)
 			game.preferences.set(property,value)
 			game.apply_preferences())
 		body.add_child(slider)
+		sliders[property] = slider
 	var flash := CheckButton.new()
 	flash.text = "Reduce death flash / 死亡時の閃光を軽減"
 	flash.button_pressed = game.preferences.reduce_flash
@@ -107,15 +125,8 @@ func _rebuild() -> void:
 		button.pressed.connect(func(): waiting_action = action; status.text = "Press a new key / キーを押してください (Esc: cancel)")
 		body.add_child(button)
 		binding_buttons[action] = button
-	status = Label.new()
-	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_child(status)
-	for entry in [["Save / 保存",_save],["Reset / 初期値",_reset],["Close / 閉じる (Esc)",close]]:
-		var button := Button.new()
-		button.text = entry[0]
-		button.pressed.connect(entry[1])
-		body.add_child(button)
-	body.get_child(3).grab_focus()
+	if binding_buttons.has(focus_action): binding_buttons[focus_action].grab_focus()
+	else: sliders.master_volume.grab_focus()
 
 func _binding_text(action: String) -> String:
 	var captions: PackedStringArray = []
@@ -131,8 +142,9 @@ func handle_event(event: InputEvent) -> bool:
 		elif not waiting_action.is_empty():
 			if game.preferences.set_binding(waiting_action,event.physical_keycode):
 				game.apply_preferences()
+				var completed_action := waiting_action
 				waiting_action = ""
-				_rebuild()
+				_rebuild(completed_action)
 			else: status.text = "Key unavailable or already assigned / 予約済み・重複したキーです"
 	return true
 
