@@ -51,6 +51,11 @@ func start_run(game) -> void:
 
 
 func return_to_title(game) -> void:
+	game.boss.reset()
+	game.bullets.clear()
+	game.particles.clear()
+	game.effects.clear()
+	game.damage_labels.clear()
 	game.practice.active = false
 	game.practice.selecting = false
 	game.title_screen = true

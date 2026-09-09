@@ -1,5 +1,9 @@
 extends RefCounted
 
+var siege = preload("res://scripts/boss_siege.gd").new()
+var hunter = preload("res://scripts/boss_hunter.gd").new()
+var halo = preload("res://scripts/boss_halo.gd").new()
+
 const TURRETS := 6
 const GUIDED_SPEED := 130.0
 const GUIDED_TURN_RATE := 2.8
@@ -8,18 +12,11 @@ const SUMMON_INTERVAL := 5.5 / 3.0
 
 # Keep dense volleys in lobes, with wide gaps independent of bullet count.
 func fan_angle(index: int, count: int) -> float:
-	if count < 9: return (index-(count-1)*0.5)*0.13
-	var left_count := int(ceil(count*0.5))
-	if index < left_count:
-		return lerpf(-0.85,-0.32,float(index)/maxi(left_count-1,1))
-	return lerpf(0.32,0.85,float(index-left_count)/maxi(count-left_count-1,1))
+	return siege.fan_angle(self,index,count)
 
 func radial_angle(index: int, count: int) -> float:
-	# Four 54-degree clusters separated by persistent 36-degree corridors.
-	var sector := index % 4
-	var local_index := index / 4
-	var local_count := (count-1-sector)/4+1
-	return sector*TAU/4.0 + lerpf(-0.47,0.47,float(local_index)/maxi(local_count-1,1))
+	return halo.radial_angle(self,index,count)
+
 # Indexed by surviving turrets minus one. Per-turret volleys grow, with caps.
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
 const MAX_VOLLEY_COUNTS := [22,16,12,9,6,4]
@@ -103,25 +100,7 @@ func health(game) -> float:
 	return hp
 
 func fire(game, e: Dictionary, toward: Vector2) -> void:
-	var stage := clampi(remaining(game),1,TURRETS)-1
-	var guided: bool = e.shots % 2 == 1
-	var count := roundi(lerpf(VOLLEY_COUNTS[stage],MAX_VOLLEY_COUNTS[stage],tier(game)/8.0))
-	for i in range(count):
-		var offset := fan_angle(i,count)
-		var aim := toward.rotated(offset)
-		game.emit_shot(e.p,aim,GUIDED_SPEED if guided else 190.0,1,true,900)
-		if guided:
-			game.bullets[-1]["homing_time"] = 1.0 if count < 9 else 0.0
-			game.bullets[-1]["turn_rate"] = GUIDED_TURN_RATE
-			game.bullets[-1]["guided"] = true
-			# Prevent homing from collapsing both lobes into the central gap.
-			game.bullets[-1]["homing_offset"] = offset if count >= 9 else 0.0
-	e.shots += 1
-	e.cd = maxf(1.0,SHOT_INTERVALS[stage]/rate_scale(game))
-	if stage <= 2: turret_gap = 0.40
-	if stage == 0 and e.shots % 3 == 0:
-		# A delayed, readable aimed triplet breaks camping without filling the fan.
-		queue_aimed(e,0.45,3,0.11,210.0)
+	siege.fire(self,game,e,toward)
 
 func queue_aimed(e: Dictionary, delay: float, count: int, spacing: float, speed: float) -> void:
 	var offsets := PackedFloat32Array()
@@ -152,78 +131,16 @@ func option_warning(option: Dictionary) -> float:
 	return charge
 
 func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
-	var distance: float = e.p.distance_to(game.player)
-	# Retreat when crowded, approach a distant player, strafe at weapon range.
-	var direction := toward*clampf((distance-260.0)/100.0,-1.4,1.0)
-	direction += toward.orthogonal()*e.orbit_side*0.8
-	var interior := Rect2(Vector2(game.rooms[1].position)*game.TILE,Vector2(game.rooms[1].size)*game.TILE).grow(-65.0)
-	if not interior.has_point(e.p+direction.normalized()*75.0):
-		direction = e.p.direction_to(interior.get_center())*1.5+direction*0.3
-	return direction.normalized()*HUNTER_SPEED
+	return hunter.hunter_velocity(self,game,e,toward)
 
 func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
-	if game.boss_variant == 0:
-		if e.cd <= 0 and turret_gap <= 0: fire(game,e,toward)
-		return Vector2.ZERO
-	if game.boss_variant == 1:
-		e.pressure_cd -= delta
-		if e.pressure_cd <= 0:
-			for i in range(3): queue_aimed(e,0.45+i*0.20,3+2*mini(tier(game)/3,1),0.10,210.0)
-			e.pressure_cd = 0.85+1.4/rate_scale(game)
-		e.summon_cd -= delta
-		if e.summon_cd <= 0:
-			summon(game,e)
-			e.summon_cd = SUMMON_INTERVAL/rate_scale(game)
-		if e.cd <= 0:
-			var count := 1 + mini(tier(game),4)
-			for i in range(count):
-				var aim := toward.rotated((i-(count-1)*0.5)*0.24)
-				add_laser(e.p,game.attack_end(e.p,aim,1100.0),0.8,0.35,e)
-			e.cd = 2.7/rate_scale(game)
-			e.shots += 1
-			e.orbit_side *= -1.0
-		# Hold still while the line is being announced so its safe side is stable.
-		for beam in lasers:
-			if beam.owner == e and beam.warning > 0: return Vector2.ZERO
-		return hunter_velocity(game,e,toward)
-	if e.cd <= 0:
-		fire_halo(game,e,toward)
-		e.shots += 1
-		# Fixed recovery after the sequence; depth adds bullets, not reaction speed.
-		e.cd = 2.5
-	return Vector2.ZERO
+	match game.boss_variant:
+		0: return siege.advance(self,game,e,delta,toward)
+		1: return hunter.advance(self,game,e,delta,toward)
+	return halo.advance(self,game,e,delta,toward)
 
 func fire_halo(game, e: Dictionary, toward: Vector2) -> void:
-	var phase: int = e.shots % 3
-	deploy_options(game,e,phase)
-	if phase == 0:
-		# Re-aim each short fan: small deliberate movement streams the bullets.
-		var opening := salvos.size()
-		for i in range(4+mini(tier(game),2)):
-			queue_aimed(e,i*0.22,3+2*mini(tier(game),2),0.13,190.0)
-		# The opening fan follows the normal core warning; the rest are timed.
-		emit_salvo(game,salvos[opening])
-		salvos.remove_at(opening)
-	elif phase == 1:
-		var count := 12+tier(game)*4
-		var rotation := int(e.shots/3)*0.20
-		for i in range(count):
-			game.emit_shot(e.p,Vector2.from_angle(radial_angle(i,count)+rotation),165.0,1,true,1200)
-		# Static obstacles plus aimed pressure, separated in time and color.
-		queue_aimed(e,0.55,3,0.10,190.0)
-		queue_aimed(e,0.95,3+2*mini(tier(game)/3,2),0.10,190.0)
-	else:
-		# Lock a pincer to the old position; the center stays traversable.
-		for wave in range(3):
-			var offsets := PackedFloat32Array()
-			var count := 3+mini(tier(game),4)
-			for side in [-1,1]:
-				for i in range(count):
-					offsets.append(side*(0.70-wave*0.16)+(i-(count-1)*0.5)*0.045)
-			var salvo := {"owner":e,"delay":wave*0.35,"offsets":offsets,"speed":175.0,"aim":toward}
-			if wave == 0: emit_salvo(game,salvo)
-			else: salvos.append(salvo)
-		queue_aimed(e,1.20,3,0.12,190.0)
+	halo.fire_halo(self,game,e,toward)
 
 func advance_attacks(game, delta: float) -> void:
 	turret_gap = maxf(0.0,turret_gap-delta)
@@ -236,39 +153,10 @@ func advance_attacks(game, delta: float) -> void:
 	advance_lasers(game,delta)
 
 func deploy_options(game, e: Dictionary, phase: int) -> void:
-	# Harmless satellites hold their formation during each firing sequence.
-	options.clear()
-	var count := 3+mini(tier(game)/2,2)
-	var radius := 215.0+mini(tier(game),7)*5.0
-	for i in range(count):
-		var angle := -PI/2+i*TAU/count+phase*0.35+int(e.shots/3)*0.30
-		var origin: Vector2 = e.p+Vector2.from_angle(angle)*radius
-		options.append({"p":origin,"owner":e,"life":2.5})
-		queue_aimed(e,0.45+i*0.28,3+2*mini(tier(game)/3,1),0.18,110.0)
-		var salvo: Dictionary = salvos[-1]
-		salvo.origin = origin
-		if phase == 2: salvo.aim = origin.direction_to(game.player).rotated((i-(count-1)*0.5)*0.18)
-		if origin.distance_to(game.player) < 100: salvo.delay += 0.35
-		# The fast follow-up overtakes the slow fence. Both lock the same aim,
-		# leaving adjacent lanes open instead of tracking every escape movement.
-		salvo.aim = origin.direction_to(game.player) if phase != 2 else salvo.aim
-		queue_aimed(e,salvo.delay+0.55,3,0.18,220.0)
-		salvos[-1].origin = origin
-		salvos[-1].aim = salvo.aim
-
+	halo.deploy_options(self,game,e,phase)
 
 func summon(game, e: Dictionary) -> void:
-	var adds := 0
-	for enemy in game.enemies:
-		if enemy.kind < 3 and enemy.hp > 0: adds += 1
-	var count := mini(2+tier(game),8)
-	for i in range(mini(count,24-adds)):
-		var p: Vector2 = e.p + Vector2.from_angle(TAU*i/count+e.shots)*100
-		if game.cells.get(game.tile(p),-1) != 1 or not game.walkable(p) or p.distance_to(game.player) < 96: continue
-		var kind := i%2
-		pending_summons.append({"p":p,"kind":kind,"hp":game.enemy_health(kind,game.floor_number),"room":1,
-			"active":false,"searching":true,"notice":0.65,"turn_speed":2.4,"cd":0.6,
-			"charge":0.0,"stun":0.0,"dir":Vector2.from_angle(TAU*i/count),"push":Vector2.ZERO})
+	hunter.summon(self,game,e)
 
 func add_laser(a: Vector2, b: Vector2, warning: float, duration: float, owner: Dictionary) -> void:
 	lasers.append({"a":a,"b":b,"warning":warning,"duration":duration,"owner":owner})

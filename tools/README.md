@@ -50,6 +50,6 @@ Existing keyboard bindings now live in `project.godot` InputMap (physical WASD f
 
 ## Combat definitions
 
-Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy behavior timings and primary fire still have code-owned values pending T13c.
+Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy movement, shot/warning timing, shield charge/recovery and primary fire are also authored resources. Boss-specific behavior is separated into siege/hunter/halo classes; the shared Boss owns queued attacks and warnings.
 
 `combat_events_test.gd` checks shield, damage, kill and death notifications, duplicate suppression, and combat parity with the standard feedback listener disconnected. Signals carry values rather than mutable enemy dictionaries.

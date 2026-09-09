@@ -7,3 +7,6 @@ script = ExtResource("1")
 health_one = 1.0
 health_fifteen = 2.0
 time_bonus = 0.2
+bullet_speed = 238.0
+shot_interval = 1.665
+warning_duration = 0.45

@@ -8,9 +8,12 @@ const TILE := 32.0
 const SPEED := 245.0
 const PLAYER_HIT_RADIUS := 5.0
 # Enemy timing stays at floor-one values; only population and HP scale.
-const ENEMY_MOVE_SPEED := 86.0
-const ENEMY_BULLET_SPEED := 238.0
-const ENEMY_SHOT_INTERVAL := 1.665
+var ENEMY_MOVE_SPEED: float:
+	get: return Catalog.ENEMIES[0].move_speed
+var ENEMY_BULLET_SPEED: float:
+	get: return Catalog.ENEMIES[1].bullet_speed
+var ENEMY_SHOT_INTERVAL: float:
+	get: return Catalog.ENEMIES[1].shot_interval
 const ENEMY_BUCKET_SIZE := 64.0
 const BULLET_HIT_RADIUS := 14.0
 const IDLE_UPDATE_PHASES := 6
@@ -200,7 +203,7 @@ func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 	e.dir = Vector2.from_angle(angle)
 	if e.notice <= 0 and absf(angle_difference(angle,target_angle)) < 0.2 and attack_reaches(e.p,player):
 		e.active = true
-		if e.kind in [1,2]: e.cd = maxf(e.cd,0.55)
+		if e.kind in [1,2]: e.cd = maxf(e.cd,Catalog.ENEMIES[e.kind].activation_delay)
 
 func entry_safe(p: Vector2, room_id: int) -> bool:
 	return Queries.entry_safe(self,p,room_id)
@@ -319,18 +322,18 @@ func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 		return Vector2.ZERO
 	if e.charge > 0:
 		e.charge = maxf(0.0, e.charge - delta)
-		var velocity: Vector2 = e.dir * 410
+		var velocity: Vector2 = e.dir * Catalog.ENEMIES[2].charge_speed
 		var hit_wall := not walkable(e.p + velocity * delta)
 		if e.charge <= 0 or hit_wall:
-			if hit_wall: e.cd = 1.2
+			if hit_wall: e.cd = Catalog.ENEMIES[2].wall_recovery
 			e.charge = 0.0
-			e.stun = 1.0
+			e.stun = Catalog.ENEMIES[2].stun_duration
 			return Vector2.ZERO
 		return velocity
 	if e.cd <= 0:
 		e.dir = toward
-		e.charge = 1.8
-		e.cd = 2.7
+		e.charge = Catalog.ENEMIES[2].charge_duration
+		e.cd = Catalog.ENEMIES[2].charge_recovery
 	return Vector2.ZERO
 
 func emit_shot(p: Vector2, direction: Vector2, speed: float, damage: float, hostile: bool, distance: float = 10000.0) -> void:
@@ -394,9 +397,9 @@ func _physics_process(delta: float) -> void:
 	if room_id >= 0: discovered[room_id] = true
 	var aim: Vector2 = controls.aim(self)
 	if fire_armed and primary and main_cd <= 0:
-		emit_shot(player, aim.rotated(rng.randf_range(-0.025, 0.025)), 1050, power, false)
-		sound.play_sfx("shot")
-		main_cd = 0.09 / fire_rate
+		emit_shot(player, aim.rotated(rng.randf_range(-Catalog.PRIMARY.spread, Catalog.PRIMARY.spread)), Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)
+		sound.play_sfx(Catalog.PRIMARY.sound)
+		main_cd = Catalog.PRIMARY.cooldown / fire_rate
 	if fire_armed and secondary and sub_cd <= 0:
 		fire_sub(aim)
 	flow_cd -= delta
@@ -432,7 +435,7 @@ func _physics_process(delta: float) -> void:
 				var target: Vector2 = player if c == tile(player) else center(flow.get(c, c))
 				velocity = (target - e.p).normalized() * ENEMY_MOVE_SPEED
 		elif not e.searching and e.kind != 3:
-			velocity = e.dir * 18
+			velocity = e.dir * Catalog.ENEMIES[e.kind].patrol_speed
 		var next_position := slide(e.p, (velocity + e.push) * enemy_delta)
 		# Unalerted patrols must not drift back into the entrance buffer.
 		if e.active or entry_safe(next_position, e.room): e.p = next_position
@@ -504,7 +507,7 @@ func label_at(p: Vector2, value: String, size: int = 18, color: Color = Color.WH
 func attack_warning(e: Dictionary) -> float:
 	if not e.active or e.charge > 0 or e.get("stun",0.0) > 0 or e.kind == 0: return 0.0
 	if e.kind == 3: return boss.warning(e)
-	var duration := 0.45 if e.kind == 1 else (0.55 if e.kind == 2 else 0.6)
+	var duration: float = Catalog.ENEMIES[e.kind].warning_duration
 	return clampf(1.0-e.cd/duration,0.0,1.0)
 
 func _draw() -> void:
