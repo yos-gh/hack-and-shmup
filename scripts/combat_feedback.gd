@@ -5,6 +5,12 @@ func bind_to(game) -> void:
 	game.combat_events.player_died.connect(player_died.bind(game))
 
 func enemy_hit(position: Vector2, damage: float, blocked: bool, killed: bool, game) -> void:
+	# Brief, local impact marks; bounded independently of weapon effects.
+	var impact_count := 0
+	for effect in game.effects:
+		if effect.kind == 2: impact_count += 1
+	if impact_count < 32:
+		game.effects.append({"kind":2,"p":position,"life":0.10,"blocked":blocked})
 	if blocked:
 		game.sound.play_sfx("shield")
 		game.burst(position,Color.SKY_BLUE,3)

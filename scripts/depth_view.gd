@@ -238,13 +238,13 @@ func sync(game) -> void:
 		var warning: float = game.attack_warning(enemy)
 		if enemy.kind == 1:
 			var facing: Vector2 = (game.player-enemy.p).normalized() if enemy.active else enemy.dir
-			var shell := chaser_entry(enemy.p, facing, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 3)
+			var shell := chaser_entry(enemy.p, facing, Vector3(10.8,10.8,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 3)
 			shell.warning = warning
 			snipers.append(shell)
 		elif enemy.kind == 0:
 			var heading := chaser_heading(game, enemy)
-			chasers.append(chaser_entry(enemy.p, heading, Vector3(10,10,2), Color("582536"), 1))
-			chasers.append(chaser_entry(enemy.p, heading, Vector3(9.6,9.6,5), Color("f3637a"), 3))
+			chasers.append(chaser_entry(enemy.p, heading, Vector3(11,11,2), Color("582536"), 1))
+			chasers.append(chaser_entry(enemy.p, heading, Vector3(10.56,10.56,5), Color("f3637a"), 3))
 		else:
 			var radius: float = 12.0-warning*2.0
 			var color := Color("ad8fff").lerp(Color("fff4dd"), warning)

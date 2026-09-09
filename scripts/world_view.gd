@@ -88,7 +88,19 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
 	for effect in game.effects:
-		if effect.kind == 0:
+		if effect.kind == 2:
+			var fade: float = clampf(effect.life/0.10,0,1)
+			if effect.blocked:
+				# Open brackets distinguish a shield stop from a damaging hit.
+				var ink := Color(0.55,0.82,1.0,fade*0.8)
+				game.draw_arc(effect.p,12,-0.65,0.65,8,ink,2)
+				game.draw_arc(effect.p,12,PI-0.65,PI+0.65,8,ink,2)
+			else:
+				var ink := Color(1.0,0.9,0.76,fade*0.85)
+				for i in range(4):
+					var ray := Vector2.from_angle(PI/4+i*PI/2)
+					game.draw_line(effect.p+ray*6,effect.p+ray*11,ink,2)
+		elif effect.kind == 0:
 			var outline = PackedVector2Array()
 			var progress: float = 1.0 - effect.life / 0.4
 			for i in range(97): outline.append(game.attack_end(effect.p, Vector2.from_angle(i * TAU / 96), game.SHOCK_RADIUS * minf(1, progress * 3)))
