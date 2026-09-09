@@ -37,6 +37,13 @@ class AssetAuditTests(unittest.TestCase):
             source.write('\n# changed generator\n')
         self.assertNotEqual(self.run_audit().returncode, 0)
 
+    def test_git_line_endings_do_not_change_inventory(self):
+        for pattern in ['tools/*.py', 'assets/definitions/*.tres', 'scripts/*.gdshader']:
+            for path in self.root.glob(pattern):
+                path.write_bytes(path.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+        result = self.run_audit()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_new_or_missing_definition_requires_review(self):
         definition = self.root / 'assets/definitions/extra.tres'
         definition.write_text('[gd_resource format=3]\n', encoding='utf-8')

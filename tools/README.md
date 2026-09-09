@@ -99,3 +99,5 @@ Run python tools/audit_assets.py --regenerate-audio to verify the catalog and re
 ## Authored docs backup
 
 Run python tools/backup_docs.py --output-dir <directory-outside-docs> to create a unique ZIP and SHA-256 sidecar. It covers authored docs and captures/references, excluding generated builds/validation/ci. Run --verify <zip> to check every member against the embedded manifest. python tools/test_backup_docs.py checks round-trip bytes, exclusions, non-overwrite behavior and invalid destinations/extra members. A same-PC ZIP is not off-device storage; no automatic schedule is created.
+
+Release builds containing tools/export_notices.gd generate THIRD_PARTY_NOTICES.txt with the running engine's embedded notices and the bundled Sentry license. The manifest marks notices_generated and includes its hash; verify_build.py requires that file when declared. Asset auditing normalizes CRLF to LF for textual sources while preserving binary audio hashes.
