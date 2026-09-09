@@ -29,6 +29,7 @@ var sound: Node
 var audio_mode := 0
 var preferences = preload("res://scripts/user_settings.gd").new()
 var settings_menu: CanvasLayer
+var menus: CanvasLayer
 var SUB_NAMES: Array:
 	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
 var SUB_COOLDOWNS: Array:
@@ -146,6 +147,9 @@ func _ready() -> void:
 	settings_menu = preload("res://scripts/settings_menu.gd").new()
 	add_child(settings_menu)
 	settings_menu.setup(self)
+	menus = preload("res://scripts/game_menus.gd").new()
+	add_child(menus)
+	menus.setup(self)
 	combat_feedback.bind_to(self)
 	rng.randomize()
 	effects_rng.randomize()
@@ -543,7 +547,9 @@ func menu_origin_y(screen: Vector2, is_pause: bool) -> float:
 	return (screen.y - top - 275.0) * 0.5
 
 func upgrade_card_rect(screen: Vector2, index: int) -> Rect2:
-	return Rect2(screen.x / 2 - 450 + index * 310, menu_origin_y(screen, false) - 40, 290, 150)
+	var width := minf(290.0,(screen.x-88.0)/3.0)
+	var total := width*3+40
+	return Rect2((screen.x-total)*0.5+index*(width+20), menu_origin_y(screen, false)-40,width,150)
 
 func player_stats() -> Array[Dictionary]:
 	return [

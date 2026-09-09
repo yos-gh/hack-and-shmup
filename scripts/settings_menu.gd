@@ -23,6 +23,7 @@ func setup(host: Node) -> void:
 	add_child(launcher)
 	panel = PanelContainer.new()
 	panel.theme = preload("res://scripts/menu_theme.gd").create()
+	launcher.theme = panel.theme
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.visible = false
 	add_child(panel)
@@ -72,6 +73,7 @@ func _process(_delta: float) -> void:
 func open() -> void:
 	if not (game.title_screen or game.paused) or game.practice.selecting: return
 	panel.show()
+	launcher.hide()
 	waiting_action = ""
 	_rebuild()
 
@@ -79,6 +81,7 @@ func close() -> void:
 	waiting_action = ""
 	panel.hide()
 	game.fire_armed = false
+	launcher.show()
 	launcher.grab_focus()
 
 func _label(text: String) -> void:
