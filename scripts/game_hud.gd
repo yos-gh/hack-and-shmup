@@ -65,7 +65,7 @@ func draw(game, screen: Vector2) -> void:
 	game.draw_arc(mouse, 8, 0, TAU, 16, Color("63f5ce"), 1)
 
 func draw_title(game, screen: Vector2) -> void:
-	if game.practice.selecting: draw_practice(game,screen)
+	pass # Menu Controls own title and practice presentation.
 
 func draw_player_stats(game, screen: Vector2, y: float) -> void:
 	centered_title_label(game, screen, y, "CURRENT STATS", 15, Color("8194aa"))
@@ -85,23 +85,6 @@ func label_at(game, p: Vector2, value: String, size: int = 18, color: Color = Co
 func centered_title_label(game, screen: Vector2, y: float, value: String, size: int, color: Color = Color.WHITE) -> void:
 	var width = game.font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	label_at(game, Vector2((screen.x - width) * 0.5, y), value, size, color)
-
-func draw_practice(game, screen: Vector2) -> void:
-	game.draw_rect(Rect2(Vector2.ZERO,screen),Color("0b111c"))
-	var y := screen.y*0.5-24
-	game.centered_title_label(screen,y-195,"BOSS PRACTICE",36,Color("63f5ce"))
-	game.centered_title_label(screen,y-157,"LEFT / RIGHT: BOSS     UP / DOWN: FLOOR",15,Color("8194aa"))
-	for i in range(7):
-		var rect = game.practice.button(screen,i)
-		var ink := Color("63f5ce") if i == game.practice.variant or i == 5 else Color("8194aa")
-		game.draw_rect(rect,Color("182735"))
-		game.draw_rect(rect,ink,false,1.5)
-		var caption: String = game.boss.NAMES[i] if i < 3 else ["-","+","ENTER / START","ESC / BACK"][i-3]
-		var width: float = game.font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,18).x
-		game.label_at(Vector2(rect.get_center().x-width/2,rect.get_center().y+6),caption,18,ink)
-	game.centered_title_label(screen,y+42,"FLOOR %02d" % game.practice.depth,25)
-	game.centered_title_label(screen,y+96,"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
-	game.centered_title_label(screen,y+128,"IN GAME: R RETRY / B SELECT / ESC PAUSE",14,Color("8194aa"))
 
 func hud_layout(screen: Vector2) -> Dictionary:
 	var show_map := screen.x >= 900
@@ -125,4 +108,5 @@ func draw_weapon_icon(game, origin: Vector2, weapon: int, ink: Color) -> void:
 		2:
 			game.draw_line(origin-Vector2(13,0),origin+Vector2(13,0),ink,3)
 			game.draw_polyline(PackedVector2Array([origin+Vector2(7,-5),origin+Vector2(14,0),origin+Vector2(7,5)]),ink,2)
+
 

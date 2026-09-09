@@ -75,4 +75,5 @@ T15b connects the backend to a scrollable Control/Theme menu (title or pause: bu
 
 Settings use a fixed action footer and status area, focus-following scroll content, percentage volume labels and a shared MenuTheme. The settings regression also checks footer bounds, focus scrolling and focus retention after remapping.
 
-GameMenus owns Control-based title, pause and upgrade screens using MenuTheme. Card Control rectangles share the pointer helper; resource descriptions wrap within them. Menu refresh preserves focused controls, settings suppresses underlying controls, and guarded card callbacks prevent duplicate transitions. game_menus_test covers these paths, including actual Viewport Enter dispatch. Boss practice selection still uses its previous drawn menu.
+GameMenus owns Control-based title, pause and upgrade screens using MenuTheme. Card Control rectangles share the pointer helper; resource descriptions wrap within them. Menu refresh preserves focused controls, settings suppresses underlying controls, and guarded card callbacks prevent duplicate transitions. game_menus_test covers these paths, including actual Viewport Enter dispatch. Boss practice also uses shared Controls and hit rectangles. Its arrow shortcuts take priority over GUI focus navigation; Tab/Enter activates controls. Tests cover depth bounds and guarded start without record mixing.
+

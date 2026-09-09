@@ -20,11 +20,12 @@ func _process(_delta: float) -> void: sync()
 func sync() -> void:
 	var screen: Vector2 = game.get_viewport_rect().size
 	var state := "title" if game.title_screen else ("pause" if game.paused else ("cards" if game.choosing else ""))
-	if game.practice.selecting or game.settings_menu.panel.visible: state = ""
+	if game.practice.selecting: state = "practice"
+	if game.settings_menu.panel.visible: state = ""
 	if state.is_empty() and signature == [""]: return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	var focus_index := focused.get_index() if focused != null and focused.get_parent() == surface and signature.size() > 1 and signature[1] == state else -1
-	var next: Array = [screen,state,game.audio_mode,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.preferences.bindings.duplicate(),DisplayServer.window_get_mode()]
+	var next: Array = [screen,state,game.audio_mode,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.preferences.bindings.duplicate(),DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth]
 	if state.is_empty(): next = [""]
 	if next == signature: return
 	signature = next
@@ -34,11 +35,12 @@ func sync() -> void:
 	cards.clear()
 	if state.is_empty(): return
 	var background := ColorRect.new()
-	background.color = Color("0b111c") if state == "title" else Color(0.02,0.03,0.06,0.93)
+	background.color = Color("0b111c") if state in ["title","practice"] else Color(0.02,0.03,0.06,0.93)
 	background.size = screen
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	surface.add_child(background)
 	if state == "title": _title(screen)
+	elif state == "practice": _practice(screen)
 	else: _battle_menu(screen,state == "pause")
 	if focus_index >= 0 and focus_index < surface.get_child_count():
 		surface.get_child(focus_index).grab_focus()
@@ -115,3 +117,27 @@ func choose(index: int) -> void:
 	game.fire_armed = false
 	game.upgrade(index)
 	sync()
+
+func _practice(screen: Vector2) -> void:
+	var y := screen.y*0.5-24
+	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE / ボス練習",30,Color("63f5ce"))
+	_label(Rect2(24,y-177,screen.x-48,45),"← / → BOSS   ↑ / ↓ FLOOR   TAB + ENTER",15,Color("8194aa"))
+	for i in range(7):
+		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START / 開始","BACK / 戻る (Esc)"][i-3]
+		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())
+		if i < 3:
+			button.toggle_mode = true
+			button.set_pressed_no_signal(i == game.practice.variant)
+			if i == game.practice.variant: button.add_theme_color_override("font_color",Color("63f5ce"))
+	_label(Rect2(screen.x*0.5-110,y+10,220,48),"FLOOR %02d" % game.practice.depth,25)
+	_label(Rect2(24,y+72,screen.x-48,56),"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
+
+func _input(event: InputEvent) -> void:
+	if not game.practice.selecting or game.settings_menu.panel.visible: return
+	if event is InputEventKey and event.pressed and not event.echo:
+		for action in ["practice_left","practice_right","practice_up","practice_down"]:
+			if event.is_action_pressed(action):
+				game.practice.input(game,event)
+				get_viewport().set_input_as_handled()
+				sync()
+				return

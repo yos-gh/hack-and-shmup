@@ -60,6 +60,30 @@ func run():
 		for i in range(3):
 			var rect: Rect2 = game.upgrade_card_rect(screen,i)
 			check(rect.position.x >= 0 and rect.end.x <= width, "cards fit supported widths")
+	game.practice.open(game)
+	menus.sync()
+	buttons = menus.surface.get_children().filter(func(node): return node is Button)
+	check(buttons.size() == 7, "practice uses seven Control buttons")
+	buttons[2].pressed.emit()
+	check(game.practice.variant == 2, "boss button updates selected variant")
+	menus.sync()
+	buttons = menus.surface.get_children().filter(func(node): return node is Button)
+	buttons[4].grab_focus()
+	var up := InputEventKey.new()
+	up.keycode = KEY_UP
+	up.pressed = true
+	root.push_input(up)
+	check(game.practice.depth == 10, "focused control preserves practice arrow shortcut")
+	game.practice.depth = 100
+	game.practice.activate(game,4)
+	check(game.practice.depth == 100, "practice upper depth bound retained")
+	game.practice.depth = 5
+	game.practice.activate(game,3)
+	check(game.practice.depth == 5, "practice lower depth bound retained")
+	var record: int = game.best_cleared
+	game.practice.activate(game,5)
+	game.practice.activate(game,5)
+	check(game.practice.active and not game.practice.selecting and game.boss_variant == 2 and game.floor_number == 5 and game.best_cleared == record, "practice start is guarded and preserves record")
 	game.queue_free()
 	await process_frame
 	if failures == 0: print("PASS: Control menus, focus, resource cards, single transition and bounds")

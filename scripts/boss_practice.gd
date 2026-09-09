@@ -19,11 +19,22 @@ func start(game) -> void:
 
 func button(screen: Vector2, index: int) -> Rect2:
 	var center := screen*0.5-Vector2(0,24)
-	if index < 3: return Rect2(center+Vector2(-390+index*270,-110),Vector2(240,72))
+	var width := minf(240,(screen.x-96)/3)
+	if index < 3: return Rect2(Vector2((screen.x-width*3-48)*0.5+index*(width+24),center.y-110),Vector2(width,72))
 	if index == 3: return Rect2(center+Vector2(-180,10),Vector2(64,48))
 	if index == 4: return Rect2(center+Vector2(116,10),Vector2(64,48))
 	if index == 5: return Rect2(center+Vector2(-160,142),Vector2(320,52))
 	return Rect2(center+Vector2(-160,214),Vector2(320,40))
+
+func activate(game, index: int) -> void:
+	if not selecting: return
+	if index < 0 or index > 6: return
+	if index < 3: variant = index
+	elif index == 3: depth = maxi(depth-5,5)
+	elif index == 4: depth = mini(depth+5,100)
+	elif index == 5: start(game)
+	else: game.return_to_title()
+	game.queue_redraw()
 
 func input(game, event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -40,10 +51,6 @@ func input(game, event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		for i in range(7):
 			if not button(game.get_viewport_rect().size,i).has_point(event.position): continue
-			if i < 3: variant = i
-			elif i == 3: depth = maxi(depth-5,5)
-			elif i == 4: depth = mini(depth+5,100)
-			elif i == 5: start(game)
-			else: game.return_to_title()
+			activate(game,i)
 			break
 	game.queue_redraw()
