@@ -20,6 +20,13 @@ func click(game, button: int, position: Vector2 = Vector2(640,400)) -> void:
 	event.pressed = true
 	game._unhandled_input(event)
 func run() -> void:
+	var first_run = load("res://scripts/run_state.gd").new()
+	var second_run = load("res://scripts/run_state.gd").new()
+	first_run.apply_upgrade(0)
+	first_run.choices.assign([0,1,2])
+	check(second_run.power == 1.0 and second_run.choices.is_empty(),"separate runs cannot share upgrades or choices")
+	first_run.reset()
+	check(first_run.power == 1.0 and first_run.choices.is_empty(),"run reset clears stale upgrade cards")
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)

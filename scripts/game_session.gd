@@ -1,6 +1,8 @@
 extends RefCounted
 
 # Session flags and transitions; combat remains owned by Game.
+var run = preload("res://scripts/run_state.gd").new()
+var best_cleared := 0
 var floor_snapshot = preload("res://scripts/floor_snapshot.gd").new()
 var title_screen := true
 var paused := false
@@ -37,13 +39,7 @@ func start_run(game) -> void:
 	game.replay_input.clear()
 	game.practice.active = false
 	game.practice.selecting = false
-	game.floor_number = 1
-	game.kills = 0
-	game.deaths = 0
-	game.power = 1.0
-	game.fire_rate = 1.0
-	game.move_bonus = 0.0
-	game.sub_weapon = 0
+	run.reset()
 	game.title_screen = false
 	game.paused = false
 	game.fire_armed = false

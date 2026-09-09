@@ -44,9 +44,15 @@ var route_seconds := 0.0
 var floor_start_kills: int:
 	get: return session.floor_snapshot.kills
 	set(value): session.floor_snapshot.kills = value
-var floor_number := 1
-var deaths := 0
-var kills := 0
+var floor_number: int:
+	get: return session.run.floor_number
+	set(value): session.run.floor_number = value
+var deaths: int:
+	get: return session.run.deaths
+	set(value): session.run.deaths = value
+var kills: int:
+	get: return session.run.kills
+	set(value): session.run.kills = value
 var cells: Dictionary = {}
 var floor_revision := 0
 var depth_view: Node
@@ -67,10 +73,18 @@ var sub_cd := 0.0
 var sub_cd_total := 0.0
 var grace := 0.0
 var flow_cd := 0.0
-var sub_weapon := 0
-var power := 1.0
-var fire_rate := 1.0
-var move_bonus := 0.0
+var sub_weapon: int:
+	get: return session.run.sub_weapon
+	set(value): session.run.sub_weapon = value
+var power: float:
+	get: return session.run.power
+	set(value): session.run.power = value
+var fire_rate: float:
+	get: return session.run.fire_rate
+	set(value): session.run.fire_rate = value
+var move_bonus: float:
+	get: return session.run.move_bonus
+	set(value): session.run.move_bonus = value
 var choosing: bool:
 	get: return session.choosing
 	set(value): session.choosing = value
@@ -80,13 +94,17 @@ var paused: bool:
 var title_screen: bool:
 	get: return session.title_screen
 	set(value): session.title_screen = value
-var best_cleared := 0
+var best_cleared: int:
+	get: return session.best_cleared
+	set(value): session.best_cleared = value
 var hit_flash := 0.0
 var hit_banner := 0.0
 var fire_armed: bool:
 	get: return session.fire_armed
 	set(value): session.fire_armed = value
-var choices: Array[int] = []
+var choices: Array[int]:
+	get: return session.run.choices
+	set(value): session.run.choices = value
 var banner := 4.0
 var rng := RandomNumberGenerator.new()
 var effects_rng := RandomNumberGenerator.new()
@@ -271,11 +289,7 @@ func upgrade(index: int) -> void:
 	new_floor()
 
 func apply_upgrade(kind: int) -> void:
-	match kind:
-		0: power += 0.35
-		1: fire_rate += 0.2
-		2: move_bonus += 20.0
-		3: power += 0.2; move_bonus += 10.0
+	session.run.apply_upgrade(kind)
 
 func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	if e.get("stun", 0.0) > 0:
