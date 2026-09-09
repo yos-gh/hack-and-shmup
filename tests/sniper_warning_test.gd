@@ -41,7 +41,7 @@ func run() -> void:
 		sniper.stun = 0.2 if phase == 4 else 0.0
 		var before: String = Scenario.digest(game)
 		game.depth_view.sync(game)
-		check(is_equal_approx(game.depth_view.batches.ring.get_instance_custom_data(0).r, game.attack_warning(sniper)), "shader receives the shared warning value")
+		check(is_equal_approx(game.depth_view.batches.sniper.get_instance_custom_data(0).r, game.attack_warning(sniper)), "shader receives the shared warning value")
 		await process_frame
 		await process_frame
 		await RenderingServer.frame_post_draw

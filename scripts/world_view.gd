@@ -37,7 +37,6 @@ func draw(game, screen: Vector2) -> void:
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and e.kind < 3:
-			if e.kind == 1: game.draw_circle(p, lerpf(5.0,1.5,warning), Color("342338"))
 			if e.kind == 2:
 				var facing: Vector2 = e.dir
 				var edge: Vector2 = facing.orthogonal()*15

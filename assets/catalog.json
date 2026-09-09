@@ -275,6 +275,13 @@
       "sha256": "85c4fe0f240445e6ffdc4eaa259bce6807aa593d410c835e1756fba2b3886256",
       "kind": "authored_shader",
       "source": "scripts/sniper_iris.gdshader"
+    },
+    {
+      "path": "scripts/triangular_iris.gdshader",
+      "bytes": 258,
+      "sha256": "40b6fcd920753d66ba28bfa49e2f66947b57e4a8a733de9e16059c224d05c877",
+      "kind": "authored_shader",
+      "source": "scripts/triangular_iris.gdshader"
     }
   ]
 }

@@ -45,6 +45,7 @@ func _ready() -> void:
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
 	make_batch("square", beveled_square())
 	make_batch("chaser", chaser_mesh())
+	make_batch("sniper", sniper_mesh())
 	var ring := TorusMesh.new()
 	ring.inner_radius = 5.0/12.0
 	ring.outer_radius = 1.0
@@ -74,14 +75,14 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if key in ["floor", "contact"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
-	if key == "ring":
+	if key in ["ring", "sniper"]:
 		var iris := ShaderMaterial.new()
-		iris.shader = preload("res://scripts/sniper_iris.gdshader")
+		iris.shader = preload("res://scripts/triangular_iris.gdshader") if key == "sniper" else preload("res://scripts/sniper_iris.gdshader")
 		instance.material_override = iris
 	instance.multimesh = MultiMesh.new()
 	instance.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	instance.multimesh.use_colors = true
-	instance.multimesh.use_custom_data = key == "ring"
+	instance.multimesh.use_custom_data = key in ["ring", "sniper"]
 	instance.multimesh.mesh = mesh
 	stage.add_child(instance)
 	batches[key] = instance.multimesh
@@ -112,14 +113,45 @@ func triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, normal: 
 func chaser_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# A forward point and notched tail distinguish heading at small sizes.
-	# Every vertex stays within a unit circle, including after rotation.
-	var rim := [Vector3(1,0,0), Vector3(-0.35,0.93,0), Vector3(-0.65,0,0), Vector3(-0.35,-0.93,0)]
-	var ridge := Vector3(0,0,1)
+	# Full square chassis: the front edge is raised, the rear stays low.
+	var rim := [Vector3(1,1,0), Vector3(-1,1,0), Vector3(-1,-1,0), Vector3(1,-1,0)]
+	var ridge := Vector3(0,0,0.7)
 	for i in range(rim.size()):
 		var a: Vector3 = rim[i]
 		var b: Vector3 = rim[(i+1)%rim.size()]
-		triangle(surface, a, b, ridge, (b-a).cross(ridge-a).normalized())
+		var top_a := Vector3(a.x*0.82,a.y*0.82,1.0 if a.x > 0 else 0.4)
+		var top_b := Vector3(b.x*0.82,b.y*0.82,1.0 if b.x > 0 else 0.4)
+		triangle(surface, top_a, top_b, ridge, Vector3(-0.36,0,1).normalized())
+		var normal := (b-a).cross(top_a-a).normalized()
+		triangle(surface, a, b, top_b, normal)
+		triangle(surface, a, top_b, top_a, normal)
+	return surface.commit()
+
+func sniper_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# UV.x identifies the inner contour. Only that contour closes on charge.
+	for i in range(3):
+		var a := Vector2.from_angle(TAU*i/3.0)
+		var b := Vector2.from_angle(TAU*(i+1)/3.0)
+		var outer_a := Vector3(a.x,a.y,0.6)
+		var outer_b := Vector3(b.x,b.y,0.6)
+		var inner_a := Vector3(a.x*2.0/3.0,a.y*2.0/3.0,0.6)
+		var inner_b := Vector3(b.x*2.0/3.0,b.y*2.0/3.0,0.6)
+		for face in [[outer_a,outer_b,inner_b],[outer_a,inner_b,inner_a]]:
+			for point in [face[0],face[2],face[1]]:
+				surface.set_normal(Vector3.BACK)
+				surface.set_uv(Vector2(1 if Vector2(point.x,point.y).length() < 0.9 else 0,0))
+				surface.add_vertex(point)
+		for contour in [[outer_a,outer_b,0.0],[inner_b,inner_a,1.0]]:
+			var start: Vector3 = contour[0]
+			var end: Vector3 = contour[1]
+			var low_start := Vector3(start.x,start.y,0)
+			var low_end := Vector3(end.x,end.y,0)
+			surface.set_uv(Vector2(contour[2],0))
+			var normal := (low_end-low_start).cross(end-low_start).normalized()
+			triangle(surface, low_start, low_end, end, normal)
+			triangle(surface, low_start, end, start, normal)
 	return surface.commit()
 
 func chaser_heading(game, enemy: Dictionary) -> Vector2:
@@ -177,12 +209,16 @@ func sync(game) -> void:
 	var squares: Array = []
 	var rings: Array = []
 	var chasers: Array = []
+	var snipers: Array = []
 	var bounds := Rect2(game.camera_pos-screen*0.5-Vector2(48,48), screen+Vector2(96,96))
 	for enemy in game.enemies:
 		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
 		if enemy.kind == 1:
-			rings.append(entry(enemy.p, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 7, true, warning))
+			var facing: Vector2 = (game.player-enemy.p).normalized() if enemy.active else enemy.dir
+			var shell := chaser_entry(enemy.p, facing, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 3)
+			shell.warning = warning
+			snipers.append(shell)
 		elif enemy.kind == 0:
 			var heading := chaser_heading(game, enemy)
 			chasers.append(chaser_entry(enemy.p, heading, Vector3(10,10,2), Color("582536"), 1))
@@ -197,6 +233,7 @@ func sync(game) -> void:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 	upload("square", squares)
 	upload("chaser", chasers)
+	upload("sniper", snipers)
 	upload("ring", rings)
 	sync_halo(game)
 	game.queue_redraw()
