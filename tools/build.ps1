@@ -19,6 +19,12 @@ if (-not (Test-Path -LiteralPath $lockPath)) { throw 'This commit has no toolcha
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $version = (& $enginePath --version | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $version -ne $lock.godot_version) { throw "Engine mismatch: expected $($lock.godot_version), got $version" }
+$release = "hack-and-shmup@$revision"
+$projectFile = Join-Path $sourcePath 'project.godot'
+$projectText = Get-Content -LiteralPath $projectFile -Raw
+if ($projectText -notmatch '(?m)^options/release=') { throw 'Missing Sentry release setting' }
+$projectText = $projectText -replace '(?m)^options/release=.*$', ('options/release="' + $release + '"')
+[IO.File]::WriteAllText($projectFile,$projectText)
 $validationPath = Join-Path $sourcePath 'docs/validation'
 New-Item -ItemType Directory -Force -Path $validationPath | Out-Null
 function Invoke-CheckedGodot([string[]]$EngineArguments, [string]$LogFile) {
@@ -36,6 +42,7 @@ New-Item -ItemType Directory -Path $exportPath | Out-Null
 Invoke-CheckedGodot @('--export-release', $lock.export_preset, (Join-Path $exportPath 'game-v2.html')) (Join-Path $buildRoot 'export.log')
 # Package the commit's landing page along with its freshly built engine files.
 Copy-Item -LiteralPath (Join-Path $sourcePath 'web/index.html') -Destination $exportPath
+[ordered]@{ revision = $revision; engine = $version; release = $release } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $exportPath 'build-info.json')
 $required = @('index.html','game-v2.html','game-v2.js','game-v2.wasm','game-v2.pck')
 foreach ($name in $required) {
     $file = Join-Path $exportPath $name
@@ -47,7 +54,8 @@ $files = @(Get-ChildItem -LiteralPath $exportPath -File -Recurse | Sort-Object F
 $package = Join-Path $buildRoot 'web.zip'
 Compress-Archive -Path (Join-Path $exportPath '*') -DestinationPath $package
 $manifest = [ordered]@{
-    schema = 1; revision = $revision; engine = $version
+    schema = 1; revision = $revision; engine = $version; release = $release
+    generated_project_sha256 = (Get-FileHash -LiteralPath $projectFile -Algorithm SHA256).Hash.ToLowerInvariant()
     engine_sha256 = (Get-FileHash -LiteralPath $enginePath -Algorithm SHA256).Hash.ToLowerInvariant()
     source_sha256 = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
     package_sha256 = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
