@@ -28,7 +28,7 @@ A fast-paced, top-down dungeon shooter built with Godot 4.7.
 | M | Cycle all audio, sound effects only, and mute |
 | Esc on the native title screen | Quit |
 
-Subweapons: **Scatter** fires a close-range spread, **Shockwave** pushes enemies back and clears nearby bullets, and **Lance** pierces enemies in a straight line.
+Subweapons: **Scatter** fires a close-range spread, **Shockwave** pushes enemies back and clears nearby bullets, and **Lance** pierces enemies beyond the screen until blocked by terrain or an unopened room. Obstacles stop only the covered portion of its width.
 
 ## Boss practice
 

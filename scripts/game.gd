@@ -2,6 +2,8 @@ extends Node2D
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
 
+const LanceTrace = preload("res://scripts/lance_trace.gd")
+
 const Queries = preload("res://scripts/floor_queries.gd")
 
 const TILE := 32.0
@@ -39,8 +41,6 @@ var entrances: Dictionary = {}
 
 var SHOCK_RADIUS: float:
 	get: return Catalog.WEAPONS[1].reach
-var LANCE_RANGE: float:
-	get: return Catalog.WEAPONS[2].reach
 var LANCE_WIDTH: float:
 	get: return Catalog.WEAPONS[2].width
 var initial_enemies: Array[Dictionary]:
@@ -259,12 +259,12 @@ func fire_sub(aim: Vector2) -> void:
 			effects.append({"kind": 0, "p": player, "end": player, "life": 0.4})
 			sub_cd = sub_cd_total
 		2:
-			var end := attack_end(player, aim, LANCE_RANGE)
+			var direction := aim.normalized()
+			var rays := LanceTrace.lanes(self,player,direction)
 			for e in enemies:
-				var nearest := Geometry2D.get_closest_point_to_segment(e.p, player, end)
-				if nearest.distance_to(e.p) <= LANCE_WIDTH * 0.5 + 12.5 and attack_reaches(player, e.p):
-					hurt_enemy(e, power * definition.damage, aim, definition.knockback)
-			effects.append({"kind": 1, "p": player, "end": end, "life": 0.28})
+				if LanceTrace.hits(self,e,rays,direction):
+					hurt_enemy(e,power*definition.damage,direction,definition.knockback)
+			effects.append({"kind":1,"p":player,"rays":rays,"life":0.28})
 			sub_cd = sub_cd_total
 
 func connect_rooms(a: int, b: int) -> void:

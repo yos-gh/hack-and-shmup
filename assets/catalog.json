@@ -243,8 +243,8 @@
     },
     {
       "path": "assets/definitions/weapon_lance.tres",
-      "bytes": 274,
-      "sha256": "2e14c4530f9724e02ed963c4f4494a81e124e77a5dd7958dc6f5f52d74bdbb37",
+      "bytes": 260,
+      "sha256": "b3b9c1ebdf929ef2d69ffab5a6b8fc1811c0eafd09088371cf7ba7137dcd9760",
       "kind": "authored_definition",
       "source": "assets/definitions/weapon_lance.tres"
     },

@@ -78,10 +78,7 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, fan, Color(1,0.75,0.4,preview_alpha * 0.4))
 		game.draw_polyline(fan,Color(1,0.75,0.4,preview_alpha * 2),1)
 	elif game.sub_weapon == 2:
-		var end = game.attack_end(game.player, preview_aim, game.LANCE_RANGE)
-		game.draw_line(game.player,end,Color(0.78,0.94,1,preview_alpha),game.LANCE_WIDTH)
-		var side = preview_aim.orthogonal()*game.LANCE_WIDTH*0.5
-		game.draw_line(end-side,end+side,Color(0.78,0.94,1,preview_alpha*2),2)
+		draw_lance(game,game.LanceTrace.lanes(game,game.player,preview_aim),preview_alpha,0)
 	if game.sub_weapon == 1:
 		var outline = PackedVector2Array()
 		for i in range(97): outline.append(game.attack_end(game.player, Vector2.from_angle(i * TAU / 96), game.SHOCK_RADIUS))
@@ -113,17 +110,10 @@ func draw(game, screen: Vector2) -> void:
 			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))
 			game.draw_polyline(reach_outline,Color(0.4,1,0.9,arrival*0.65),1.5)
 			game.draw_polyline(outline, Color(0.4, 1, 0.9, effect.life / 0.4), 2)
-		else:
-			var direction: Vector2 = effect.p.direction_to(effect.end)
-			var length: float = effect.p.distance_to(effect.end)
-			var side: Vector2 = direction.orthogonal()*game.LANCE_WIDTH*0.5
+		elif effect.kind == 1:
 			var fade: float = minf(1.0,effect.life/0.09)
 			var core: float = clampf((effect.life-0.16)/0.12,0,1)
-			if length > 1.0:
-				# Flat-ended beam matches the preview width and clipped endpoint.
-				game.draw_line(effect.p,effect.end,Color(0.62,0.86,1,0.28*fade),game.LANCE_WIDTH)
-				game.draw_line(effect.p,effect.end,Color(0.88,0.98,1,0.9*core),3)
-				game.draw_line(effect.end-side,effect.end+side,Color(0.78,0.94,1,0.7*fade),2)
+			draw_lance(game,effect.rays,0.28*fade,core)
 	for p in game.particles: game.draw_rect(Rect2(p.p, Vector2(3,3)), Color(p.color, p.life / 0.35))
 	for entry in game.damage_labels:
 		var number = str(int(round(entry.damage))) if is_equal_approx(entry.damage, round(entry.damage)) else "%.1f" % entry.damage
@@ -138,6 +128,16 @@ func draw(game, screen: Vector2) -> void:
 	if game.grace > 0: game.draw_arc(game.player, 21, 0, TAU, 32, Color("63f5ce"), 1)
 	if not game.boss_floor and game.time_left <= 5.0:
 		game.draw_arc(game.player,29,-PI/2,-PI/2+TAU*clampf(game.time_left/5,0.001,1),48,Color(1,0.28,0.34,0.8),3)
+
+func draw_lance(game, rays: Array, alpha: float, core: float) -> void:
+	for i in range(rays.size()):
+		var ray: Dictionary = rays[i]
+		if ray.p.distance_squared_to(ray.end) < 0.01: continue
+		var side: Vector2 = ray.p.direction_to(ray.end).orthogonal()*ray.width*0.5
+		game.draw_colored_polygon(PackedVector2Array([ray.p-side,ray.end-side,ray.end+side,ray.p+side]),Color(0.62,0.86,1,alpha))
+		game.draw_line(ray.end-side,ray.end+side,Color(0.78,0.94,1,minf(1,alpha*2)),1)
+		if absf(i-(rays.size()-1)*0.5) <= 1 and core > 0:
+			game.draw_line(ray.p,ray.end,Color(0.88,0.98,1,0.9*core),ray.width)
 
 func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color: Color) -> void:
 	for i in range(outline.size() - 1):
