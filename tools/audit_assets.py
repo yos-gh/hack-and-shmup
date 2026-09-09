@@ -14,7 +14,7 @@ CATALOG = ROOT / 'assets/catalog.json'
 
 def content(path):
     data = path.read_bytes()
-    return data.replace(b'\r\n', b'\n') if path.suffix in {'.py', '.tres', '.gdshader'} else data
+    return data.replace(b'\r\n', b'\n') if path.suffix in {'.py', '.tres', '.gdshader', '.js'} else data
 
 def digest(path):
     return hashlib.sha256(content(path)).hexdigest()
@@ -36,8 +36,19 @@ def inventory():
         else:
             row.update(kind='authored_definition' if path.suffix == '.tres' else 'authored_shader', source=relative)
         rows.append(row)
+    dependencies = []
+    for path in sorted([* (ROOT / 'addons/sentry/bin/windows/x86_64').glob('*'), * (ROOT / 'addons/sentry/bin/web').glob('*')]):
+        if path.is_file() and path.suffix in {'.dll', '.exe', '.wasm'}:
+            dependencies.append({'path': path.relative_to(ROOT).as_posix(), 'bytes': path.stat().st_size,
+                                 'sha256': digest(path), 'notice': 'addons/sentry/LICENSE.md'})
+    bundle = ROOT / 'addons/sentry/web/sentry-bundle.js'
+    if bundle.is_file():
+        dependencies.append({'path': bundle.relative_to(ROOT).as_posix(), 'bytes': len(content(bundle)),
+                             'sha256': digest(bundle), 'notice': 'addons/sentry/LICENSE.md'})
     return {'schema': 1, 'scope': 'assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader',
             'rights_status': 'Project-local source identified; this inventory does not assign a license or establish ownership.',
+            'dependency_version_policy': 'Exact bundled bytes are pinned below. Upstream SDK release and transitive notice completeness are not established by these hashes.',
+            'dependencies': dependencies,
             'assets': rows}
 
 def verify_audio():
@@ -78,3 +89,5 @@ if __name__ == '__main__':
     except (OSError, ValueError, subprocess.CalledProcessError, wave.Error) as error:
         print(f'FAIL: {error}', file=sys.stderr)
         sys.exit(1)
+
+

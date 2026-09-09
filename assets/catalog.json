@@ -2,6 +2,63 @@
   "schema": 1,
   "scope": "assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader",
   "rights_status": "Project-local source identified; this inventory does not assign a license or establish ownership.",
+  "dependency_version_policy": "Exact bundled bytes are pinned below. Upstream SDK release and transitive notice completeness are not established by these hashes.",
+  "dependencies": [
+    {
+      "path": "addons/sentry/bin/web/libsentry.web.debug.wasm32.nothreads.wasm",
+      "bytes": 2719498,
+      "sha256": "9a2b2940172b6a9759a008b99a21f8f7710c129d16ff8c28b7f4dc6c29ed8f88",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/web/libsentry.web.debug.wasm32.wasm",
+      "bytes": 2782774,
+      "sha256": "6e5e19850ad5b01635c3871978f9469e7e77d2d58e2f02065b4a84459bdf55f9",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/web/libsentry.web.release.wasm32.nothreads.wasm",
+      "bytes": 2581340,
+      "sha256": "477cd63caa80c76795666bc80853019a7f27da515a2b0aa67d085a4edfab90ed",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/web/libsentry.web.release.wasm32.wasm",
+      "bytes": 2642231,
+      "sha256": "c7a35354e5b4a8f1a6d34b07a3c5844f848cf02a4621f2426771e8d309352039",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/windows/x86_64/crashpad_handler.exe",
+      "bytes": 3070976,
+      "sha256": "90328da95fb91fe0aa5068bea29463323892922e64457311a9a6e30874f427cb",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/windows/x86_64/crashpad_wer.dll",
+      "bytes": 669696,
+      "sha256": "35b936b94743761d762d332f11d09c2a388312a04ba54138610df87b6569d852",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/windows/x86_64/libsentry.windows.debug.x86_64.dll",
+      "bytes": 1804288,
+      "sha256": "c48daaa724e9698c745c6a98dbc47b962862d2490443e57363814eef335640b1",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/bin/windows/x86_64/libsentry.windows.release.x86_64.dll",
+      "bytes": 1463296,
+      "sha256": "291783f7adbf0f81c64bf1d39144adf44124ca58662002181fa983654efc844f",
+      "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "addons/sentry/web/sentry-bundle.js",
+      "bytes": 96347,
+      "sha256": "680193a9a91e537148219ae1fece8909c6f940f0244c99543661d5032fa468bd",
+      "notice": "addons/sentry/LICENSE.md"
+    }
+  ],
   "assets": [
     {
       "path": "assets/audio/clear.wav",

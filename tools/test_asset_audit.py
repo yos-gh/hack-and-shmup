@@ -14,6 +14,9 @@ class AssetAuditTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         shutil.copytree(ROOT / 'assets', self.root / 'assets')
+        shutil.copytree(ROOT / 'addons/sentry/bin', self.root / 'addons/sentry/bin')
+        (self.root / 'addons/sentry/web').mkdir(parents=True)
+        shutil.copy2(ROOT / 'addons/sentry/web/sentry-bundle.js', self.root / 'addons/sentry/web/sentry-bundle.js')
         (self.root / 'tools').mkdir()
         (self.root / 'scripts').mkdir()
         for name in ['audit_assets.py', 'generate_audio.py', 'generate_warning.py']:
@@ -50,6 +53,11 @@ class AssetAuditTests(unittest.TestCase):
         self.assertNotEqual(self.run_audit().returncode, 0)
         definition.unlink()
         (self.root / 'assets/definitions/weapon_primary.tres').unlink()
+        self.assertNotEqual(self.run_audit().returncode, 0)
+
+    def test_changed_dependency_requires_review(self):
+        dependency = self.root / 'addons/sentry/bin/windows/x86_64/crashpad_wer.dll'
+        dependency.write_bytes(dependency.read_bytes() + b'changed')
         self.assertNotEqual(self.run_audit().returncode, 0)
 
 if __name__ == '__main__':
