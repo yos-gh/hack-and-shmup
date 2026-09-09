@@ -102,20 +102,28 @@ func draw(game, screen: Vector2) -> void:
 					game.draw_line(effect.p+ray*6,effect.p+ray*11,ink,2)
 		elif effect.kind == 0:
 			var outline = PackedVector2Array()
+			var reach_outline = PackedVector2Array()
 			var progress: float = 1.0 - effect.life / 0.4
-			for i in range(97): outline.append(game.attack_end(effect.p, Vector2.from_angle(i * TAU / 96), game.SHOCK_RADIUS * minf(1, progress * 3)))
-			draw_radial_fill(game, effect.p, outline, Color(0.3, 1, 0.85, effect.life * 0.4))
-			game.draw_polyline(outline, Color(0.4, 1, 0.9, effect.life / 0.4), 5)
+			for i in range(97):
+				var ray := Vector2.from_angle(i * TAU / 96)
+				outline.append(game.attack_end(effect.p, ray, game.SHOCK_RADIUS * minf(1, progress * 3)))
+				reach_outline.append(game.attack_end(effect.p, ray, game.SHOCK_RADIUS))
+			# Damage is immediate: show the clipped full reach from the first frame.
+			var arrival := maxf(0,1.0-progress/0.45)
+			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))
+			game.draw_polyline(reach_outline,Color(0.4,1,0.9,arrival*0.65),1.5)
+			game.draw_polyline(outline, Color(0.4, 1, 0.9, effect.life / 0.4), 2)
 		else:
 			var direction: Vector2 = effect.p.direction_to(effect.end)
 			var length: float = effect.p.distance_to(effect.end)
-			var tip_size = minf(18.0, length * 0.4)
-			var neck: Vector2 = effect.end - direction * tip_size
-			var side = direction.orthogonal()
-			var ink = Color(0.78, 0.94, 1.0, 0.55 * minf(1.0, effect.life / 0.09))
+			var side: Vector2 = direction.orthogonal()*game.LANCE_WIDTH*0.5
+			var fade: float = minf(1.0,effect.life/0.09)
+			var core: float = clampf((effect.life-0.16)/0.12,0,1)
 			if length > 1.0:
-				game.draw_line(effect.p, neck, ink, game.LANCE_WIDTH)
-				game.draw_colored_polygon(PackedVector2Array([effect.end, neck + side * game.LANCE_WIDTH * 0.65, neck - side * game.LANCE_WIDTH * 0.65]), ink)
+				# Flat-ended beam matches the preview width and clipped endpoint.
+				game.draw_line(effect.p,effect.end,Color(0.62,0.86,1,0.28*fade),game.LANCE_WIDTH)
+				game.draw_line(effect.p,effect.end,Color(0.88,0.98,1,0.9*core),3)
+				game.draw_line(effect.end-side,effect.end+side,Color(0.78,0.94,1,0.7*fade),2)
 	for p in game.particles: game.draw_rect(Rect2(p.p, Vector2(3,3)), Color(p.color, p.life / 0.35))
 	for entry in game.damage_labels:
 		var number = str(int(round(entry.damage))) if is_equal_approx(entry.damage, round(entry.damage)) else "%.1f" % entry.damage
