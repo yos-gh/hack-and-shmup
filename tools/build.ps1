@@ -54,12 +54,18 @@ if ($Target -eq 'Windows') {
 }
 $exportPath = Join-Path $buildRoot $folder
 New-Item -ItemType Directory -Path $exportPath | Out-Null
+$noticesGenerated = $false
+if (Test-Path -LiteralPath (Join-Path $sourcePath 'tools/export_notices.gd')) {
+    Invoke-CheckedGodot @('--script','res://tools/export_notices.gd','--',(Join-Path $exportPath 'THIRD_PARTY_NOTICES.txt')) (Join-Path $buildRoot 'notices.log')
+    $noticesGenerated = $true
+}
 Invoke-CheckedGodot @('--export-release', $preset, (Join-Path $exportPath $entryFile)) (Join-Path $buildRoot 'export.log')
 # Package the commit's landing page along with its freshly built engine files.
 if ($Target -eq 'Web') { Copy-Item -LiteralPath (Join-Path $sourcePath 'web/index.html') -Destination $exportPath }
 [ordered]@{ revision = $revision; engine = $version; release = $release } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $exportPath 'build-info.json')
 $required = @('index.html','game-v2.html','game-v2.js','game-v2.wasm','game-v2.pck')
 if ($Target -eq 'Windows') { $required = @('hack-and-shmup.exe','hack-and-shmup.pck','libsentry.windows.release.x86_64.dll','crashpad_handler.exe','crashpad_wer.dll') }
+if ($noticesGenerated) { $required += 'THIRD_PARTY_NOTICES.txt' }
 foreach ($name in $required) {
     $file = Join-Path $exportPath $name
     if (-not (Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -eq 0) { throw "Missing or empty artifact: $name" }
@@ -85,7 +91,7 @@ $manifest = [ordered]@{
     engine_sha256 = (Get-FileHash -LiteralPath $enginePath -Algorithm SHA256).Hash.ToLowerInvariant()
     source_sha256 = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
     package_sha256 = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
-    target = $Target; startup_verified = $startupVerified; preset = $preset; tests = $testResults; files = $files
+    target = $Target; startup_verified = $startupVerified; notices_generated = $noticesGenerated; preset = $preset; tests = $testResults; files = $files
     verification = 'Local import, native regressions and target export. Windows startup is headless only; interactive playback and deployment are not verified.'
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $buildRoot 'manifest.json')

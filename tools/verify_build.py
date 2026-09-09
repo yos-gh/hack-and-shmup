@@ -41,6 +41,8 @@ def verify(directory):
         required = {'hack-and-shmup.exe', 'hack-and-shmup.pck', 'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll'}
         if manifest.get('startup_verified') is not True:
             raise ValueError('Windows startup was not verified')
+    if manifest.get('notices_generated') is True:
+        required.add('THIRD_PARTY_NOTICES.txt')
     if not required <= expected.keys():
         raise ValueError('Missing required target artifact')
     actual = {p.relative_to(artifact_root).as_posix() for p in artifact_root.rglob('*') if p.is_file()}

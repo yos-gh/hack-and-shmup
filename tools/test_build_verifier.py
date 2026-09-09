@@ -37,6 +37,12 @@ class ManifestTests(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(verify(self.root), 5)
 
+    def test_declared_notices_are_required(self):
+        self.manifest['notices_generated'] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, 'required'):
+            verify(self.root)
+
     def make_windows(self):
         names = ['hack-and-shmup.exe', 'hack-and-shmup.pck',
                  'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll']
