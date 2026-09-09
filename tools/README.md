@@ -53,3 +53,11 @@ Existing keyboard bindings now live in `project.godot` InputMap (physical WASD f
 Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy movement, shot/warning timing, shield charge/recovery and primary fire are also authored resources. Boss-specific behavior is separated into siege/hunter/halo classes; the shared Boss owns queued attacks and warnings.
 
 `combat_events_test.gd` checks shield, damage, kill and death notifications, duplicate suppression, and combat parity with the standard feedback listener disconnected. Signals carry values rather than mutable enemy dictionaries.
+
+## Isolated commit builds
+
+`./tools/build.ps1 -Ref HEAD` archives a committed revision into a new `docs/builds/` directory, checks the exact Godot version from that revision's `tools/toolchain.json`, imports it, runs all native regressions, and exports Web into that isolated directory. Uncommitted working-tree changes are intentionally excluded. The selected commit must contain the toolchain lock and test tools. The current Windows runner needs an available graphics/audio device.
+
+The source ZIP is the original commit archive. The isolated project receives a derived Sentry release (`hack-and-shmup@<commit>`); the manifest records its project-file hash, engine binary hash, original source hash, regression results, package hash and each Web file's SHA-256. `web/build-info.json` identifies the build. No push or publication occurs, and tracked `web/` is not overwritten. This is a traceable fixed-source build, not a claim of byte-identical ZIPs across machines.
+
+Run `python tools/verify_build.py <build-directory>` to check loose files, source/package hashes and the ZIP file list/contents without extracting it. Run `python tools/test_build_verifier.py` for six verifier checks. Browser playback, Windows export, CI and deployed hash comparison remain separate work. The Sentry regression checks only local binding/configuration; it does not submit a verification message.
