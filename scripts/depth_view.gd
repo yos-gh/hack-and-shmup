@@ -44,6 +44,7 @@ func _ready() -> void:
 	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
 	make_batch("square", beveled_square())
+	make_batch("chaser", chaser_mesh())
 	var ring := TorusMesh.new()
 	ring.inner_radius = 5.0/12.0
 	ring.outer_radius = 1.0
@@ -108,6 +109,31 @@ func triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, normal: 
 		surface.set_normal(normal)
 		surface.add_vertex(point)
 
+func chaser_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# A forward point and notched tail distinguish heading at small sizes.
+	# Every vertex stays within a unit circle, including after rotation.
+	var rim := [Vector3(1,0,0), Vector3(-0.35,0.93,0), Vector3(-0.65,0,0), Vector3(-0.35,-0.93,0)]
+	var ridge := Vector3(0,0,1)
+	for i in range(rim.size()):
+		var a: Vector3 = rim[i]
+		var b: Vector3 = rim[(i+1)%rim.size()]
+		triangle(surface, a, b, ridge, (b-a).cross(ridge-a).normalized())
+	return surface.commit()
+
+func chaser_heading(game, enemy: Dictionary) -> Vector2:
+	if not enemy.active: return enemy.dir
+	var cell: Vector2i = game.tile(enemy.p)
+	var target: Vector2 = game.player if cell == game.tile(game.player) else game.center(game.flow.get(cell, cell))
+	var direction: Vector2 = target-enemy.p
+	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
+
+func chaser_entry(point: Vector2, heading: Vector2, scale_value: Vector3, color: Color, height: float) -> Dictionary:
+	var value := entry(point, scale_value, color, height)
+	value.transform.basis = Basis(Vector3.BACK, -heading.angle()).scaled(scale_value)
+	return value
+
 func project_point(point: Vector2, height: float = 0.0) -> Vector3:
 	return Vector3(point.x, -point.y, height)
 
@@ -150,21 +176,27 @@ func sync(game) -> void:
 		cached_discovery = discovery
 	var squares: Array = []
 	var rings: Array = []
+	var chasers: Array = []
 	var bounds := Rect2(game.camera_pos-screen*0.5-Vector2(48,48), screen+Vector2(96,96))
 	for enemy in game.enemies:
 		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
 		if enemy.kind == 1:
 			rings.append(entry(enemy.p, Vector3(12,12,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 7, true, warning))
+		elif enemy.kind == 0:
+			var heading := chaser_heading(game, enemy)
+			chasers.append(chaser_entry(enemy.p, heading, Vector3(10,10,2), Color("582536"), 1))
+			chasers.append(chaser_entry(enemy.p, heading, Vector3(9.6,9.6,5), Color("f3637a"), 3))
 		else:
-			var radius: float = 10.0 if enemy.kind == 0 else 12.0-warning*2.0
-			var color := Color("f3637a") if enemy.kind == 0 else Color("ad8fff").lerp(Color("fff4dd"), warning)
+			var radius: float = 12.0-warning*2.0
+			var color := Color("ad8fff").lerp(Color("fff4dd"), warning)
 			# A quiet chassis and raised inset plate retain the original footprint.
 			squares.append(entry(enemy.p, Vector3(radius,radius,2), color.darkened(0.65), 1))
 			squares.append(entry(enemy.p, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 	upload("square", squares)
+	upload("chaser", chasers)
 	upload("ring", rings)
 	sync_halo(game)
 	game.queue_redraw()
