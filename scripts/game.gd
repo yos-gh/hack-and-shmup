@@ -27,6 +27,8 @@ var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
 var audio_mode := 0
+var preferences = preload("res://scripts/user_settings.gd").new()
+var settings_menu: CanvasLayer
 var SUB_NAMES: Array:
 	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
 var SUB_COOLDOWNS: Array:
@@ -141,6 +143,9 @@ var practice = preload("res://scripts/boss_practice.gd").new()
 func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
 	add_child(sound)
+	settings_menu = preload("res://scripts/settings_menu.gd").new()
+	add_child(settings_menu)
+	settings_menu.setup(self)
 	combat_feedback.bind_to(self)
 	rng.randomize()
 	effects_rng.randomize()
@@ -148,6 +153,11 @@ func _ready() -> void:
 
 func tile(p: Vector2) -> Vector2i:
 	return Queries.tile(self,p)
+
+func apply_preferences() -> void:
+	preferences.apply_bindings()
+	sound.set_levels(preferences.master_volume, preferences.music_volume, preferences.effects_volume)
+	queue_redraw()
 
 func center(p: Vector2i) -> Vector2:
 	return Queries.center(self,p)

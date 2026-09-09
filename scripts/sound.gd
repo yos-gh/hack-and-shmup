@@ -8,6 +8,10 @@ var headless := false
 var paused_state := false
 var warning_step := 6
 var critical_priority := 0
+var master_gain := 1.0
+var music_gain := 1.0
+var effects_gain := 1.0
+var voice_levels: Array[float] = []
 const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
@@ -28,6 +32,7 @@ func _ready() -> void:
 		add_child(voice)
 		voice.volume_db = -5
 		voices.append(voice)
+		voice_levels.append(-5.0)
 	if not headless: music.play()
 
 func play_sfx(key: String) -> void:
@@ -37,13 +42,13 @@ func play_sfx(key: String) -> void:
 		if voices[0].playing and priority < critical_priority: return
 		critical_priority = priority
 		for voice in voices: voice.stop()
-		voices[0].volume_db = -5
+		_set_voice_level(0, -5)
 		voices[0].stream = clips[key]
 		voices[0].play()
 		return
 	if key == "warning":
 		if voices[0].playing: return
-		voices[1].volume_db = -5
+		_set_voice_level(1, -5)
 		voices[1].stream = clips[key]
 		voices[1].play()
 		return
@@ -51,7 +56,7 @@ func play_sfx(key: String) -> void:
 	for i in range(2,voices.size()):
 		var voice := voices[i]
 		if not voice.playing:
-			voice.volume_db = -11 if voices[0].playing else -5
+			_set_voice_level(i, -11 if voices[0].playing else -5)
 			voice.stream = clips[key]
 			voice.play()
 			return
@@ -76,6 +81,23 @@ func set_paused(value: bool) -> void:
 
 func set_audio_mode(value: int) -> void:
 	audio_mode = posmod(value,3)
-	music.volume_db = -10 if audio_mode == 0 else -80
+	_refresh_music_level()
 	if audio_mode == 2:
 		for voice in voices: voice.stop()
+
+func _safe_gain(value: float) -> float:
+	return clampf(value, 0.0, 1.0) if is_finite(value) else 1.0
+
+func set_levels(master: float, background: float, effects: float) -> void:
+	master_gain = _safe_gain(master)
+	music_gain = _safe_gain(background)
+	effects_gain = _safe_gain(effects)
+	_refresh_music_level()
+	for i in range(voices.size()): _set_voice_level(i, voice_levels[i])
+
+func _refresh_music_level() -> void:
+	music.volume_db = -10 + linear_to_db(master_gain * music_gain) if audio_mode == 0 else -80
+
+func _set_voice_level(index: int, baseline: float) -> void:
+	voice_levels[index] = baseline
+	voices[index].volume_db = baseline + linear_to_db(master_gain * effects_gain)

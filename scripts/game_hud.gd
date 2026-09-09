@@ -18,7 +18,8 @@ func draw(game, screen: Vector2) -> void:
 	var weapon_ink := Color("63f5ce") if ready else Color("ffb95e")
 	draw_weapon_icon(game, weapon.position+Vector2(15,20), game.sub_weapon, weapon_ink)
 	label_at(game, weapon.position+Vector2(42,20), Catalog.WEAPONS[game.sub_weapon].title, 20 if weapon.size.x >= 250 else 16, weapon_ink)
-	label_at(game, weapon.position+Vector2(42,40), "RMB / READY" if ready else "WAIT %.1fs" % game.sub_cd, 12, Color("8194aa"))
+	var secondary_key: String = OS.get_keycode_string(game.preferences.bindings.fire_secondary) if game.preferences.bindings.has("fire_secondary") else "RMB"
+	label_at(game, weapon.position+Vector2(42,40), secondary_key + " / READY" if ready else "WAIT %.1fs" % game.sub_cd, 12, Color("8194aa"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x,3)),Color("263847"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x*cooldown_fraction(game),3)),weapon_ink)
 	if game.boss_floor:
@@ -47,11 +48,13 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_rect(Rect2(mp,Vector2(game.rooms[i].size)*map_scale),Color("63f5ce") if game.cells.get(game.tile(game.player),-1)==i else (Color("354858") if game.discovered.has(i) else Color("171f2b")))
 			if i == game.goal_room and game.stairs_unlocked: game.draw_circle(mp+Vector2(game.rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
 	game.draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
-	label_at(game, Vector2(26,screen.y - 15), "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO", 13, Color("a4b3c6"))
+	var help := "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
+	if not game.preferences.bindings.is_empty(): help = "CUSTOM KEYS ACTIVE / SETTINGS IN PAUSE MENU     MOUSE AIM     ESC PAUSE     M AUDIO"
+	label_at(game, Vector2(26,screen.y - 15), help, 13, Color("a4b3c6"))
 	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-15),"PRACTICE / R RETRY / B SELECT",12,Color("63f5ce"))
 	if game.banner > 0:
 		centered_title_label(game, screen,110,("BOSS DEFEATED / DESCEND" if game.stairs_unlocked else game.boss.NAMES[game.boss_variant]) if game.boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
-	if game.hit_flash > 0:
+	if game.hit_flash > 0 and not game.preferences.reduce_flash:
 		game.draw_rect(Rect2(Vector2.ZERO,screen),Color(1,0.25,0.3,game.hit_flash*0.35))
 		game.draw_rect(Rect2(Vector2(4,4),screen-Vector2(8,8)),Color(1,0.3,0.35,game.hit_flash*2),false,6)
 	if game.hit_banner > 0:
@@ -104,7 +107,7 @@ func draw_title(game, screen: Vector2) -> void:
 	centered_title_label(game, screen,origin.y+-50,"ENDLESS DESCENT / PROTOTYPE",18,Color("8194aa"))
 	centered_title_label(game, screen,origin.y+35,"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
 	centered_title_label(game, screen,origin.y+105,"CLICK OR ENTER TO DESCEND",22)
-	centered_title_label(game, screen,origin.y+148,"WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
+	centered_title_label(game, screen,origin.y+148,"WASD MOVE / MOUSE AIM / Q & E WEAPONS" if game.preferences.bindings.is_empty() else "CUSTOM KEYS ACTIVE / F10 SETTINGS / MOUSE AIM",14,Color("8194aa"))
 	centered_title_label(game, screen,origin.y+176,"M AUDIO / RECORD LASTS UNTIL YOU QUIT",14,Color("8194aa"))
 	if not OS.has_feature("web"):
 		centered_title_label(game, screen,origin.y+232,"ESC / QUIT",14,Color("8194aa"))
