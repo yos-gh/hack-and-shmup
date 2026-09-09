@@ -113,15 +113,15 @@ func triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, normal: 
 func chaser_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Full square chassis: the front edge is raised, the rear stays low.
-	var rim := [Vector3(1,1,0), Vector3(-1,1,0), Vector3(-1,-1,0), Vector3(1,-1,0)]
-	var ridge := Vector3(0,0,0.7)
+	# Broad front and slightly narrower rear are readable from directly above.
+	var rim := [Vector3(1,1,0), Vector3(-1,0.76,0), Vector3(-1,-0.76,0), Vector3(1,-1,0)]
+	var ridge := Vector3(0,0,1)
 	for i in range(rim.size()):
 		var a: Vector3 = rim[i]
 		var b: Vector3 = rim[(i+1)%rim.size()]
-		var top_a := Vector3(a.x*0.82,a.y*0.82,1.0 if a.x > 0 else 0.4)
-		var top_b := Vector3(b.x*0.82,b.y*0.82,1.0 if b.x > 0 else 0.4)
-		triangle(surface, top_a, top_b, ridge, Vector3(-0.36,0,1).normalized())
+		var top_a := Vector3(a.x*0.82,a.y*0.82,1.0)
+		var top_b := Vector3(b.x*0.82,b.y*0.82,1.0)
+		triangle(surface, top_a, top_b, ridge, Vector3.BACK)
 		var normal := (b-a).cross(top_a-a).normalized()
 		triangle(surface, a, b, top_b, normal)
 		triangle(surface, a, top_b, top_a, normal)
@@ -130,18 +130,28 @@ func chaser_mesh() -> ArrayMesh:
 func sniper_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# UV.x identifies the inner contour. Only that contour closes on charge.
-	for i in range(3):
-		var a := Vector2.from_angle(TAU*i/3.0)
-		var b := Vector2.from_angle(TAU*(i+1)/3.0)
-		var outer_a := Vector3(a.x,a.y,0.6)
-		var outer_b := Vector3(b.x,b.y,0.6)
-		var inner_a := Vector3(a.x*2.0/3.0,a.y*2.0/3.0,0.6)
-		var inner_b := Vector3(b.x*2.0/3.0,b.y*2.0/3.0,0.6)
+	# Sample rays against an isosceles outline and a circular inner contour.
+	# Include the exact three corners as well as regular circle samples.
+	var corners := [Vector2(1.3,0),Vector2(-0.8,0.9),Vector2(-0.8,-0.9)]
+	var angles: Array[float] = []
+	for i in range(48): angles.append(TAU*i/48.0)
+	for corner in corners:
+		var angle: float = fposmod(corner.angle(),TAU)
+		if not angles.has(angle): angles.append(angle)
+	angles.sort()
+	for i in range(angles.size()):
+		var a := Vector2.from_angle(angles[i])
+		var b := Vector2.from_angle(angles[(i+1)%angles.size()])
+		var oa := sniper_outline(a,corners)
+		var ob := sniper_outline(b,corners)
+		var outer_a := Vector3(oa.x,oa.y,0.6)
+		var outer_b := Vector3(ob.x,ob.y,0.6)
+		var inner_a := Vector3(a.x*5.0/12.0,a.y*5.0/12.0,0.6)
+		var inner_b := Vector3(b.x*5.0/12.0,b.y*5.0/12.0,0.6)
 		for face in [[outer_a,outer_b,inner_b],[outer_a,inner_b,inner_a]]:
 			for point in [face[0],face[2],face[1]]:
 				surface.set_normal(Vector3.BACK)
-				surface.set_uv(Vector2(1 if Vector2(point.x,point.y).length() < 0.9 else 0,0))
+				surface.set_uv(Vector2(1 if Vector2(point.x,point.y).length() < 0.5 else 0,0))
 				surface.add_vertex(point)
 		for contour in [[outer_a,outer_b,0.0],[inner_b,inner_a,1.0]]:
 			var start: Vector3 = contour[0]
@@ -153,6 +163,18 @@ func sniper_mesh() -> ArrayMesh:
 			triangle(surface, low_start, low_end, end, normal)
 			triangle(surface, low_start, end, start, normal)
 	return surface.commit()
+
+func sniper_outline(direction: Vector2, corners: Array) -> Vector2:
+	for i in range(corners.size()):
+		var a: Vector2 = corners[i]
+		var edge: Vector2 = corners[(i+1)%corners.size()]-a
+		var denominator := direction.cross(edge)
+		if absf(denominator) < 0.00001: continue
+		var distance := a.cross(edge)/denominator
+		var along := a.cross(direction)/denominator
+		if distance > 0 and along >= -0.00001 and along <= 1.00001:
+			return direction*distance
+	return direction
 
 func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	if not enemy.active: return enemy.dir

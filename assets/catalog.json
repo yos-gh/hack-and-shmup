@@ -278,8 +278,8 @@
     },
     {
       "path": "scripts/triangular_iris.gdshader",
-      "bytes": 258,
-      "sha256": "40b6fcd920753d66ba28bfa49e2f66947b57e4a8a733de9e16059c224d05c877",
+      "bytes": 266,
+      "sha256": "914a6c18f680b1ff51f591a124ef9abba5eff7ac7dc2751dec62cea2a59833a3",
       "kind": "authored_shader",
       "source": "scripts/triangular_iris.gdshader"
     }

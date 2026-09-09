@@ -1,7 +1,7 @@
 shader_type spatial;
 
 void vertex() {
-	// Fixed outer triangle; its triangular opening contracts to 30%.
+	// Fixed isosceles shell; its circular opening shrinks from 5px to 1.5px.
 	VERTEX.xy *= mix(1.0, 0.3, clamp(INSTANCE_CUSTOM.r, 0.0, 1.0) * UV.x);
 }
 
