@@ -1,5 +1,7 @@
 extends Node2D
 
+const Queries = preload("res://scripts/floor_queries.gd")
+
 const TILE := 32.0
 const SPEED := 245.0
 const PLAYER_HIT_RADIUS := 5.0
@@ -131,18 +133,43 @@ func _ready() -> void:
 	new_floor()
 
 func tile(p: Vector2) -> Vector2i:
-	return Vector2i(floor(p.x / TILE), floor(p.y / TILE))
+	return Queries.tile(self,p)
 
 func center(p: Vector2i) -> Vector2:
-	return Vector2(p) * TILE + Vector2.ONE * TILE * 0.5
+	return Queries.center(self,p)
 
 func new_floor(boss_choice: int = -1) -> void:
-	floor_generator.generate(self,boss_choice)
+	var settings = preload("res://scripts/floor_settings.gd").new()
+	settings.depth = floor_number
+	settings.move_bonus = move_bonus
+	settings.power = power
+	settings.fire_rate = fire_rate
+	settings.boss_choice = boss_choice
+	var generated = floor_generator.generate_from_state(settings,rng.state)
+	floor_revision += 1
+	cells = generated.cells
+	rooms = generated.rooms
+	room_shapes = generated.room_shapes
+	entrances = generated.entrances
+	enemies = generated.enemies
+	room_links = generated.room_links
+	corridor_cells = generated.corridor_cells
+	flow = generated.flow
+	spawn_point = generated.spawn_point
+	stairs = generated.stairs
+	goal_room = generated.goal_room
+	boss_floor = generated.boss_floor
+	if boss_floor:
+		boss_variant = generated.boss_variant
+		boss_max_hp = generated.boss_max_hp
+	route_seconds = generated.route_seconds
+	time_limit = generated.time_limit
+	rng.state = generated.rng.state
+	session.floor_snapshot.capture(self)
+	restart_attempt()
 
 func enemy_health(kind: int, depth: int) -> float:
-	if kind == 2: return 1.0
-	# Preserve floor-one HP and interpolate to the requested floor-15 targets.
-	return lerpf(2.3, 4.0, (depth - 1) / 14.0) if kind == 0 else 1.0 + (depth - 1) / 14.0
+	return Queries.enemy_health(self,kind,depth)
 
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.kind == 1: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
@@ -165,13 +192,10 @@ func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 		if e.kind in [1,2]: e.cd = maxf(e.cd,0.55)
 
 func entry_safe(p: Vector2, room_id: int) -> bool:
-	if cells.get(tile(p), -1) != room_id: return false
-	for entrance in entrances.get(room_id, []):
-		if p.distance_to(entrance) < ENTRY_CLEARANCE: return false
-	return walkable(p)
+	return Queries.entry_safe(self,p,room_id)
 
 func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
-	return floor_generator.room_contains(self,p,r,shape)
+	return Queries.room_contains(self,p,r,shape)
 
 func restart_attempt() -> void:
 	session.restart_attempt(self)
@@ -215,12 +239,10 @@ func fire_sub(aim: Vector2) -> void:
 			sub_cd = sub_cd_total
 
 func connect_rooms(a: int, b: int) -> void:
-	floor_generator.connect_rooms(self,a,b)
+	Queries.connect_rooms(self,a,b)
 
 func walkable(p: Vector2, radius: float = 10.0) -> bool:
-	for offset in [Vector2(-radius,-radius), Vector2(radius,-radius), Vector2(-radius,radius), Vector2(radius,radius)]:
-		if not cells.has(tile(p + offset)): return false
-	return true
+	return Queries.walkable(self,p,radius)
 
 func slide(p: Vector2, motion: Vector2, radius: float = 10.0) -> Vector2:
 	var next := p
@@ -229,19 +251,7 @@ func slide(p: Vector2, motion: Vector2, radius: float = 10.0) -> Vector2:
 	return next
 
 func build_flow() -> void:
-	flow.clear()
-	var start := tile(player)
-	flow[start] = start
-	var queue: Array[Vector2i] = [start]
-	var index := 0
-	while index < queue.size():
-		var c := queue[index]
-		index += 1
-		for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var n: Vector2i = c + d
-			if cells.has(n) and not flow.has(n):
-				flow[n] = c
-				queue.append(n)
+	Queries.build_flow(self)
 
 func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))

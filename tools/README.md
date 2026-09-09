@@ -42,6 +42,8 @@ Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prep
 
 ## Input and session regression
 
-Existing keyboard bindings now live in `project.godot` InputMap (physical WASD for movement). `PlayerInput` routes events, `GameSession` owns transitions, and `FloorSnapshot` keeps the in-memory retry baseline. `FloorGenerator` writes the existing floor model in the original RNG order. Key-binding settings and independent FloorData are not implemented yet.
+Existing keyboard bindings now live in `project.godot` InputMap (physical WASD for movement). `PlayerInput` routes events, `GameSession` owns transitions, and `FloorSnapshot` keeps the in-memory retry baseline. `FloorGenerator` returns an independent `FloorData` from `FloorSettings` and a seed or saved RNG state. `Game` applies the result and advances its RNG explicitly. Key-binding settings are not implemented yet.
 
 `session_input_test.gd` checks InputMap bindings/remapping, held inputs and echo suppression, pause/resume shot gating, card/practice transitions and 50 retries across normal floors and all three bosses. Audio regression waits by elapsed time rather than uncapped render frames and exits with a failure result instead of hanging on an assertion.
+
+`floor_data_test.gd` builds normal and all boss floors without a game scene, verifies connectivity/entrance safety/time budgets, and checks that settings, caller RNG and independently generated results cannot affect each other.
