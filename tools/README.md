@@ -103,3 +103,7 @@ Run python tools/backup_docs.py --output-dir <directory-outside-docs> to create 
 Release builds containing tools/export_notices.gd generate THIRD_PARTY_NOTICES.txt with the running engine's embedded notices and the bundled Sentry license. The manifest marks notices_generated and includes its hash; verify_build.py requires that file when declared. Asset auditing normalizes CRLF to LF for textual sources while preserving binary audio hashes.
 
 Application focus loss pauses active combat/audio and disarms firing; focus return alone never resumes. Key capture is cancelled, while title and upgrade selection retain their contexts. focus_pause_test sends notifications directly and verifies frozen simulation and explicit resume gating. Actual OS/browser notification delivery remains an interactive check.
+
+## Local Web preview
+
+Run `python tools/serve_web.py <build-directory>/web` from the project root, then open `http://127.0.0.1:8123/game-v2.html`. The directory must contain the exported `game-v2.html`. Use `--port` to choose another port and Ctrl+C in the serving terminal to stop. This serves only on localhost with Godot isolation headers and caching disabled; it does not publish a build. Browser persistence, audio and font rendering still require interactive verification.
