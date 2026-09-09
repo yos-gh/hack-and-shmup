@@ -37,6 +37,33 @@ class ManifestTests(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(verify(self.root), 5)
 
+    def make_windows(self):
+        names = ['hack-and-shmup.exe', 'hack-and-shmup.pck',
+                 'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll']
+        (self.root / 'windows').mkdir()
+        self.manifest['files'] = []
+        with zipfile.ZipFile(self.root / 'windows.zip', 'w') as archive:
+            for name in names:
+                content = name.encode()
+                (self.root / 'windows' / name).write_bytes(content)
+                archive.writestr(name, content)
+                self.manifest['files'].append(dict(path=name, bytes=len(content), sha256=hashlib.sha256(content).hexdigest()))
+        self.manifest['package_sha256'] = hashlib.sha256((self.root / 'windows.zip').read_bytes()).hexdigest()
+        self.manifest['target'] = 'Windows'
+        self.manifest['startup_verified'] = True
+        self.write_manifest()
+
+    def test_windows(self):
+        self.make_windows()
+        self.assertEqual(verify(self.root), 5)
+
+    def test_windows_requires_startup(self):
+        self.make_windows()
+        self.manifest['startup_verified'] = False
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, 'startup'):
+            verify(self.root)
+
     def test_tampered_artifact(self):
         (self.root / 'web' / 'game-v2.pck').write_bytes(b'changed')
         with self.assertRaises(ValueError): verify(self.root)
