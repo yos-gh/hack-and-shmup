@@ -1,0 +1,42 @@
+name: Verify Web and Windows builds
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-build-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    # Full regressions need a logged-in Windows desktop with OpenGL and audio.
+    runs-on: [self-hosted, Windows, X64, godot-desktop]
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify fixed source and both packages
+        id: build
+        env:
+          GODOT_CONSOLE: ${{ vars.GODOT_CONSOLE }}
+        run: ./tools/ci.ps1 -Godot $env:GODOT_CONSOLE -Ref $env:GITHUB_SHA
+      - name: Retain verified packages and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-builds-${{ github.sha }}
+          path: ${{ steps.build.outputs.artifacts }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-build-logs-${{ github.sha }}
+          path: |
+            docs/builds/**/*.log
+            docs/builds/**/tests.json
+          if-no-files-found: warn
+          retention-days: 14

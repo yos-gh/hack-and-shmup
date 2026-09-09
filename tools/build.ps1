@@ -1,7 +1,8 @@
 param(
     [string]$Godot = 'C:/Users/ysyki/Godot/Godot_console.exe',
     [string]$Ref = 'HEAD',
-    [ValidateSet('Web','Windows')][string]$Target = 'Web'
+    [ValidateSet('Web','Windows')][string]$Target = 'Web',
+    [string]$ResultFile = ''
 )
 $ErrorActionPreference = 'Stop'
 $projectPath = Split-Path -Parent $PSScriptRoot
@@ -83,5 +84,8 @@ $manifest = [ordered]@{
     verification = 'Local import, native regressions and target export. Windows startup is headless only; interactive playback and deployment are not verified.'
 }
 $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $buildRoot 'manifest.json')
+if ($ResultFile) {
+    [ordered]@{ revision = $revision; target = $Target; build_directory = $buildRoot } | ConvertTo-Json | Set-Content -LiteralPath $ResultFile
+}
 Write-Output "PASS: verified commit build $revision"
 Write-Output "Artifacts: $buildRoot"

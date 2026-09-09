@@ -81,3 +81,13 @@ GameMenus owns Control-based title, pause and upgrade screens using MenuTheme. C
 Key settings offer individual default restoration with collision checks, distinguish reserved/unsupported/conflicting inputs, and reject modifier chords. InputMap-derived captions drive the remapped controls guide in title/HUD. Individual resets preserve volume and other settings.
 
 On Web, Save checks OS.is_userfs_persistent before claiming a persistent save. Unavailable storage leaves preferences active for the session and displays that limitation. This check does not verify asynchronous IndexedDB completion or browser reload behavior.
+
+## Manual CI
+
+`./tools/ci.ps1 -Godot <Godot_console.exe> -Ref HEAD` resolves one immutable commit, runs verifier self-tests, builds both targets in isolation, and verifies each manifest/ZIP. `-Targets Web` or `-Targets Windows` limits a local run. Machine-readable build results are written under a unique `docs/ci/` directory. The build script's optional `-ResultFile` returns revision, target and output directory without parsing console text.
+
+`.github/workflows/verify-builds.yml` invokes the same entry point with the workflow commit and retains packages/manifests/logs for 14 days. It is manual-only and does not deploy. It requires a Windows x64 self-hosted runner labeled `godot-desktop`, running in a logged-in interactive desktop session with OpenGL/audio, PowerShell 7, Git, Python 3 and the exact Godot engine/export templates in `tools/toolchain.json`. Configure repository variable `GODOT_CONSOLE` with that runner's absolute engine path. Keep the runner checkout separate from the development workspace. Hosted-runner success is not assumed, and no runner registration or GitHub run is performed by adding these files.
+
+A failed target stops the entry point; it never emits the successful artifact output list for a partial run. Local logs remain under `docs/builds/`. Successful workflow artifacts include original source ZIPs and release ZIPs with manifests and regression logs; extract a release ZIP into its target folder beside the manifest/source ZIP to use the standalone verifier. Interactive browser and exported Windows playback remain separate gates.
+
+The workflow retains diagnostic logs on failure as a separate artifact. Local end-to-end validation of ci.ps1 succeeded for commit 698788a on both targets (25 native regressions each, Web 15 files, Windows 6 files and exported headless startup). GitHub runner execution remains unverified.
