@@ -91,13 +91,7 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
 	for effect in game.effects:
-		if effect.kind == 3:
-			var fade: float = clampf(effect.life/0.08,0,1)
-			for tip in effect.tips:
-				if effect.p.distance_to(tip) <= 12: continue
-				var start: Vector2 = effect.p.move_toward(tip,12)
-				game.draw_line(start,tip,Color(0.76,1,0.9,fade*0.65),2)
-		elif effect.kind == 2:
+		if effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
 			if effect.blocked:
 				# Open brackets distinguish a shield stop from a damaging hit.
@@ -136,7 +130,19 @@ func draw(game, screen: Vector2) -> void:
 		if not game.depth_enabled: game.draw_circle(game.player, 12, Color("63f5ce"))
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
-	game.draw_line(game.player + aim * 8, game.player + aim * 23, Color.WHITE, 5)
+	if not game.depth_enabled:
+		for side in [-1.0,1.0]:
+			var barrel_offset: Vector2 = aim.orthogonal()*side*3.5
+			game.draw_line(game.player+aim*9+barrel_offset,game.player+aim*19+barrel_offset,Color("3ba88f"),2.5)
+	game.draw_line(game.player + aim * 12, game.player + aim * 21, Color.WHITE, 2)
+	# Keep the clipped firing fan above the hull and the narrow aiming marker.
+	for effect in game.effects:
+		if effect.kind != 3: continue
+		var fade: float = clampf(effect.life/0.08,0,1)
+		for tip in effect.tips:
+			if effect.p.distance_to(tip) <= 12: continue
+			var start: Vector2 = effect.p.move_toward(tip,12)
+			game.draw_line(start,tip,Color(0.76,1,0.9,fade*0.85),2)
 	if game.grace > 0:
 		# The existing one-second protection is readable without delaying retry.
 		var remaining: float = clampf(game.grace,0,1)

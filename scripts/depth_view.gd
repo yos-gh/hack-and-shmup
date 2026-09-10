@@ -46,6 +46,7 @@ func _ready() -> void:
 	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
 	make_batch("square", beveled_square())
+	make_batch("player_barrel", beveled_square())
 	make_batch("chaser", chaser_mesh())
 	make_batch("sniper", sniper_mesh())
 	make_batch("siege_base", beveled_square())
@@ -317,8 +318,13 @@ func sync(game) -> void:
 			# A quiet chassis and raised inset plate retain the original footprint.
 			squares.append(entry(enemy.p, Vector3(radius,radius,2), color.darkened(0.65), 1))
 			squares.append(entry(enemy.p, Vector3(radius*0.88,radius*0.88,5), color, 4))
+	var barrels: Array = []
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
+		var aim: Vector2 = game.controls.aim(game)
+		for side in [-1.0,1.0]:
+			barrels.append(chaser_entry(game.player+aim*14+aim.orthogonal()*side*3.5,aim,Vector3(5,1.25,2),Color("3ba88f"),7))
+	upload("player_barrel", barrels)
 	upload("square", squares)
 	upload("chaser", chasers)
 	upload("sniper", snipers)
