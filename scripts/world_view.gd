@@ -68,7 +68,12 @@ func draw(game, screen: Vector2) -> void:
 	for b in game.bullets:
 		if game.cells.get(game.tile(b.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(b.p)]): continue
 		var bullet_ink = Color("ff788e") if b.get("pressure",false) else (Color("d996ed") if b.get("guided",false) else Color("ffb95e"))
-		game.draw_line(b.p, b.p - b.v.normalized() * 12, bullet_ink if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
+		if not b.hostile and b.get("scatter_visual",false):
+			var tail: Vector2 = game.attack_end(b.p,-b.v.normalized(),16)
+			game.draw_line(tail,b.p,Color(0.45,1,0.86,0.45),4)
+			game.draw_line(tail.lerp(b.p,0.5),b.p,Color("e2fff5"),2)
+		else:
+			game.draw_line(b.p, b.p - b.v.normalized() * 12, bullet_ink if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
 	var preview_aim: Vector2 = game.controls.aim(game)
 	var preview_alpha = 0.18 if game.sub_cd <= 0 else 0.06
 	if game.sub_weapon == 0:
@@ -85,7 +90,13 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
 	for effect in game.effects:
-		if effect.kind == 2:
+		if effect.kind == 3:
+			var fade: float = clampf(effect.life/0.08,0,1)
+			for tip in effect.tips:
+				if effect.p.distance_to(tip) <= 12: continue
+				var start: Vector2 = effect.p.move_toward(tip,12)
+				game.draw_line(start,tip,Color(0.76,1,0.9,fade*0.65),2)
+		elif effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
 			if effect.blocked:
 				# Open brackets distinguish a shield stop from a damaging hit.

@@ -249,7 +249,13 @@ func fire_sub(aim: Vector2) -> void:
 	sub_cd_total = definition.cooldown
 	match sub_weapon:
 		0:
-			for i in range(definition.pellets): emit_shot(player, aim.rotated((i - (definition.pellets-1)*0.5) * definition.spread), definition.speed, power * definition.damage, false, definition.reach)
+			var muzzle: Array[Vector2] = []
+			for i in range(definition.pellets):
+				var direction := aim.rotated((i - (definition.pellets-1)*0.5) * definition.spread)
+				emit_shot(player,direction,definition.speed,power*definition.damage,false,definition.reach)
+				bullets[-1]["scatter_visual"] = true
+				if i % 3 == 0: muzzle.append(attack_end(player,direction,26))
+			effects.append({"kind":3,"p":player,"tips":muzzle,"life":0.08})
 			sub_cd = sub_cd_total
 		1:
 			for e in enemies:
