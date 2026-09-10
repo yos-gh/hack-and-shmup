@@ -136,7 +136,10 @@ func draw(game, screen: Vector2) -> void:
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
 	game.draw_line(game.player + aim * 8, game.player + aim * 23, Color.WHITE, 5)
-	if game.grace > 0: game.draw_arc(game.player, 21, 0, TAU, 32, Color("63f5ce"), 1)
+	if game.grace > 0:
+		# The existing one-second protection is readable without delaying retry.
+		var remaining: float = clampf(game.grace,0,1)
+		game.draw_arc(game.player,21,-PI/2,-PI/2+TAU*remaining,48,Color("63f5ce"),2)
 	if not game.boss_floor and game.time_left <= 5.0:
 		game.draw_arc(game.player,29,-PI/2,-PI/2+TAU*clampf(game.time_left/5,0.001,1),48,Color(1,0.28,0.34,0.8),3)
 
