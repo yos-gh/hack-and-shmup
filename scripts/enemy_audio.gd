@@ -2,7 +2,8 @@ extends Node
 
 # One pending cue per attack family; independent of combat and random streams.
 const PRIORITY := {"sniper_fire":0,"siege_fire":1,"halo_fire":1,"halo_option":0,"hunter_burst":1,"hunter_fire":2,"hunter_lock":3}
-const LEVEL := {"sniper_fire":-14.0,"siege_fire":-10.0,"halo_fire":-11.0,"halo_option":-16.0,"hunter_burst":-14.0,"hunter_fire":-10.0,"hunter_lock":-9.0}
+# The modulated laser warning has a quieter source; +6 dB brings its RMS near laser fire.
+const LEVEL := {"sniper_fire":-14.0,"siege_fire":-10.0,"halo_fire":-11.0,"halo_option":-16.0,"hunter_burst":-14.0,"hunter_fire":-10.0,"hunter_lock":-3.0}
 const GAP := 0.065
 var pending: Dictionary = {}
 var cooldown: Dictionary = {}
