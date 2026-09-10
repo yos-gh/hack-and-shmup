@@ -44,13 +44,15 @@ for bar,root in enumerate(roots):
             add(music,start,.14,lambda t,f=f: (1 if (f*t)%1<.25 else -.333)*math.exp(-t*18),.085)
             add(music,start+.1,.14,lambda t,f=f: (1 if (f*t)%1<.25 else -.333)*math.exp(-t*18),.02)
 save('descent',music)
-settings={'shot':(.065,900,100,.15),'scatter':(.14,240,45,.3),'shock':(.32,95,25,.4),'lance':(.2,1700,180,.22),'shield':(.09,1800,1200,.12),'kill':(.075,360,80,.15),'death':(.4,520,40,.48),'clear':(.6,440,880,.22),'timeout':(.65,880,110,.32)}
+settings={'shot':(.065,900,100,.15),'scatter':(.14,240,45,.3),'shock':(.32,95,25,.4),'lance':(.2,1700,180,.22),'shield':(.09,1800,1200,.12),'kill':(.075,360,80,.15),'death':(.4,520,40,.48),'clear':(.6,440,880,.22),'timeout':(.65,880,110,.32),'siege_fire':(.18,180,55,.22),'hunter_lock':(.26,420,1050,.12),'hunter_fire':(.20,1250,220,.20)}
 for name,(duration,f0,f1,gain) in settings.items():
     buf=array('f',[0])*round(duration*RATE)
     def tone(t):
         phase=TAU*(f0*t+(f1-f0)*t*t/(2*duration))
         value=math.sin(phase)
         if name in ['shot','scatter','kill']: value=value*.4+rng.uniform(-1,1)*.6
+        if name=='siege_fire': value=.75*value+.25*math.sin(phase*2.7)
+        if name=='hunter_lock': value=math.sin(phase)*(.5+.5*math.sin(TAU*12*t))
         if name=='death': value = .6*value + .4*rng.uniform(-1,1)
         if name=='timeout': value=math.sin(TAU*(880 if int(t/.11)%2==0 else 440)*t)
         if name=='clear': value=math.sin(TAU*freq([69,72,76,81][min(3,int(t/duration*4))])*t)

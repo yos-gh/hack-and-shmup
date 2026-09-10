@@ -162,10 +162,14 @@ func add_laser(a: Vector2, b: Vector2, warning: float, duration: float, owner: D
 	lasers.append({"a":a,"b":b,"warning":warning,"duration":duration,"owner":owner})
 
 func advance_lasers(game, delta: float) -> void:
+	var sounded_owners: Array = []
 	for beam in lasers:
 		if beam.owner.hp <= 0: beam.duration = 0; continue
 		if beam.warning > 0:
 			beam.warning = maxf(0.0,beam.warning-delta)
+			if beam.warning == 0 and game.boss_variant == 1 and not sounded_owners.has(beam.owner):
+				game.sound.play_sfx("hunter_fire")
+				sounded_owners.append(beam.owner)
 			continue
 		beam.duration -= delta
 		if beam.duration > 0:

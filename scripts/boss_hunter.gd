@@ -35,6 +35,7 @@ func advance(boss, game, e: Dictionary, delta: float, toward: Vector2) -> Vector
 		boss.summon(game,e)
 		e.summon_cd = boss.SUMMON_INTERVAL/boss.rate_scale(game)
 	if e.cd <= 0:
+		game.sound.play_sfx("hunter_lock")
 		var count := 1 + mini(boss.tier(game),4)
 		for i in range(count):
 			var aim := toward.rotated((i-(count-1)*0.5)*0.24)

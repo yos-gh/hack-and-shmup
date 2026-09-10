@@ -16,8 +16,8 @@ func run() -> void:
 			quit(2)
 			return
 		options[pair[0]] = pair[1]
-	if not options.view in ["2d", "3d"] or not options.scenario in ["normal19", "halo45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
-		printerr("Expected scenario=normal19|halo45, integer seed, weapon=0..2, frames>=0")
+	if not options.view in ["2d", "3d"] or not options.scenario in ["normal19", "siege5", "hunter15", "halo45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
+		printerr("Expected scenario=normal19|siege5|hunter15|halo45, integer seed, weapon=0..2, frames>=0")
 		quit(2)
 		return
 	var game = load("res://main.tscn").instantiate()

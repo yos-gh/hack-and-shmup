@@ -46,6 +46,14 @@ func _ready() -> void:
 	make_batch("square", beveled_square())
 	make_batch("chaser", chaser_mesh())
 	make_batch("sniper", sniper_mesh())
+	make_batch("siege_base", beveled_square())
+	make_batch("siege_armor", beveled_square())
+	make_batch("siege_barrel", beveled_square())
+	make_batch("siege_core", beveled_square())
+	make_batch("hunter_body", hunter_mesh())
+	make_batch("hunter_wing", beveled_square())
+	make_batch("hunter_core", beveled_square())
+	make_batch("hunter_drive", beveled_square())
 	var ring := TorusMesh.new()
 	ring.inner_radius = 5.0/12.0
 	ring.outer_radius = 1.0
@@ -183,6 +191,60 @@ func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	var direction: Vector2 = target-enemy.p
 	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
 
+func hunter_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rim := [Vector3(1,0,0),Vector3(-1,1,0),Vector3(-0.65,0,0),Vector3(-1,-1,0)]
+	for i in range(rim.size()):
+		var a: Vector3 = rim[i]
+		var b: Vector3 = rim[(i+1)%rim.size()]
+		var peak := Vector3(0,0,1)
+		triangle(surface,a,b,peak,(b-a).cross(peak-a).normalized())
+	return surface.commit()
+
+func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector3, color: Color, height: float) -> Dictionary:
+	return chaser_entry(enemy.p+offset.rotated(facing.angle()),facing,size,color,height)
+
+func sync_other_bosses(game) -> void:
+	var parts := {"siege_base":[],"siege_armor":[],"siege_barrel":[],"siege_core":[],"hunter_body":[],"hunter_wing":[],"hunter_core":[],"hunter_drive":[]}
+	if game.boss_floor and game.boss_variant != 2:
+		for enemy in game.enemies:
+			if enemy.kind != 3 or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
+			var warning: float = game.attack_warning(enemy)
+			var facing: Vector2 = enemy.p.direction_to(game.player) if enemy.active else enemy.dir
+			if game.boss_variant == 0:
+				var ink: Color = game.boss.COLORS[0]
+				# Stationary diamond footing, independent of the swivelling turret.
+				parts.siege_base.append(boss_part(enemy,Vector2.from_angle(PI/4),Vector2.ZERO,Vector3(14,14,3),ink.darkened(0.72),1))
+				for side in [-1,1]:
+					parts.siege_armor.append(boss_part(enemy,facing,Vector2(-3,side*10),Vector3(9,5,5),ink.darkened(0.22),4))
+					parts.siege_barrel.append(boss_part(enemy,facing,Vector2(11-warning*3,side*4),Vector3(7,2,4),ink.lerp(Color("fff0fc"),warning),6))
+				parts.siege_core.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(8-warning*3,7-warning*3,5),ink.lerp(Color.WHITE,warning),5))
+			else:
+				var laser_charge := 0.0
+				var firing := false
+				for beam in game.boss.lasers:
+					if beam.owner != enemy: continue
+					# Aim at the locked central beam, not a player moving across it.
+					if laser_charge == 0 and not firing: facing = beam.a.direction_to(beam.b)
+					laser_charge = maxf(laser_charge,clampf(1-beam.warning/0.8,0,1))
+					firing = firing or beam.warning <= 0
+				# Multi-beam patterns are symmetric: use their average direction.
+				var beam_aim := Vector2.ZERO
+				for beam in game.boss.lasers:
+					if beam.owner == enemy: beam_aim += beam.a.direction_to(beam.b)
+				if not beam_aim.is_zero_approx(): facing = beam_aim.normalized()
+				var ink: Color = game.boss.COLORS[1]
+				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(24,18,3),ink.darkened(0.65),1))
+				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(22,16,5),ink.darkened(0.18),3))
+				for side in [-1,1]:
+					parts.hunter_wing.append(boss_part(enemy,facing,Vector2(-9,side*(9-laser_charge*2)),Vector3(8,3,4),ink.lerp(Color("e3fcff"),laser_charge*0.6),6))
+					var drive: float = 2.0 if laser_charge > 0 and not firing else 5.0
+					parts.hunter_drive.append(boss_part(enemy,facing,Vector2(-18,side*9),Vector3(drive,2,2),ink.darkened(0.35 if drive == 2 else 0),3))
+				var extent := 7.0-4.0*maxf(laser_charge,warning)
+				parts.hunter_core.append(boss_part(enemy,facing,Vector2(4,0),Vector3(extent,4,4),ink.lerp(Color.WHITE,maxf(laser_charge,warning)),7))
+	for key in parts: upload(key,parts[key])
+
 func chaser_entry(point: Vector2, heading: Vector2, scale_value: Vector3, color: Color, height: float) -> Dictionary:
 	var value := entry(point, scale_value, color, height)
 	value.transform.basis = Basis(Vector3.BACK, -heading.angle()).scaled(scale_value)
@@ -258,6 +320,7 @@ func sync(game) -> void:
 	upload("sniper", snipers)
 	upload("ring", rings)
 	sync_halo(game)
+	sync_other_bosses(game)
 	game.queue_redraw()
 	max_sync_ms = maxf(max_sync_ms, (Time.get_ticks_usec()-started)/1000.0)
 

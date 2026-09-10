@@ -24,7 +24,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
-	for scenario in ["normal19", "halo45"]:
+	for scenario in ["normal19", "siege5", "hunter15", "halo45"]:
 		var expected := PackedByteArray()
 		for mode in range(2):
 			Scenario.configure(game, scenario, 19045, 1)

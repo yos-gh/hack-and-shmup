@@ -16,7 +16,7 @@ const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
-	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout","warning"]:
+	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)

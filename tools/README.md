@@ -2,7 +2,7 @@
 
 Run from the project root with Godot 4.7 stable. These tools are excluded from Web exports.
 
-For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario halo45`). F6 switches between the same live game's classic and 3D presentation. Normal damage, time and input remain enabled. This is an early appearance study: terrain, player shell and three regular enemy bodies are 3D; bullets, attack ranges, boss bodies and UI retain the established 2D presentation. Initial 3D rendering can stall briefly; Web performance and final art are not yet validated.
+For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario siege5`, `-Scenario hunter15`, or `-Scenario halo45`). F6 switches between the same live game's classic and 3D presentation. Normal damage, time and input remain enabled. This is an early appearance study: terrain, player shell, regular enemies and all three boss bodies are 3D; bullets, attack ranges and UI retain the established 2D presentation. Initial 3D rendering can stall briefly; Web performance and final art are not yet validated.
 
 ```powershell
 # All regression tests; audio and view-state checks use a display.

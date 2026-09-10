@@ -33,7 +33,7 @@ func draw(game, screen: Vector2) -> void:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
 		var warning = game.attack_warning(e)
-		if game.depth_enabled and e.kind == 3 and game.boss_variant == 2: continue
+		if game.depth_enabled and e.kind == 3: continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and e.kind < 3:
