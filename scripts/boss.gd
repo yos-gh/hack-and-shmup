@@ -100,8 +100,7 @@ func health(game) -> float:
 	return hp
 
 func present_siege_shot(game, e: Dictionary) -> void:
-	game.sound.play_sfx("siege_fire")
-	game.effects.append({"kind":4,"p":e.p,"life":0.16})
+	game.enemy_attack_cue("siege_fire",e.p)
 
 func shot_flash(game, position: Vector2) -> float:
 	var flash := 0.0
@@ -122,6 +121,8 @@ func emit_salvo(game, salvo: Dictionary) -> void:
 	var owner: Dictionary = salvo.owner
 	if game.boss_variant == 0: present_siege_shot(game,owner)
 	var origin: Vector2 = salvo.get("origin",owner.p)
+	if game.boss_variant == 2: game.enemy_attack_cue("halo_option" if salvo.has("origin") else "halo_fire",origin)
+	elif game.boss_variant == 1: game.enemy_attack_cue("hunter_burst",origin)
 	var aim: Vector2 = salvo.aim
 	if aim == Vector2.ZERO: aim = origin.direction_to(game.player)
 	for offset in salvo.offsets:
@@ -180,7 +181,7 @@ func advance_lasers(game, delta: float) -> void:
 		if beam.warning > 0:
 			beam.warning = maxf(0.0,beam.warning-delta)
 			if beam.warning == 0 and game.boss_variant == 1 and not sounded_owners.has(beam.owner):
-				game.sound.play_sfx("hunter_fire")
+				game.enemy_attack_cue("hunter_fire",beam.a)
 				sounded_owners.append(beam.owner)
 			continue
 		beam.duration -= delta

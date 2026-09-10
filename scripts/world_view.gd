@@ -45,7 +45,7 @@ func draw(game, screen: Vector2) -> void:
 		if e.kind == 0:
 			game.draw_rect(Rect2(p - Vector2(10,10), Vector2(20,20)), Color("f3637a"))
 		elif e.kind == 1:
-			game.draw_circle(p, 12, Color("ffb95e").lerp(Color("fff4dd"),warning))
+			game.draw_circle(p, 12, Color("ffb95e").lerp(Color("fff4dd"),maxf(warning,game.boss.shot_flash(game,e.p))))
 			game.draw_circle(p, lerpf(5.0,1.5,warning), Color("342338"))
 		elif e.kind == 2:
 			var extent = 12.0 - warning*2.0
@@ -55,7 +55,7 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		else:
 			var ink: Color = game.boss.COLORS[game.boss_variant]
-			if game.boss_variant == 0: ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
+			ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
 			if game.boss_variant == 0:
 				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),ink.darkened(0.55))
 			elif game.boss_variant == 1:
@@ -163,7 +163,7 @@ func draw_options(game) -> void:
 	if game.depth_enabled and game.boss_variant == 2: return
 	for option in game.boss.options:
 		var charge: float = game.boss.option_warning(option)
-		var ink := Color("ffc46b").lerp(Color("fff5e2"),charge)
+		var ink := Color("ffc46b").lerp(Color("fff5e2"),maxf(charge,game.boss.shot_flash(game,option.p)))
 		game.draw_circle(option.p,11,Color("263847"))
 		game.draw_arc(option.p,11,0,TAU,16,ink,1.5)
 		var half := 5.0-charge*2.0

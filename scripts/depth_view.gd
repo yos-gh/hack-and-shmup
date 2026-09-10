@@ -302,7 +302,7 @@ func sync(game) -> void:
 		var warning: float = game.attack_warning(enemy)
 		if enemy.kind == 1:
 			var facing: Vector2 = (game.player-enemy.p).normalized() if enemy.active else enemy.dir
-			var shell := chaser_entry(enemy.p, facing, Vector3(10.8,10.8,7), Color("ffb95e").lerp(Color("fff4dd"), warning), 3)
+			var shell := chaser_entry(enemy.p, facing, Vector3(10.8,10.8,7), Color("ffb95e").lerp(Color("fff4dd"), maxf(warning,game.boss.shot_flash(game,enemy.p))), 3)
 			shell.warning = warning
 			snipers.append(shell)
 		elif enemy.kind == 0:
@@ -338,12 +338,12 @@ func sync_halo(game) -> void:
 			var extent := lerpf(12.0,7.0,warning)
 			bases.append(entry(enemy.p,Vector3(24,24,4),ink.darkened(0.75),3,true))
 			shells.append(entry(enemy.p,Vector3(29,29,12),ink,7,true))
-			cores.append(entry(enemy.p,Vector3(extent,extent,6),ink.lerp(Color.WHITE,warning),7))
+			cores.append(entry(enemy.p,Vector3(extent,extent,6),ink.lerp(Color.WHITE,maxf(warning,game.boss.shot_flash(game,enemy.p))),7))
 		for option in game.boss.options:
 			if option.life <= 0 or option.owner.hp <= 0 or not game.attack_open(option.p): continue
 			var charge: float = game.boss.option_warning(option)
 			var extent := 5.0-charge*2.0
-			var color := ink.lerp(Color("fff5e2"),charge)
+			var color := ink.lerp(Color("fff5e2"),maxf(charge,game.boss.shot_flash(game,option.p)))
 			bases.append(entry(option.p,Vector3(10,10,3),Color("263847"),3,true))
 			shells.append(entry(option.p,Vector3(11,11,7),color,5,true))
 			cores.append(entry(option.p,Vector3(extent,extent,4),color,6))

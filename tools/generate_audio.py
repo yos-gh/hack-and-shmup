@@ -44,7 +44,7 @@ for bar,root in enumerate(roots):
             add(music,start,.14,lambda t,f=f: (1 if (f*t)%1<.25 else -.333)*math.exp(-t*18),.085)
             add(music,start+.1,.14,lambda t,f=f: (1 if (f*t)%1<.25 else -.333)*math.exp(-t*18),.02)
 save('descent',music)
-settings={'shot':(.065,900,100,.15),'scatter':(.14,240,45,.3),'shock':(.32,95,25,.4),'lance':(.2,1700,180,.22),'shield':(.09,1800,1200,.12),'kill':(.075,360,80,.15),'death':(.4,520,40,.48),'clear':(.6,440,880,.22),'timeout':(.65,880,110,.32),'siege_fire':(.18,180,55,.22),'hunter_lock':(.26,420,1050,.12),'hunter_fire':(.20,1250,220,.20)}
+settings={'shot':(.065,900,100,.15),'scatter':(.14,240,45,.3),'shock':(.32,95,25,.4),'lance':(.2,1700,180,.22),'shield':(.09,1800,1200,.12),'kill':(.075,360,80,.15),'death':(.4,520,40,.48),'clear':(.6,440,880,.22),'timeout':(.65,880,110,.32),'siege_fire':(.18,180,55,.22),'hunter_lock':(.26,420,1050,.12),'hunter_fire':(.20,1250,220,.20),'sniper_fire':(.09,640,300,.16),'halo_fire':(.22,260,170,.20),'halo_option':(.11,750,480,.12),'hunter_burst':(.10,460,190,.14)}
 for name,(duration,f0,f1,gain) in settings.items():
     buf=array('f',[0])*round(duration*RATE)
     def tone(t):

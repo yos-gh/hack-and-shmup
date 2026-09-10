@@ -1,5 +1,7 @@
 extends Node
 
+var enemy_audio = preload("res://scripts/enemy_audio.gd").new()
+
 var music := AudioStreamPlayer.new()
 var voices: Array[AudioStreamPlayer] = []
 var clips: Dictionary = {}
@@ -16,7 +18,7 @@ const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
-	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire"]:
+	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","halo_option","hunter_burst"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
@@ -33,6 +35,7 @@ func _ready() -> void:
 		voice.volume_db = -5
 		voices.append(voice)
 		voice_levels.append(-5.0)
+	add_child(enemy_audio)
 	if not headless: music.play()
 
 func play_sfx(key: String) -> void:
@@ -41,6 +44,7 @@ func play_sfx(key: String) -> void:
 		var priority: int = CRITICAL_PRIORITIES[key]
 		if voices[0].playing and priority < critical_priority: return
 		critical_priority = priority
+		enemy_audio.reset()
 		for voice in voices: voice.stop()
 		_set_voice_level(0, -5)
 		voices[0].stream = clips[key]
@@ -76,11 +80,14 @@ func set_paused(value: bool) -> void:
 	# Apply transitions only; game physics may request the same state every frame.
 	if value == paused_state: return
 	paused_state = value
+	enemy_audio.set_paused(value)
 	music.stream_paused = value
 	for voice in voices: voice.stream_paused = value
 
 func set_audio_mode(value: int) -> void:
 	audio_mode = posmod(value,3)
+	enemy_audio.muted = audio_mode == 2
+	if enemy_audio.muted: enemy_audio.reset()
 	_refresh_music_level()
 	if audio_mode == 2:
 		for voice in voices: voice.stop()
@@ -92,6 +99,7 @@ func set_levels(master: float, background: float, effects: float) -> void:
 	master_gain = _safe_gain(master)
 	music_gain = _safe_gain(background)
 	effects_gain = _safe_gain(effects)
+	enemy_audio.set_gain(master_gain*effects_gain)
 	_refresh_music_level()
 	for i in range(voices.size()): _set_voice_level(i, voice_levels[i])
 

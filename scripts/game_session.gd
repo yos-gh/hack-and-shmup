@@ -12,6 +12,7 @@ var fire_armed := false
 
 func restart_attempt(game) -> void:
 	game.boss.reset()
+	game.sound.enemy_audio.reset()
 	game.stairs_unlocked = not game.boss_floor
 	floor_snapshot.restore(game)
 	game.enemy_buckets.clear()
@@ -52,6 +53,7 @@ func start_run(game) -> void:
 
 func return_to_title(game) -> void:
 	game.boss.reset()
+	game.sound.enemy_audio.reset()
 	game.bullets.clear()
 	game.particles.clear()
 	game.effects.clear()

@@ -21,6 +21,7 @@ func fire_halo(boss, game, e: Dictionary, toward: Vector2) -> void:
 		boss.emit_salvo(game,boss.salvos[opening])
 		boss.salvos.remove_at(opening)
 	elif phase == 1:
+		game.enemy_attack_cue("halo_fire",e.p)
 		var count: int = 12+boss.tier(game)*4
 		var rotation := int(e.shots/3)*0.20
 		for i in range(count):

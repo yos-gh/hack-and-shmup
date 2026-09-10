@@ -372,6 +372,14 @@ func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 		e.cd = Catalog.ENEMIES[2].charge_recovery
 	return Vector2.ZERO
 
+func enemy_attack_cue(key: String, position: Vector2, flash: bool = true) -> void:
+	sound.enemy_audio.request(self,key,position)
+	if flash and attack_open(position):
+		var count := 0
+		for effect in effects:
+			if effect.kind == 4: count += 1
+		if count < 64: effects.append({"kind":4,"p":position,"life":0.16})
+
 func emit_shot(p: Vector2, direction: Vector2, speed: float, damage: float, hostile: bool, distance: float = 10000.0) -> void:
 	bullets.append({"p": p, "v": direction * speed, "damage": damage, "hostile": hostile, "life": distance / speed})
 
@@ -461,6 +469,7 @@ func _physics_process(delta: float) -> void:
 			if e.kind == 1:
 				if e.cd <= 0:
 					emit_shot(e.p, toward, ENEMY_BULLET_SPEED, 1, true)
+					enemy_attack_cue("sniper_fire",e.p)
 					e.cd = ENEMY_SHOT_INTERVAL
 			elif e.kind == 2:
 				velocity = shield_velocity(e, delta, toward)
