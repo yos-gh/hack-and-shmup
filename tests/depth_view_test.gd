@@ -36,6 +36,14 @@ func run() -> void:
 			if mode == 0: expected = state(game)
 			else: check(state(game) == expected, "3D synchronization preserves replay: " + scenario)
 		var before := state(game)
+		for key in ["wall_body", "wall_detail"]:
+			var mesh: MultiMesh = game.depth_view.batches[key]
+			for i in range(mesh.visible_instance_count):
+				var transform := mesh.get_instance_transform(i)
+				for x in [-0.499,0.499]:
+					for y in [-0.499,0.499]:
+						var point: Vector3 = transform*Vector3(x,y,0)
+						check(not game.cells.has(game.tile(Vector2(point.x,-point.y))), "wall detail stays outside walkable cells: " + scenario)
 		await process_frame
 		await RenderingServer.frame_post_draw
 		check(state(game) == before, "actual 3D rendering has no gameplay side effects")

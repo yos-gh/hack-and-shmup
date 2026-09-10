@@ -41,6 +41,8 @@ func _ready() -> void:
 	box.size = Vector3.ONE
 	make_batch("floor", box)
 	make_batch("contact", box)
+	make_batch("wall_body", box)
+	make_batch("wall_detail", box)
 	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
 	make_batch("square", beveled_square())
@@ -80,7 +82,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 0.65
 	material.metallic = 0.15
-	if key in ["floor", "contact"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if key in ["floor", "contact", "wall_body", "wall_detail"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
 	if key in ["ring", "sniper"]:
@@ -358,6 +360,9 @@ func rebuild_floor(game) -> void:
 	var contacts: Array = []
 	var vertical_walls: Array = []
 	var horizontal_walls: Array = []
+	var bodies: Array = []
+	var details: Array = []
+	var pillars: Dictionary = {}
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
@@ -371,12 +376,35 @@ func rebuild_floor(game) -> void:
 		floors.append(entry(p+Vector2(seam_x,seam_y)*0.5, Vector3(32-seam_x,32-seam_y,2), shade, -2))
 		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 			if game.cells.has(cell+direction): continue
+			# All backing stays in solid cells, outside the exact walkable boundary.
+			var body_size := Vector3(10,32,4) if direction.x != 0 else Vector3(32,10,4)
+			bodies.append(entry(p+Vector2(direction)*21, body_size, Color("202f3d") if known else Color("0e1925"), 1))
+			var along: int = cell.y if direction.x != 0 else cell.x
+			if posmod(along,4) == 0:
+				var tangent := Vector2(-direction.y,direction.x)
+				var joint_size := Vector3(6,1,0.2) if direction.x != 0 else Vector3(1,6,0.2)
+				details.append(entry(p+Vector2(direction)*23+tangent*15, joint_size, Color("101b28") if known else Color("080e17"), 3.2))
+			var solid: Vector2i = cell+direction
+			pillars[solid] = known or pillars.get(solid,false)
 			var wall_center: Vector2 = p+Vector2(direction)*18
 			var contact_size := Vector3(5,32,0.1) if direction.x != 0 else Vector3(32,5,0.1)
 			contacts.append(entry(p+Vector2(direction)*13.5, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
 			var size_value := Vector3(2,16,8) if direction.x != 0 else Vector3(16,2,8)
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
 			target.append(entry(wall_center, size_value, Color("426477") if known else Color("172736"), -1))
+	# Single-cell obstacles receive a recessed lid, never a new collision shape.
+	for cell in pillars:
+		var enclosed := true
+		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+			if not game.cells.has(cell+direction): enclosed = false
+		if not enclosed: continue
+		var known: bool = pillars[cell]
+		var p: Vector2 = game.center(cell)
+		bodies.append(entry(p,Vector3(24,24,4),Color("202f3d") if known else Color("0e1925"),1))
+		for offset in [-4.0,0.0,4.0]:
+			details.append(entry(p+Vector2(0,offset),Vector3(10,1.2,0.2),Color("101b28") if known else Color("080e17"),3.2))
+	upload("wall_body", bodies)
+	upload("wall_detail", details)
 	upload("floor", floors)
 	upload("contact", contacts)
 	upload("wall_v", vertical_walls)
