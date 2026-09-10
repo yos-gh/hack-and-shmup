@@ -99,6 +99,17 @@ func health(game) -> float:
 		if e.kind == 3: hp += maxf(0.0,e.hp)
 	return hp
 
+func present_siege_shot(game, e: Dictionary) -> void:
+	game.sound.play_sfx("siege_fire")
+	game.effects.append({"kind":4,"p":e.p,"life":0.16})
+
+func shot_flash(game, position: Vector2) -> float:
+	var flash := 0.0
+	for effect in game.effects:
+		if effect.kind == 4 and effect.p == position:
+			flash = maxf(flash,clampf(effect.life/0.16,0,1))
+	return flash
+
 func fire(game, e: Dictionary, toward: Vector2) -> void:
 	siege.fire(self,game,e,toward)
 
@@ -109,6 +120,7 @@ func queue_aimed(e: Dictionary, delay: float, count: int, spacing: float, speed:
 
 func emit_salvo(game, salvo: Dictionary) -> void:
 	var owner: Dictionary = salvo.owner
+	if game.boss_variant == 0: present_siege_shot(game,owner)
 	var origin: Vector2 = salvo.get("origin",owner.p)
 	var aim: Vector2 = salvo.aim
 	if aim == Vector2.ZERO: aim = origin.direction_to(game.player)

@@ -51,6 +51,21 @@ func run() -> void:
    for x in range(-20,21):
     if not frames[0].get_pixelv(center+Vector2i(x,y)).is_equal_approx(frames[1].get_pixelv(center+Vector2i(x,y))): changes += 1
   check(changes>20,"charge visibly changes rendered body")
+  game.rebuild_enemy_buckets()
+  check(game.bullet_target(enemy.p+Vector2(20,0)) == enemy,"larger bosses accept edge hits")
+  check(game.bullet_target(enemy.p+Vector2(24,0)).is_empty(),"shots outside enlarged body miss")
+  if scenario == "siege5":
+   game.boss.fire(game,enemy,Vector2.RIGHT)
+   check(game.boss.shot_flash(game,enemy.p) == 1.0,"firing triggers immediate local flash")
+   check(game.boss.shot_flash(game,game.enemies[1].p) == 0,"other turrets do not flash")
+   game.depth_view.sync(game)
+   await process_frame
+   await RenderingServer.frame_post_draw
+   root.get_texture().get_image().save_png("res://docs/validation/boss-art/siege-shot.png")
+   game.effects.clear()
+   check(game.boss.shot_flash(game,enemy.p) == 0,"flash expires without retained state")
+   game.boss.emit_salvo(game,{"owner":enemy,"aim":Vector2.RIGHT,"offsets":[0.0],"speed":210.0})
+   check(game.boss.shot_flash(game,enemy.p) == 1.0,"delayed volley also identifies firing turret")
   for other in game.enemies: other.hp = 0
   game.depth_view.sync(game)
   check(core.visible_instance_count == 0,"dead bosses removed immediately")

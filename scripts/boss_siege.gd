@@ -10,7 +10,7 @@ func fan_angle(boss, index: int, count: int) -> float:
 	return lerpf(0.32,0.85,float(index-left_count)/maxi(count-left_count-1,1))
 
 func fire(boss, game, e: Dictionary, toward: Vector2) -> void:
-	game.sound.play_sfx("siege_fire")
+	boss.present_siege_shot(game,e)
 	var stage := clampi(boss.remaining(game),1,boss.TURRETS)-1
 	var guided: bool = e.shots % 2 == 1
 	var count := roundi(lerpf(boss.VOLLEY_COUNTS[stage],boss.MAX_VOLLEY_COUNTS[stage],boss.tier(game)/8.0))

@@ -55,6 +55,7 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		else:
 			var ink: Color = game.boss.COLORS[game.boss_variant]
+			if game.boss_variant == 0: ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
 			if game.boss_variant == 0:
 				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),ink.darkened(0.55))
 			elif game.boss_variant == 1:

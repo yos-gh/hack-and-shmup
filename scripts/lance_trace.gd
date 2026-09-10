@@ -53,5 +53,5 @@ static func hits(game, enemy: Dictionary, rays: Array, direction: Vector2) -> bo
 		var distance: float = (enemy.p-ray.p).dot(direction)
 		if distance < 0 or distance > ray.p.distance_to(ray.end): continue
 		var point: Vector2 = ray.p+direction*distance
-		if point.distance_to(enemy.p) <= 12.5+ray.width*0.5 and game.attack_reaches(point,enemy.p): return true
+		if point.distance_to(enemy.p) <= game.enemy_bullet_radius(enemy)-1.5+ray.width*0.5 and game.attack_reaches(point,enemy.p): return true
 	return false

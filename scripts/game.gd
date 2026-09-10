@@ -291,14 +291,18 @@ func build_flow() -> void:
 func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
 
+func enemy_bullet_radius(e: Dictionary) -> float:
+	return 22.0 if e.get("kind",0) == 3 and boss_variant in [0,1] else BULLET_HIT_RADIUS
+
 func rebuild_enemy_buckets() -> void:
 	enemy_buckets.clear()
 	# Insert in enemy order, including every bucket touched by the hit radius.
 	# A bullet needs one lookup; overlapping targets keep their original priority.
 	for e in enemies:
 		if e.hp <= 0: continue
-		var lo := enemy_bucket(e.p - Vector2.ONE * BULLET_HIT_RADIUS)
-		var hi := enemy_bucket(e.p + Vector2.ONE * BULLET_HIT_RADIUS)
+		var radius := enemy_bullet_radius(e)
+		var lo := enemy_bucket(e.p - Vector2.ONE * radius)
+		var hi := enemy_bucket(e.p + Vector2.ONE * radius)
 		for y in range(lo.y, hi.y + 1):
 			for x in range(lo.x, hi.x + 1):
 				var key := Vector2i(x, y)
@@ -307,7 +311,7 @@ func rebuild_enemy_buckets() -> void:
 
 func bullet_target(p: Vector2) -> Dictionary:
 	for e in enemy_buckets.get(enemy_bucket(p), []):
-		if e.hp > 0 and p.distance_squared_to(e.p) < BULLET_HIT_RADIUS * BULLET_HIT_RADIUS and attack_open(e.p):
+		if e.hp > 0 and p.distance_squared_to(e.p) < pow(enemy_bullet_radius(e),2) and attack_open(e.p):
 			return e
 	return {}
 
