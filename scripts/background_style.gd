@@ -27,19 +27,16 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		caps.append(view.entry(point,Vector3(32,32,0.1),outer.darkened(0.78),-0.15))
 		shells.append(view.entry(point,Vector3(31.5,31.5,depth),translucent(outer,0.13),-depth*0.5))
 		cores.append(view.entry(point,Vector3(26,26,depth*0.62),translucent(inner,0.20),-depth*0.63))
+		# Only the playable inner boundary receives a clear line; depth is subdued.
 		for corner in [Vector2(-16,-16),Vector2(16,-16),Vector2(16,16),Vector2(-16,16)]:
-			add_edge(edges,point+corner,point+corner,0,-32,translucent(outer.lightened(0.06),0.70))
-			add_edge(edges,point+corner,point+corner,-32,-depth,translucent(outer,0.22))
-		for level in [0.0,-32.0,-64.0,-depth]:
-			var ink := translucent(outer.lightened(0.18),0.85) if level == 0 else translucent(outer,0.22)
-			if level <= -64: ink = translucent(inner,0.27)
+			add_edge(edges,point+corner,point+corner,-32,-depth,translucent(outer,0.12))
+		for level in [-32.0,-64.0,-depth]:
+			var ink := translucent(outer,0.12)
+			if level <= -64: ink = translucent(inner,0.12)
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				# The playable boundary already owns these top edges.
-				if level == 0 and game.cells.has(cell+direction): continue
 				var middle: Vector2 = point+Vector2(direction)*16
 				var tangent := Vector2(-direction.y,direction.x)*16
-				var edge_ink := translucent(outer.lightened(0.06),0.70) if level == -32 and direction == Vector2i.DOWN else ink
-				add_edge(edges,middle-tangent,middle+tangent,level,level,edge_ink)
+				add_edge(edges,middle-tangent,middle+tangent,level,level,ink)
 	for cell in game.cells:
 		if game.cells[cell] != -1 and not game.discovered.has(game.cells[cell]): continue
 		var p: Vector2 = game.center(cell)

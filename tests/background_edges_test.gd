@@ -28,6 +28,7 @@ func run() -> void:
 	for index in range(edges.visible_instance_count):
 		var transform := edges.get_instance_transform(index)
 		var key := [transform*Vector3(-0.5,0,0),transform*Vector3(0.5,0,0)]
+		check(key[0].z <= -32 and key[1].z <= -32,"decorative cube edges never outline the roof or upper wall")
 		check(not unique.has(key),"each shared cube edge is emitted once")
 		unique[key] = true
 	for key in view.batches: view.batches[key].visible_instance_count = 0
