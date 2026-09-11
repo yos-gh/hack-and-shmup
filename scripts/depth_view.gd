@@ -1,5 +1,7 @@
 extends Node
 
+const Glyph = preload("res://scripts/glyph_meshes.gd")
+
 # Presentation-only orthographic XY scene: one world unit equals one screen pixel.
 # +Z adds depth without moving the projected hit position. No 3D physics nodes.
 var viewport := SubViewport.new()
@@ -45,30 +47,20 @@ func _ready() -> void:
 	make_batch("wall_detail", box)
 	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
 	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
-	make_batch("square", beveled_square())
+	make_batch("square", Glyph.plate([Vector2(-1,-1),Vector2(1,-1),Vector2(1,1),Vector2(-1,1)],0.22))
 	make_batch("player_barrel", beveled_square())
-	make_batch("chaser", chaser_mesh())
+	make_batch("chaser", Glyph.plate([Vector2(1,1),Vector2(-1,0.76),Vector2(-1,-0.76),Vector2(1,-1)],0.22))
 	make_batch("sniper", sniper_mesh())
-	make_batch("siege_base", beveled_square())
+	make_batch("siege_base", Glyph.annulus(0.55,4))
 	make_batch("siege_armor", beveled_square())
 	make_batch("siege_barrel", beveled_square())
 	make_batch("siege_core", beveled_square())
-	make_batch("hunter_body", hunter_mesh())
+	make_batch("hunter_body", Glyph.chevron())
 	make_batch("hunter_wing", beveled_square())
 	make_batch("hunter_core", beveled_square())
 	make_batch("hunter_drive", beveled_square())
-	var ring := TorusMesh.new()
-	ring.inner_radius = 5.0/12.0
-	ring.outer_radius = 1.0
-	ring.rings = 16
-	ring.ring_segments = 8
-	make_batch("ring", ring)
-	var halo_ring := TorusMesh.new()
-	halo_ring.inner_radius = 24.0/29.0
-	halo_ring.outer_radius = 1.0
-	halo_ring.rings = 48
-	halo_ring.ring_segments = 8
-	make_batch("halo_ring", halo_ring)
+	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
+	make_batch("halo_ring", Glyph.annulus(24.0/29.0,64,true))
 	var disk := CylinderMesh.new()
 	disk.top_radius = 1.0
 	disk.bottom_radius = 1.0
@@ -121,23 +113,6 @@ func triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, normal: 
 		surface.set_normal(normal)
 		surface.add_vertex(point)
 
-func chaser_mesh() -> ArrayMesh:
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# Broad front and slightly narrower rear are readable from directly above.
-	var rim := [Vector3(1,1,0), Vector3(-1,0.76,0), Vector3(-1,-0.76,0), Vector3(1,-1,0)]
-	var ridge := Vector3(0,0,1)
-	for i in range(rim.size()):
-		var a: Vector3 = rim[i]
-		var b: Vector3 = rim[(i+1)%rim.size()]
-		var top_a := Vector3(a.x*0.82,a.y*0.82,1.0)
-		var top_b := Vector3(b.x*0.82,b.y*0.82,1.0)
-		triangle(surface, top_a, top_b, ridge, Vector3.BACK)
-		var normal := (b-a).cross(top_a-a).normalized()
-		triangle(surface, a, b, top_b, normal)
-		triangle(surface, a, top_b, top_a, normal)
-	return surface.commit()
-
 func sniper_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -155,24 +130,39 @@ func sniper_mesh() -> ArrayMesh:
 		var b := Vector2.from_angle(angles[(i+1)%angles.size()])
 		var oa := sniper_outline(a,corners)
 		var ob := sniper_outline(b,corners)
-		var outer_a := Vector3(oa.x,oa.y,0.6)
-		var outer_b := Vector3(ob.x,ob.y,0.6)
-		var inner_a := Vector3(a.x*5.0/12.0,a.y*5.0/12.0,0.6)
-		var inner_b := Vector3(b.x*5.0/12.0,b.y*5.0/12.0,0.6)
+		var outer_a := Vector3(oa.x*0.94,oa.y*0.94,0.75+oa.x*0.22)
+		var outer_b := Vector3(ob.x*0.94,ob.y*0.94,0.75+ob.x*0.22)
+		var inner_a := Vector3(a.x*5.0/12.0,a.y*5.0/12.0,0.75+a.x*5.0/12.0*0.22)
+		var inner_b := Vector3(b.x*5.0/12.0,b.y*5.0/12.0,0.75+b.x*5.0/12.0*0.22)
 		for face in [[outer_a,outer_b,inner_b],[outer_a,inner_b,inner_a]]:
 			for point in [face[0],face[2],face[1]]:
-				surface.set_normal(Vector3.BACK)
+				surface.set_color(Color(0.82,0.86,0.91))
+				surface.set_normal(Vector3(-0.22,0,1).normalized())
 				surface.set_uv(Vector2(1 if Vector2(point.x,point.y).length() < 0.5 else 0,0))
 				surface.add_vertex(point)
-		for contour in [[outer_a,outer_b,0.0],[inner_b,inner_a,1.0]]:
+		var rim_a := Vector3(oa.x,oa.y,0.45+oa.x*0.22)
+		var rim_b := Vector3(ob.x,ob.y,0.45+ob.x*0.22)
+		surface.set_uv(Vector2.ZERO)
+		surface.set_color(Color.WHITE)
+		var bevel_normal := (rim_b-rim_a).cross(outer_a-rim_a).normalized()
+		triangle(surface,rim_a,rim_b,outer_b,bevel_normal)
+		triangle(surface,rim_a,outer_b,outer_a,bevel_normal)
+		for contour in [[rim_a,rim_b,0.0],[inner_b,inner_a,1.0]]:
 			var start: Vector3 = contour[0]
 			var end: Vector3 = contour[1]
 			var low_start := Vector3(start.x,start.y,0)
 			var low_end := Vector3(end.x,end.y,0)
+			surface.set_color(Color(0.35,0.48,0.58))
 			surface.set_uv(Vector2(contour[2],0))
 			var normal := (low_end-low_start).cross(end-low_start).normalized()
 			triangle(surface, low_start, low_end, end, normal)
 			triangle(surface, low_start, end, start, normal)
+		for face in [[rim_a,inner_b,rim_b],[rim_a,inner_a,inner_b]]:
+			for point in [face[0],face[2],face[1]]:
+				surface.set_normal(Vector3.FORWARD)
+				surface.set_color(Color(0.25,0.32,0.4))
+				surface.set_uv(Vector2(1 if Vector2(point.x,point.y).length() < 0.5 else 0,0))
+				surface.add_vertex(Vector3(point.x,point.y,0))
 	return surface.commit()
 
 func sniper_outline(direction: Vector2, corners: Array) -> Vector2:
@@ -194,17 +184,6 @@ func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	var direction: Vector2 = target-enemy.p
 	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
 
-func hunter_mesh() -> ArrayMesh:
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var rim := [Vector3(1,0,0),Vector3(0,1,0),Vector3(-0.88,0.8,0),Vector3(-0.65,0,0),Vector3(-0.88,-0.8,0),Vector3(0,-1,0)]
-	for i in range(rim.size()):
-		var a: Vector3 = rim[i]
-		var b: Vector3 = rim[(i+1)%rim.size()]
-		var peak := Vector3(0,0,1)
-		triangle(surface,a,b,peak,(b-a).cross(peak-a).normalized())
-	return surface.commit()
-
 func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector3, color: Color, height: float) -> Dictionary:
 	var factor := 1.3 if get_parent().boss_variant == 0 else 1.12
 	return chaser_entry(enemy.p+(offset*factor).rotated(facing.angle()),facing,Vector3(size.x*factor,size.y*factor,size.z),color,height)
@@ -220,9 +199,9 @@ func sync_other_bosses(game) -> void:
 				var flash: float = game.boss.shot_flash(game,enemy.p)
 				var ink: Color = game.boss.COLORS[0].lerp(Color("fff5ff"),flash*0.8)
 				# Stationary diamond footing, independent of the swivelling turret.
-				parts.siege_base.append(boss_part(enemy,Vector2.from_angle(PI/4),Vector2.ZERO,Vector3(14,14,3),ink.darkened(0.72),1))
+				parts.siege_base.append(boss_part(enemy,Vector2.RIGHT,Vector2.ZERO,Vector3(20,20,5),ink,2))
 				for side in [-1,1]:
-					parts.siege_armor.append(boss_part(enemy,facing,Vector2(-3,side*10),Vector3(9,5,5),ink.darkened(0.22),4))
+					parts.siege_armor.append(boss_part(enemy,facing,Vector2(-3,side*10),Vector3(6,3,5),ink.darkened(0.22),4))
 					parts.siege_barrel.append(boss_part(enemy,facing,Vector2(11-warning*3-flash*4,side*4),Vector3(7,2,4),ink.lerp(Color("fff0fc"),warning),6))
 				parts.siege_core.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(8-warning*3,7-warning*3,5),ink.lerp(Color.WHITE,warning),5))
 			else:
@@ -243,16 +222,16 @@ func sync_other_bosses(game) -> void:
 				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(24,18,3),ink.darkened(0.65),1))
 				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(22,16,5),ink.darkened(0.18),3))
 				for side in [-1,1]:
-					parts.hunter_wing.append(boss_part(enemy,facing,Vector2(-9,side*(9-laser_charge*2)),Vector3(8,3,4),ink.lerp(Color("e3fcff"),laser_charge*0.6),6))
+					parts.hunter_wing.append(boss_part(enemy,facing,Vector2(-9,side*(9-laser_charge*2)),Vector3(5,2,4),ink.lerp(Color("e3fcff"),laser_charge*0.6),6))
 					var drive: float = 2.0 if laser_charge > 0 and not firing else 5.0
 					parts.hunter_drive.append(boss_part(enemy,facing,Vector2(-18,side*9),Vector3(drive,2,2),ink.darkened(0.35 if drive == 2 else 0),3))
 				var extent := 7.0-4.0*maxf(laser_charge,warning)
-				parts.hunter_core.append(boss_part(enemy,facing,Vector2(4,0),Vector3(extent,4,4),ink.lerp(Color.WHITE,maxf(laser_charge,warning)),7))
+				parts.hunter_core.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(extent,1.8,4),ink.lerp(Color.WHITE,maxf(laser_charge,warning)),7))
 	for key in parts: upload(key,parts[key])
 
 func chaser_entry(point: Vector2, heading: Vector2, scale_value: Vector3, color: Color, height: float) -> Dictionary:
 	var value := entry(point, scale_value, color, height)
-	value.transform.basis = Basis(Vector3.BACK, -heading.angle()).scaled(scale_value)
+	value.transform.basis = Basis(Vector3.BACK, -heading.angle()) * Basis.from_scale(scale_value)
 	return value
 
 func project_point(point: Vector2, height: float = 0.0) -> Vector3:
@@ -316,8 +295,8 @@ func sync(game) -> void:
 			var radius: float = 12.0-warning*2.0
 			var color := Color("ad8fff").lerp(Color("fff4dd"), warning)
 			# A quiet chassis and raised inset plate retain the original footprint.
-			squares.append(entry(enemy.p, Vector3(radius,radius,2), color.darkened(0.65), 1))
-			squares.append(entry(enemy.p, Vector3(radius*0.88,radius*0.88,5), color, 4))
+			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius,radius,2), color.darkened(0.65), 1))
+			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	var barrels: Array = []
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))

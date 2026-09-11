@@ -66,6 +66,11 @@ func run() -> void:
    check(game.boss.shot_flash(game,enemy.p) == 0,"flash expires without retained state")
    game.boss.emit_salvo(game,{"owner":enemy,"aim":Vector2.RIGHT,"offsets":[0.0],"speed":210.0})
    check(game.boss.shot_flash(game,enemy.p) == 1.0,"delayed volley also identifies firing turret")
+  # Elongated hulls must rotate as solids, without changing their proportions.
+  for angle in [0.0,PI/4,PI/2,PI*0.75]:
+   var basis: Basis = game.depth_view.chaser_entry(Vector2.ZERO,Vector2.from_angle(angle),Vector3(22,16,5),Color.WHITE,0).transform.basis
+   check(is_equal_approx(basis.x.length(),22.0) and is_equal_approx(basis.y.length(),16.0),"hull dimensions are independent of aim angle")
+   check(basis.x.normalized().dot(Vector3(cos(angle),-sin(angle),0))>0.999,"hull forward axis follows aim at diagonal headings")
   for other in game.enemies: other.hp = 0
   game.depth_view.sync(game)
   check(core.visible_instance_count == 0,"dead bosses removed immediately")
