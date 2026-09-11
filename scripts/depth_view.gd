@@ -1,5 +1,6 @@
 extends Node
 
+const Background = preload("res://scripts/background_style.gd")
 const Glyph = preload("res://scripts/glyph_meshes.gd")
 
 # Presentation-only orthographic XY scene: one world unit equals one screen pixel.
@@ -41,6 +42,7 @@ func _ready() -> void:
 	stage.add_child(light)
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
+	for key in ["bg_shell","bg_core","bg_strut","bg_lower"]: make_batch(key,box)
 	make_batch("floor", box)
 	make_batch("contact", box)
 	make_batch("wall_body", box)
@@ -82,6 +84,11 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		var iris := ShaderMaterial.new()
 		iris.shader = preload("res://scripts/triangular_iris.gdshader") if key == "sniper" else preload("res://scripts/sniper_iris.gdshader")
 		instance.material_override = iris
+	if key == "floor": material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	if key.begins_with("bg_"):
+		var glass := ShaderMaterial.new()
+		glass.shader = preload("res://scripts/background_glass.gdshader")
+		instance.material_override = glass
 	instance.multimesh = MultiMesh.new()
 	instance.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	instance.multimesh.use_colors = true
@@ -348,11 +355,14 @@ func rebuild_floor(game) -> void:
 	var bodies: Array = []
 	var details: Array = []
 	var pillars: Dictionary = {}
+	var palette := Background.palette(game)
+	var outer: Color = palette[0]
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
 		# Nearly continuous floor; only a quiet seam every four cells.
-		var shade := Color("182432") if known else Color("0c1420")
+		var shade := Color("101b25").lerp(outer,0.08) if known else Color("0c1420")
+		shade.a = 0.78 if known else 1.0
 		var panel := Vector2i(floori(cell.x/4.0), floori(cell.y/4.0))
 		# Coordinate-derived variation cannot consume simulation or effects RNG.
 		shade = shade.lightened(posmod(panel.x*17+panel.y*31,4)*0.003) if known else shade
@@ -363,7 +373,7 @@ func rebuild_floor(game) -> void:
 			if game.cells.has(cell+direction): continue
 			# All backing stays in solid cells, outside the exact walkable boundary.
 			var body_size := Vector3(10,32,4) if direction.x != 0 else Vector3(32,10,4)
-			bodies.append(entry(p+Vector2(direction)*21, body_size, Color("202f3d") if known else Color("0e1925"), 1))
+			bodies.append(entry(p+Vector2(direction)*21, body_size, outer.darkened(0.72) if known else Color("0e1925"), 1))
 			var along: int = cell.y if direction.x != 0 else cell.x
 			if posmod(along,4) == 0:
 				var tangent := Vector2(-direction.y,direction.x)
@@ -376,18 +386,8 @@ func rebuild_floor(game) -> void:
 			contacts.append(entry(p+Vector2(direction)*13.5, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
 			var size_value := Vector3(2,16,8) if direction.x != 0 else Vector3(16,2,8)
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
-			target.append(entry(wall_center, size_value, Color("426477") if known else Color("172736"), -1))
-	# Single-cell obstacles receive a recessed lid, never a new collision shape.
-	for cell in pillars:
-		var enclosed := true
-		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-			if not game.cells.has(cell+direction): enclosed = false
-		if not enclosed: continue
-		var known: bool = pillars[cell]
-		var p: Vector2 = game.center(cell)
-		bodies.append(entry(p,Vector3(24,24,4),Color("202f3d") if known else Color("0e1925"),1))
-		for offset in [-4.0,0.0,4.0]:
-			details.append(entry(p+Vector2(0,offset),Vector3(10,1.2,0.2),Color("101b28") if known else Color("080e17"),3.2))
+			target.append(entry(wall_center, size_value, outer if known else Color("172736"), -1))
+	Background.build(self,game,pillars,palette)
 	upload("wall_body", bodies)
 	upload("wall_detail", details)
 	upload("floor", floors)
