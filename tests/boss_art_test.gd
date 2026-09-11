@@ -9,6 +9,7 @@ func check(value: bool, message: String) -> void:
 func run() -> void:
  var game = load("res://main.tscn").instantiate()
  root.add_child(game)
+ game.set_view_pitch(0)
  game.set_physics_process(false)
  game.set_process_unhandled_input(false)
  DirAccess.make_dir_recursive_absolute("res://docs/validation/boss-art")

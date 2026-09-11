@@ -11,6 +11,7 @@ func check(ok: bool, message: String) -> void:
 func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
+	game.set_view_pitch(0)
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
 	Scenario.configure(game,"halo45",19045,1)

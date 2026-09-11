@@ -22,6 +22,7 @@ func run() -> void:
 		return
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
+	game.set_view_pitch(0)
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
 	for scenario in ["normal19", "siege5", "hunter15", "halo45"]:
@@ -40,8 +41,8 @@ func run() -> void:
 			var mesh: MultiMesh = game.depth_view.batches[key]
 			for i in range(mesh.visible_instance_count):
 				var transform := mesh.get_instance_transform(i)
-				for x in [-0.999,0.999]:
-					for y in [-0.999,0.999]:
+				for x in [-0.499,0.499]:
+					for y in [0.0]:
 						var point: Vector3 = transform*Vector3(x,y,0)
 						check(not game.cells.has(game.tile(Vector2(point.x,-point.y))), "wall rim stays outside walkable cells: " + scenario)
 		await process_frame

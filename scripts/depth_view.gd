@@ -43,11 +43,12 @@ func _ready() -> void:
 	stage.add_child(light)
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
-	for key in ["bg_shell","bg_core","bg_strut","bg_lower"]: make_batch(key,box)
+	for key in ["bg_shell","bg_core","bg_lower"]: make_batch(key,box)
+	make_batch("bg_strut",Background.line_mesh())
 	make_batch("floor", box)
 	make_batch("contact", box)
-	make_batch("wall_v", beveled_square(Vector2(0.4,1.0)))
-	make_batch("wall_h", beveled_square(Vector2(1.0,0.4)))
+	make_batch("wall_v", Background.line_mesh())
+	make_batch("wall_h", Background.line_mesh())
 	make_batch("square", Glyph.plate([Vector2(-1,-1),Vector2(1,-1),Vector2(1,1),Vector2(-1,1)],0.22))
 	make_batch("player_barrel", beveled_square())
 	make_batch("chaser", Glyph.plate([Vector2(1,1),Vector2(-1,0.76),Vector2(-1,-0.76),Vector2(1,-1)],0.22))
@@ -96,9 +97,16 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		var glass := ShaderMaterial.new()
 		glass.shader = preload("res://scripts/background_glass.gdshader")
 		instance.material_override = glass
+	if key in ["bg_strut","wall_v","wall_h"]:
+		var edge := ShaderMaterial.new()
+		edge.shader = preload("res://scripts/background_edge.gdshader")
+		edge.set_shader_parameter("boundary",key != "bg_strut")
+		instance.material_override = edge
+	if key == "bg_shell": instance.material_override.set_shader_parameter("front_shell",true)
 	# Transparent batches sort as layers, not by their aggregate AABB center.
 	# Camera pitch must never move glass flooring in front of combat glyphs.
-	if key.begins_with("bg_"): instance.material_override.render_priority = -30
+	if key.begins_with("bg_"): instance.material_override.render_priority = {"bg_lower":-50,"bg_core":-40,"bg_shell":-35,"bg_strut":-30}[key]
+	elif key in ["wall_v","wall_h"]: instance.material_override.render_priority = -10
 	elif key == "floor": instance.material_override.render_priority = -20
 	elif key not in ["wall_v","wall_h","contact"]: instance.material_override.render_priority = 10
 	instance.multimesh = MultiMesh.new()
@@ -296,7 +304,7 @@ func sync(game) -> void:
 	if applied_pitch != game.view_pitch_degrees:
 		applied_pitch = game.view_pitch_degrees
 		for child in stage.get_children():
-			if child is MultiMeshInstance3D and child.multimesh in [batches.bg_shell,batches.bg_core,batches.bg_strut,batches.bg_lower]:
+			if child is MultiMeshInstance3D and child.multimesh in [batches.bg_shell,batches.bg_core,batches.bg_strut,batches.bg_lower,batches.wall_v,batches.wall_h]:
 				child.material_override.set_shader_parameter("depth_slant",Vector2(0.45,-0.30) if pitch == 0 else Vector2.ZERO)
 	var discovery: int = hash(game.discovered)
 	if cached_floor != game.floor_revision or cached_discovery != discovery:
@@ -397,9 +405,9 @@ func rebuild_floor(game) -> void:
 			var wall_center: Vector2 = p+Vector2(direction)*16.65
 			var contact_size := Vector3(2,32,0.1) if direction.x != 0 else Vector3(32,2,0.1)
 			contacts.append(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
-			var size_value := Vector3(0.6,16,0.5) if direction.x != 0 else Vector3(16,0.6,0.5)
+			var tangent := Vector2(-direction.y,direction.x)*16
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
-			target.append(entry(wall_center, size_value, outer.lightened(0.13) if known else Color("172736"), 0))
+			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13) if known else Color("172736")))
 	Background.build(self,game,pillars,palette)
 	upload("floor", floors)
 	upload("contact", contacts)

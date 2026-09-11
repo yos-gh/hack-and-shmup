@@ -8,7 +8,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "0"}
+	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "25"}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=", true, 1)
 		if pair.size() != 2 or not options.has(pair[0]):

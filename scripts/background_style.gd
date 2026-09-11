@@ -14,6 +14,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
 	var cores: Array = []
 	var struts: Array = []
+	var edges: Dictionary = {}
 	var lower: Array = []
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
@@ -24,14 +25,17 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		var depth := 96.0
 		shells.append(view.entry(point,Vector3(31.5,31.5,depth),translucent(outer,0.13),-depth*0.5))
 		cores.append(view.entry(point,Vector3(26,26,depth*0.62),translucent(inner,0.20),-depth*0.63))
-		for corner in [Vector2(-15.5,-15.5),Vector2(15.5,-15.5),Vector2(15.5,15.5),Vector2(-15.5,15.5)]:
-			struts.append(view.entry(point+corner,Vector3(0.55,0.55,depth),translucent(outer,0.38),-depth*0.5))
+		for corner in [Vector2(-16,-16),Vector2(16,-16),Vector2(16,16),Vector2(-16,16)]:
+			add_edge(edges,point+corner,point+corner,0,-depth,translucent(outer,0.38))
 		for level in [0.0,-32.0,-64.0,-depth]:
 			var ink := translucent(outer.lightened(0.18),0.85) if level == 0 else translucent(outer,0.22)
 			if level <= -64: ink = translucent(inner,0.27)
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				var size := Vector3(31,0.55,0.5) if direction.y else Vector3(0.55,31,0.5)
-				struts.append(view.entry(point+Vector2(direction)*15.5,size,ink,level))
+				# The playable boundary already owns these top edges.
+				if level == 0 and game.cells.has(cell+direction): continue
+				var middle: Vector2 = point+Vector2(direction)*16
+				var tangent := Vector2(-direction.y,direction.x)*16
+				add_edge(edges,middle-tangent,middle+tangent,level,level,ink)
 	for cell in game.cells:
 		if game.cells[cell] != -1 and not game.discovered.has(game.cells[cell]): continue
 		var p: Vector2 = game.center(cell)
@@ -50,6 +54,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var horizontal: bool = posmod(cell.y,4) == 1
 			var size := Vector3(32,3,5) if horizontal else Vector3(3,32,5)
 			lower.append(view.entry(p,size,translucent(outer,0.18),-46))
+	for edge in edges.values(): struts.append(edge)
 	view.upload("bg_shell",shells)
 	view.upload("bg_core",cores)
 	view.upload("bg_strut",struts)
@@ -57,3 +62,26 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 
 static func translucent(color: Color, opacity: float) -> Color:
 	return Color(color.r,color.g,color.b,opacity)
+
+static func add_edge(edges: Dictionary, a: Vector2, b: Vector2, za: float, zb: float, color: Color) -> void:
+	var start := Vector3(a.x,-a.y,za)
+	var end := Vector3(b.x,-b.y,zb)
+	if start > end:
+		var swap := start
+		start = end
+		end = swap
+	var key := [start,end]
+	if not edges.has(key): edges[key] = line_entry(start,end,color)
+
+static func line_entry(a: Vector3, b: Vector3, color: Color) -> Dictionary:
+	var axis := b-a
+	var up := Vector3.RIGHT if absf(axis.normalized().dot(Vector3.BACK)) > 0.99 else Vector3.BACK
+	var side := up.cross(axis).normalized()
+	return {"transform":Transform3D(Basis(axis,side,axis.normalized().cross(side)),(a+b)*0.5),"color":color,"warning":0.0}
+
+static func line_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for vertex in [Vector3(-0.5,-1,0),Vector3(0.5,-1,0),Vector3(0.5,1,0),Vector3(-0.5,-1,0),Vector3(0.5,1,0),Vector3(-0.5,1,0)]:
+		surface.add_vertex(vertex)
+	return surface.commit()
