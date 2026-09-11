@@ -35,7 +35,8 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 				if level == 0 and game.cells.has(cell+direction): continue
 				var middle: Vector2 = point+Vector2(direction)*16
 				var tangent := Vector2(-direction.y,direction.x)*16
-				add_edge(edges,middle-tangent,middle+tangent,level,level,ink)
+				var edge_ink := translucent(outer.lightened(0.06),0.70) if level == -32 and direction == Vector2i.DOWN else ink
+				add_edge(edges,middle-tangent,middle+tangent,level,level,edge_ink)
 	for cell in game.cells:
 		if game.cells[cell] != -1 and not game.discovered.has(game.cells[cell]): continue
 		var p: Vector2 = game.center(cell)
@@ -72,6 +73,7 @@ static func add_edge(edges: Dictionary, a: Vector2, b: Vector2, za: float, zb: f
 		end = swap
 	var key := [start,end]
 	if not edges.has(key): edges[key] = line_entry(start,end,color)
+	elif color.a > edges[key].color.a: edges[key].color = color
 
 static func line_entry(a: Vector3, b: Vector3, color: Color) -> Dictionary:
 	var axis := b-a

@@ -61,9 +61,13 @@ func run() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var frame: Image = view.viewport.get_texture().get_image()
-	var front: Vector2 = view.camera.unproject_position(view.project_point(target+Vector2(0,16),-40))
+	var front: Vector2 = view.camera.unproject_position(view.project_point(target+Vector2(0,16),-16))
 	print("Front sample ",front," color ",frame.get_pixelv(Vector2i(front))," background ",frame.get_pixel(0,0))
 	check(frame.get_pixelv(Vector2i(front)).get_luminance()>frame.get_pixel(0,0).get_luminance()+0.03,"near-facing cube wall renders below the top at 25 degrees")
+	var below: Vector2 = view.camera.unproject_position(view.project_point(target+Vector2(0,16),-64))
+	var wall_light := frame.get_pixelv(Vector2i(front)).get_luminance()-frame.get_pixel(0,0).get_luminance()
+	var support_light := frame.get_pixelv(Vector2i(below)).get_luminance()-frame.get_pixel(0,0).get_luminance()
+	check(wall_light>support_light*3.0,"near wall is distinct from the transparent lower support")
 	DirAccess.make_dir_recursive_absolute("res://docs/validation/edges")
 	frame.save_png("res://docs/validation/edges/front-face.png")
 	game.free()
