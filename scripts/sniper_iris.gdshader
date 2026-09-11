@@ -1,4 +1,5 @@
 shader_type spatial;
+render_mode depth_prepass_alpha;
 
 // Torus local XZ radius. Keep the outside at 12px and close the actual opening
 // from 5px to 1.5px, matching the shared 2D warning rather than hiding it below a dot.
@@ -15,7 +16,11 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = COLOR.rgb;
-	ROUGHNESS = 0.65;
-	METALLIC = 0.15;
+	float facing = abs(dot(normalize(NORMAL), normalize(VIEW)));
+	float edge = pow(1.0-facing, 3.0);
+	ALBEDO = mix(COLOR.rgb, vec3(0.82,0.93,1.0), edge*0.12);
+	ROUGHNESS = 0.42;
+	SPECULAR = 0.08;
+	METALLIC = 0.05;
+	ALPHA = mix(0.58,0.96,facing);
 }
