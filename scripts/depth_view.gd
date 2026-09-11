@@ -43,7 +43,7 @@ func _ready() -> void:
 	stage.add_child(light)
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
-	for key in ["bg_shell","bg_core","bg_lower"]: make_batch(key,box)
+	for key in ["bg_shell","bg_core","bg_lower","bg_cap"]: make_batch(key,box)
 	make_batch("bg_strut",Background.line_mesh())
 	make_batch("floor", box)
 	make_batch("contact", box)
@@ -103,9 +103,13 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		edge.set_shader_parameter("boundary",key != "bg_strut")
 		instance.material_override = edge
 	if key == "bg_shell": instance.material_override.set_shader_parameter("front_shell",true)
+	if key == "bg_cap":
+		# A depth-writing top masks the rear cube sides below it.
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		instance.material_override = material
 	# Transparent batches sort as layers, not by their aggregate AABB center.
 	# Camera pitch must never move glass flooring in front of combat glyphs.
-	if key.begins_with("bg_"): instance.material_override.render_priority = {"bg_lower":-50,"bg_core":-40,"bg_shell":-35,"bg_strut":-30}[key]
+	if key.begins_with("bg_"): instance.material_override.render_priority = {"bg_lower":-50,"bg_core":-40,"bg_shell":-35,"bg_strut":-30,"bg_cap":0}[key]
 	elif key in ["wall_v","wall_h"]: instance.material_override.render_priority = -10
 	elif key == "floor": instance.material_override.render_priority = -20
 	elif key not in ["wall_v","wall_h","contact"]: instance.material_override.render_priority = 10

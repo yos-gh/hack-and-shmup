@@ -12,6 +12,7 @@ static func palette(game) -> Array:
 
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
+	var caps: Array = []
 	var cores: Array = []
 	var struts: Array = []
 	var edges: Dictionary = {}
@@ -23,10 +24,12 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		var point: Vector2 = game.center(cell)
 		# A hollow glass column, with a second colored layer deep inside it.
 		var depth := 96.0
+		caps.append(view.entry(point,Vector3(32,32,0.1),outer.darkened(0.78),-0.15))
 		shells.append(view.entry(point,Vector3(31.5,31.5,depth),translucent(outer,0.13),-depth*0.5))
 		cores.append(view.entry(point,Vector3(26,26,depth*0.62),translucent(inner,0.20),-depth*0.63))
 		for corner in [Vector2(-16,-16),Vector2(16,-16),Vector2(16,16),Vector2(-16,16)]:
-			add_edge(edges,point+corner,point+corner,0,-depth,translucent(outer,0.38))
+			add_edge(edges,point+corner,point+corner,0,-32,translucent(outer.lightened(0.06),0.70))
+			add_edge(edges,point+corner,point+corner,-32,-depth,translucent(outer,0.22))
 		for level in [0.0,-32.0,-64.0,-depth]:
 			var ink := translucent(outer.lightened(0.18),0.85) if level == 0 else translucent(outer,0.22)
 			if level <= -64: ink = translucent(inner,0.27)
@@ -56,6 +59,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var size := Vector3(32,3,5) if horizontal else Vector3(3,32,5)
 			lower.append(view.entry(p,size,translucent(outer,0.18),-46))
 	for edge in edges.values(): struts.append(edge)
+	view.upload("bg_cap",caps)
 	view.upload("bg_shell",shells)
 	view.upload("bg_core",cores)
 	view.upload("bg_strut",struts)

@@ -19,5 +19,5 @@ void fragment() {
 	float wall_band = front_face * (1.0-smoothstep(31.0,33.0,layer_depth));
 	float support = COLOR.a * exp(-layer_depth/58.0);
 	ALBEDO = COLOR.rgb * mix(1.0,0.88,wall_band);
-	ALPHA = mix(support,0.62,wall_band);
+	ALPHA = mix(support,0.34,wall_band);
 }
