@@ -8,7 +8,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d"}
+	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "0"}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=", true, 1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -16,14 +16,15 @@ func run() -> void:
 			quit(2)
 			return
 		options[pair[0]] = pair[1]
-	if not options.view in ["2d", "3d"] or not options.scenario in ["normal19", "siege5", "hunter15", "halo45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
-		printerr("Expected scenario=normal19|siege5|hunter15|halo45, integer seed, weapon=0..2, frames>=0")
+	if not options.tilt.is_valid_float() or float(options.tilt) < 0 or float(options.tilt) > 40 or not options.view in ["2d", "3d"] or not options.scenario in ["normal19", "siege5", "hunter15", "halo45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
+		printerr("Expected scenario=normal19|siege5|hunter15|halo45, integer seed, weapon=0..2, frames>=0, tilt=0..40")
 		quit(2)
 		return
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	Scenario.configure(game, options.scenario, int(options.seed), int(options.weapon))
 	game.view_comparison = true
+	game.set_view_pitch(float(options.tilt))
 	game.set_depth_view(options.view == "3d")
 	if int(options.frames) == 0:
 		return

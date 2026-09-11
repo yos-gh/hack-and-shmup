@@ -12,6 +12,7 @@ var batches: Dictionary = {}
 var cached_floor := -1
 var cached_discovery := 0
 var active := true
+var applied_pitch := -1.0
 var max_sync_ms := 0.0
 var last_rebuild_ms := 0.0
 
@@ -95,6 +96,11 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		var glass := ShaderMaterial.new()
 		glass.shader = preload("res://scripts/background_glass.gdshader")
 		instance.material_override = glass
+	# Transparent batches sort as layers, not by their aggregate AABB center.
+	# Camera pitch must never move glass flooring in front of combat glyphs.
+	if key.begins_with("bg_"): instance.material_override.render_priority = -30
+	elif key == "floor": instance.material_override.render_priority = -20
+	elif key not in ["wall_v","wall_h","contact"]: instance.material_override.render_priority = 10
 	instance.multimesh = MultiMesh.new()
 	instance.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	instance.multimesh.use_colors = true
@@ -252,7 +258,10 @@ func project_point(point: Vector2, height: float = 0.0) -> Vector3:
 
 func entry(point: Vector2, scale_value: Vector3, color: Color, height: float = 0.0, ring: bool = false, warning: float = 0.0) -> Dictionary:
 	var basis := Basis(Vector3.RIGHT, PI/2) if ring else Basis.IDENTITY
-	return {"transform": Transform3D(basis.scaled(scale_value), project_point(point, height)), "color": color, "warning": warning}
+	var origin := project_point(point,height)
+	# Keep raised actor origins over their tactical anchors; mesh thickness remains 3D.
+	origin.y -= tan(deg_to_rad(get_parent().view_pitch_degrees))*maxf(height,0.0)
+	return {"transform": Transform3D(basis.scaled(scale_value), origin), "color": color, "warning": warning}
 
 func upload(key: String, entries: Array) -> void:
 	var mesh: MultiMesh = batches[key]
@@ -281,7 +290,14 @@ func sync(game) -> void:
 	var screen: Vector2 = game.get_viewport_rect().size
 	viewport.size = Vector2i(screen)
 	camera.size = screen.y
-	camera.position = project_point(game.camera_pos, 1500)
+	var pitch := deg_to_rad(game.view_pitch_degrees)
+	camera.rotation = Vector3(pitch,0,0)
+	camera.position = project_point(game.view_origin())+Vector3(0,-sin(pitch),cos(pitch))*1500
+	if applied_pitch != game.view_pitch_degrees:
+		applied_pitch = game.view_pitch_degrees
+		for child in stage.get_children():
+			if child is MultiMeshInstance3D and child.multimesh in [batches.bg_shell,batches.bg_core,batches.bg_strut,batches.bg_lower]:
+				child.material_override.set_shader_parameter("depth_slant",Vector2(0.45,-0.30) if pitch == 0 else Vector2.ZERO)
 	var discovery: int = hash(game.discovered)
 	if cached_floor != game.floor_revision or cached_discovery != discovery:
 		rebuild_floor(game)
@@ -291,7 +307,8 @@ func sync(game) -> void:
 	var rings: Array = []
 	var chasers: Array = []
 	var snipers: Array = []
-	var bounds := Rect2(game.camera_pos-screen*0.5-Vector2(48,48), screen+Vector2(96,96))
+	var world_screen: Vector2 = screen/game.view_scale()
+	var bounds := Rect2(game.view_origin()-world_screen*0.5-Vector2(64,64), world_screen+Vector2(128,128))
 	for enemy in game.enemies:
 		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)

@@ -5,7 +5,7 @@ func pointer(game) -> Vector2:
 	return game.replay_input.get("cursor", game.get_global_mouse_position())
 
 func aim(game) -> Vector2:
-	var direction: Vector2 = (pointer(game) - game.get_viewport_rect().size * 0.5 + game.camera_pos - game.player).normalized()
+	var direction: Vector2 = (game.screen_to_world(pointer(game)) - game.player).normalized()
 	return game.replay_input.get("aim", direction)
 
 func movement(game) -> Vector2:
@@ -26,6 +26,10 @@ func handle_event(game, event: InputEvent) -> void:
 		return
 	if game.view_comparison and event is InputEventKey and event.pressed and not event.echo and event.is_action_pressed("compare_view"):
 		game.set_depth_view(not game.depth_enabled)
+		return
+	if game.view_comparison and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F7:
+		var next := 15.0 if game.view_pitch_degrees < 1 else (25.0 if game.view_pitch_degrees < 20 else (35.0 if game.view_pitch_degrees < 30 else 0.0))
+		game.set_view_pitch(next)
 		return
 	if game.practice.selecting:
 		game.practice.input(game,event)

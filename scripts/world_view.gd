@@ -7,9 +7,8 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 func draw(game, screen: Vector2) -> void:
 	if game.depth_enabled:
 		game.draw_texture_rect(game.depth_view.viewport.get_texture(), Rect2(Vector2.ZERO, screen), false)
-	var offset = screen * 0.5 - game.camera_pos
-	game.draw_set_transform(offset)
-	var view = Rect2(-offset - Vector2(32,32), screen + Vector2(64,64))
+	game.draw_set_transform_matrix(game.world_transform())
+	var view := Rect2(game.screen_to_world(Vector2.ZERO)-Vector2(32,32),screen/game.view_scale()+Vector2(64,64))
 	if not game.depth_enabled:
 		for c in game.cells:
 			var p = Vector2(c) * game.TILE

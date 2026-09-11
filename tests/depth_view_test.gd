@@ -56,7 +56,7 @@ func run() -> void:
 			var point: Vector2 = game.camera_pos+offset
 			for height in [0.0, 7.0, 40.0]:
 				var projected: Vector2 = game.depth_view.camera.unproject_position(game.depth_view.project_point(point, height))
-				check(projected.distance_to(offset+screen*0.5) < 0.05, "orthographic position matches 2D at all tested heights/sizes")
+				check(projected.distance_to(game.world_to_screen(point)) < 0.05, "orthographic position matches 2D at all tested heights/sizes")
 	var node_count: int = game.depth_view.stage.get_child_count()
 	for i in range(8):
 		var before := state(game)

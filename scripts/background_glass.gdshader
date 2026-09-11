@@ -1,13 +1,14 @@
 shader_type spatial;
 render_mode unshaded, world_vertex_coords, depth_prepass_alpha;
 
+uniform vec2 depth_slant = vec2(0.45,-0.30);
 varying float layer_depth;
 
 void vertex() {
 	// Only decorative depth is oblique. The playable XY plane never moves.
 	float depth = max(-VERTEX.z, 0.0);
 	layer_depth = depth;
-	VERTEX.xy += vec2(0.45, -0.30) * depth;
+	VERTEX.xy += depth_slant * depth;
 }
 
 void fragment() {

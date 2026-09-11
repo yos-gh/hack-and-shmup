@@ -6,7 +6,7 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 func draw(game, screen: Vector2) -> void:
 	game.draw_set_transform(Vector2.ZERO)
 	if game.view_comparison:
-		label_at(game, Vector2(26,108), "F6 / " + ("3D STUDY" if game.depth_enabled else "CLASSIC 2D"), 13, Color("8194aa"))
+		label_at(game, Vector2(26,108), "F6 / " + (("3D  |  F7 / TILT %d DEG" % game.view_pitch_degrees) if game.depth_enabled else "CLASSIC 2D"), 13, Color("8194aa"))
 	var layout := hud_layout(screen)
 	var weapon: Rect2 = layout.weapon
 	var timer: Rect2 = layout.timer

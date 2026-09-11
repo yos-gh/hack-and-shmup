@@ -74,6 +74,7 @@ var floor_revision := 0
 var depth_view: Node
 var depth_enabled := false
 var view_comparison := false
+var view_pitch_degrees := 0.0
 var rooms: Array[Rect2i] = []
 var discovered: Dictionary = {}
 var enemies: Array[Dictionary] = []
@@ -562,6 +563,31 @@ func _draw() -> void:
 		return
 	world_view.draw(self, screen)
 	hud.draw(self, screen)
+
+# One presentation transform for the 3D camera, 2D attacks and pointer input.
+# Quantization affects rendering only, never simulation positions or camera follow.
+func view_scale() -> Vector2:
+	return Vector2(1,cos(deg_to_rad(view_pitch_degrees))) if depth_enabled else Vector2.ONE
+
+func view_origin() -> Vector2:
+	if not depth_enabled: return camera_pos
+	var scale_value := view_scale()
+	return (camera_pos*scale_value*4.0).round()/4.0/scale_value
+
+func world_to_screen(point: Vector2) -> Vector2:
+	return (point-view_origin())*view_scale()+get_viewport_rect().size*0.5
+
+func screen_to_world(point: Vector2) -> Vector2:
+	return (point-get_viewport_rect().size*0.5)/view_scale()+view_origin()
+
+func world_transform() -> Transform2D:
+	var scale_value := view_scale()
+	return Transform2D(Vector2(scale_value.x,0),Vector2(0,scale_value.y),world_to_screen(Vector2.ZERO))
+
+func set_view_pitch(degrees: float) -> void:
+	view_pitch_degrees = clampf(degrees,0,40)
+	if depth_view != null and depth_enabled: depth_view.sync(self)
+	queue_redraw()
 
 func set_depth_view(enabled: bool) -> void:
 	if enabled and depth_view == null:
