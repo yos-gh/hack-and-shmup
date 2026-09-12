@@ -76,9 +76,20 @@ func run() -> void:
 		await RenderingServer.frame_post_draw
 	var reverse: Image = view.viewport.get_texture().get_image()
 	check(absf(reverse.get_pixelv(Vector2i(front)).get_luminance()-frame.get_pixelv(Vector2i(front)).get_luminance())<0.005,"both orientations retain the same readable wall band")
-	check(not view.batches.has("bg_cap"),"no roof fill is rendered")
+	check(not view.batches.has("bg_cap"),"no decorative roof strip is rendered")
 	var wall: Transform3D = view.batches.bg_shell.get_instance_transform(0)
 	check(absf(wall.basis.y.normalized().z)>0.999 and is_zero_approx(wall.basis.x.z),"wall geometry is vertical only, with no horizontal roof")
+	view.upload("wall_mask",[view.entry(target+Vector2(0,32),Vector3(32,32,0.1),Color("080e17"),-0.05)])
+	for wait_frame in range(3):
+		await process_frame
+		await RenderingServer.frame_post_draw
+	var masked: Image = view.viewport.get_texture().get_image()
+	view.batches.bg_shell.visible_instance_count = 0
+	for wait_frame in range(3):
+		await process_frame
+		await RenderingServer.frame_post_draw
+	var mask_only: Image = view.viewport.get_texture().get_image()
+	check(masked.get_pixelv(Vector2i(front)).is_equal_approx(mask_only.get_pixelv(Vector2i(front))),"solid footprint masks the wall seen through a pillar top")
 	DirAccess.make_dir_recursive_absolute("res://docs/validation/edges")
 	frame.save_png("res://docs/validation/edges/front-face.png")
 	game.free()

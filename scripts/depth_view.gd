@@ -47,6 +47,7 @@ func _ready() -> void:
 	make_batch("bg_core",Background.wall_mesh())
 	make_batch("bg_shell",Background.wall_mesh())
 	make_batch("bg_strut",Background.line_mesh())
+	make_batch("wall_mask", Background.wall_mesh())
 	make_batch("floor", box)
 	make_batch("contact", box)
 	make_batch("wall_v", Background.line_mesh())
@@ -79,7 +80,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 0.65
 	material.metallic = 0.15
-	if key in ["floor", "contact"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if key in ["floor", "contact", "wall_mask"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
 	if key in ["square","player_barrel","chaser"] or key.begins_with("siege_") or key.begins_with("hunter_") or key.begins_with("halo_"):

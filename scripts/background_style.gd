@@ -20,8 +20,35 @@ static func sample_at(seed_value: int, cell: Vector2i, channel: int) -> float:
 static func deck_at(seed_value: int, panel: Vector2i) -> int:
 	return mini(int(sample_at(seed_value,panel,1)*7),6)
 
+static func enclosed_solids(cells: Dictionary, solids: Dictionary) -> Array:
+	var bounds := Rect2i(cells.keys()[0],Vector2i.ONE)
+	for cell in cells: bounds = bounds.expand(cell)
+	bounds = bounds.grow(1)
+	var visited: Dictionary = {}
+	var enclosed: Array = []
+	for seed_cell in solids:
+		if visited.has(seed_cell): continue
+		var region: Array = [seed_cell]
+		visited[seed_cell] = true
+		var exterior := false
+		var cursor := 0
+		while cursor < region.size():
+			var cell: Vector2i = region[cursor]
+			cursor += 1
+			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+				var next: Vector2i = cell+direction
+				if not bounds.has_point(next):
+					exterior = true
+					continue
+				if cells.has(next) or visited.has(next): continue
+				visited[next] = true
+				region.append(next)
+		if not exterior: enclosed.append_array(region)
+	return enclosed
+
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
+	var masks: Array = []
 	var cores: Array = []
 	var struts: Array = []
 	var edges: Dictionary = {}
@@ -29,6 +56,8 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var decor_seed: int = hash(game.cells) ^ (game.floor_number*7919)
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
+	for cell in enclosed_solids(game.cells,solids):
+		masks.append(view.entry(game.center(cell),Vector3(32,32,1),Color("080e17").linear_to_srgb(),-0.25))
 	for cell in solids:
 		var point: Vector2 = game.center(cell)
 		# The contour carries open glass curtains with a second color at depth.
@@ -43,8 +72,8 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer if known else outer.darkened(0.48),0.13)))
 			if direction.y != 0:
 				add_edge(edges,middle-tangent,middle+tangent,-32,-32,translucent(outer if known else outer.darkened(0.48),0.55))
-			var core := wall_entry(middle-tangent,middle+tangent,depth-48,translucent(inner if known else inner.darkened(0.5),0.20))
-			core.transform.origin.z -= 48
+			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner if known else inner.darkened(0.5),0.20))
+			core.transform.origin.z -= 32
 			cores.append(core)
 		# Only the playable inner boundary receives a clear line; depth is subdued.
 		# Sparse deep supports avoid an equally weighted cube lattice.
@@ -85,6 +114,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 				side.transform.origin.z -= top_depth
 				lower.append(side)
 	for edge in edges.values(): struts.append(edge)
+	view.upload("wall_mask",masks)
 	view.upload("bg_shell",shells)
 	view.upload("bg_core",cores)
 	view.upload("bg_strut",struts)

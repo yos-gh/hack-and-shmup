@@ -23,9 +23,9 @@ void vertex() {
 void fragment() {
 	if (!two_sided && !FRONT_FACING) discard;
 	// The near wall has a finite, readable fascia; supports below it recede.
-	float wall_band = front_face * (1.0-smoothstep(31.0,33.0,layer_depth));
+	float wall_band = front_face * (1.0-smoothstep(28.0,40.0,layer_depth));
 	float support = COLOR.a * exp(-layer_depth/85.0);
-	if (front_shell) support *= mix(1.0,0.45,smoothstep(32.0,44.0,layer_depth));
+	if (front_shell) support *= mix(1.0,0.75,smoothstep(32.0,56.0,layer_depth));
 	float facet = glass_facets(glass_position/32.0);
 	// Keep the fascia readable even where a facet happens to be dark.
 	ALBEDO = COLOR.rgb * mix(0.35+1.3*facet,0.90+0.30*facet,wall_band);

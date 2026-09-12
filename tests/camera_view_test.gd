@@ -12,7 +12,7 @@ func check(ok: bool, message: String) -> void:
 func background_only(game) -> void:
 	game.depth_view.sync(game)
 	for key in game.depth_view.batches:
-		if not key.begins_with("bg_") and not key in ["floor","contact","wall_v","wall_h"]:
+		if not key.begins_with("bg_") and not key in ["floor","contact","wall_mask","wall_v","wall_h"]:
 			game.depth_view.batches[key].visible_instance_count = 0
 
 func run() -> void:

@@ -17,7 +17,7 @@ func rendered(view) -> Image:
 
 func background_only(view) -> void:
 	for key in view.batches:
-		if not key.begins_with("bg_") and not key in ["floor","contact","wall_v","wall_h"]:
+		if not key.begins_with("bg_") and not key in ["floor","contact","wall_mask","wall_v","wall_h"]:
 			view.batches[key].visible_instance_count = 0
 
 func run() -> void:
