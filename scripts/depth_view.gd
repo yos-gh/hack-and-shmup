@@ -43,7 +43,7 @@ func _ready() -> void:
 	stage.add_child(light)
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
-	make_batch("bg_lower",box)
+	make_batch("bg_lower",Background.wall_mesh())
 	make_batch("bg_core",Background.wall_mesh())
 	make_batch("bg_shell",Background.wall_mesh())
 	make_batch("bg_strut",Background.line_mesh())
@@ -105,7 +105,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		edge.set_shader_parameter("boundary",key != "bg_strut")
 		instance.material_override = edge
 	if key == "bg_shell": instance.material_override.set_shader_parameter("front_shell",true)
-	if key in ["bg_shell","bg_core"]: instance.material_override.set_shader_parameter("two_sided",true)
+	if key in ["bg_shell","bg_core","bg_lower"]: instance.material_override.set_shader_parameter("two_sided",true)
 	# Transparent batches sort as layers, not by their aggregate AABB center.
 	# Camera pitch must never move glass flooring in front of combat glyphs.
 	if key.begins_with("bg_"): instance.material_override.render_priority = {"bg_lower":-50,"bg_core":-40,"bg_shell":-35,"bg_strut":-30}[key]
@@ -389,12 +389,15 @@ func rebuild_floor(game) -> void:
 	var pillars: Dictionary = {}
 	var palette := Background.palette(game)
 	var outer: Color = palette[0]
+	for child in stage.get_children():
+		if child is MultiMeshInstance3D and child.multimesh == batches.floor:
+			child.material_override.set_shader_parameter("inner_color",Vector3(palette[1].r,palette[1].g,palette[1].b))
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
 		# Nearly continuous floor; only a quiet seam every four cells.
-		var shade := Color("101923").lerp(outer,0.12) if known else Color("0c1420")
-		shade.a = 0.56 if known else 1.0
+		var shade := Color("101923").lerp(outer,0.08) if known else Color("0c1420")
+		shade.a = 0.50 if known else 1.0
 		var panel := Vector2i(floori(cell.x/4.0), floori(cell.y/4.0))
 		# Coordinate-derived variation cannot consume simulation or effects RNG.
 		shade = shade.lightened(posmod(panel.x*17+panel.y*31,4)*0.003) if known else shade

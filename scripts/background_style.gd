@@ -1,10 +1,10 @@
 extends RefCounted
 ## Presentation-only palette and lower structure; never consumes gameplay RNG.
 const PAIRS := [
-	[Color("51848b"),Color("806388")],
-	[Color("57758f"),Color("9b805c")],
-	[Color("796788"),Color("538b83")],
-	[Color("6f8471"),Color("626e98")]
+	[Color("528ba2"),Color("925bb0")],
+	[Color("527eab"),Color("b48759")],
+	[Color("8771aa"),Color("489d92")],
+	[Color("799a7a"),Color("6c72b2")]
 ]
 
 static func palette(game) -> Array:
@@ -19,7 +19,6 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
 	for cell in solids:
-		if not solids[cell]: continue
 		var point: Vector2 = game.center(cell)
 		# The contour carries open glass curtains with a second color at depth.
 		var depth := 96.0
@@ -27,41 +26,48 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 			var neighbor: Vector2i = cell+direction
 			if not game.cells.has(neighbor): continue
-			if game.cells[neighbor] != -1 and not game.discovered.has(game.cells[neighbor]): continue
+			var known: bool = game.cells[neighbor] == -1 or game.discovered.has(game.cells[neighbor])
 			var middle := point+Vector2(direction)*16
 			var tangent := Vector2(-direction.y,direction.x)*16
-			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer,0.13)))
+			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer,0.13) if known else Color(0.24,0.34,0.44,0.09)))
+			if not known: continue
 			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner,0.20))
 			core.transform.origin.z -= 32
 			cores.append(core)
+		if not solids[cell]: continue
 		# Only the playable inner boundary receives a clear line; depth is subdued.
-		for corner in [Vector2(-16,-16),Vector2(16,-16),Vector2(16,16),Vector2(-16,16)]:
-			add_edge(edges,point+corner,point+corner,-32,-depth,translucent(outer,0.12))
-		for level in [-32.0,-64.0,-depth]:
-			var ink := translucent(outer,0.12)
-			if level <= -64: ink = translucent(inner,0.12)
-			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				var middle: Vector2 = point+Vector2(direction)*16
-				var tangent := Vector2(-direction.y,direction.x)*16
-				add_edge(edges,middle-tangent,middle+tangent,level,level,ink)
+		# Sparse deep supports avoid an equally weighted cube lattice.
+		if posmod(cell.x*7+cell.y*11,5) == 0:
+			for corner in [Vector2(-16,-16),Vector2(16,16)]:
+				add_edge(edges,point+corner,point+corner,-32,-144,translucent(inner,0.12))
 	for cell in game.cells:
 		if game.cells[cell] != -1 and not game.discovered.has(game.cells[cell]): continue
 		var p: Vector2 = game.center(cell)
-		var panel := Vector2i(floori(cell.x/4.0),floori(cell.y/4.0))
-		# Discontinuous suspended decks form broad quiet masses under the glass.
-		# Their layout is decorative and cannot reveal another playable room.
-		var pattern := posmod(panel.x*13+panel.y*7,5)
-		if pattern < 3:
-			var depth := 68.0+pattern*24.0
-			lower.append(view.entry(p,Vector3(31.5,31.5,22),translucent(inner,0.14),-depth))
-			if posmod(cell.x,4) == 0:
-				lower.append(view.entry(p+Vector2(-15,0),Vector3(0.65,32,0.5),translucent(outer,0.23),-depth+11))
-			if posmod(cell.y,4) == 0:
-				lower.append(view.entry(p+Vector2(0,-15),Vector3(32,0.65,0.5),translucent(outer,0.23),-depth+11))
-		if posmod(cell.x,4) == 1 or posmod(cell.y,4) == 1:
-			var horizontal: bool = posmod(cell.y,4) == 1
-			var size := Vector3(32,3,5) if horizontal else Vector3(3,32,5)
-			lower.append(view.entry(p,size,translucent(outer,0.18),-46))
+		# World-fixed decorative masses, unrelated to hidden room contents.
+		var panel := Vector2i(floori(cell.x/3.0),floori(cell.y/3.0))
+		var pattern := posmod(panel.x*13+panel.y*7,7)
+		if pattern < 4:
+			var depth := 64.0+pattern*24.0
+			lower.append(view.entry(p,Vector3(32,32,1),translucent(inner,0.30),-depth+22))
+			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+				var neighbor: Vector2i = cell+direction
+				var other_panel := Vector2i(floori(neighbor.x/3.0),floori(neighbor.y/3.0))
+				var same_deck := posmod(other_panel.x*13+other_panel.y*7,7) == pattern
+				if game.cells.has(neighbor) and (game.cells[neighbor] == -1 or game.discovered.has(game.cells[neighbor])) and same_deck: continue
+				var middle := p+Vector2(direction)*16
+				var tangent := Vector2(-direction.y,direction.x)*16
+				var side := wall_entry(middle-tangent,middle+tangent,44,translucent(inner,0.30))
+				side.transform.origin.z -= depth-22
+				lower.append(side)
+		# Occasional tall, inset prisms provide a different spatial scale.
+		if posmod(cell.x*17+cell.y*31,19) == 0:
+			lower.append(view.entry(p,Vector3(23,23,1),translucent(inner,0.33),-52))
+			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+				var middle := p+Vector2(direction)*11.5
+				var tangent := Vector2(-direction.y,direction.x)*11.5
+				var side := wall_entry(middle-tangent,middle+tangent,96,translucent(inner,0.33))
+				side.transform.origin.z -= 52
+				lower.append(side)
 	for edge in edges.values(): struts.append(edge)
 	view.upload("bg_shell",shells)
 	view.upload("bg_core",cores)

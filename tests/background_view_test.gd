@@ -35,8 +35,11 @@ func run() -> void:
 		check(lower.visible_instance_count > 0,"visible room has a decorative lower layer")
 		for index in range(lower.visible_instance_count):
 			var origin := lower.get_instance_transform(index).origin
-			var cell: Vector2i = game.tile(Vector2(origin.x,-origin.y))
-			check(game.cells[cell] == -1 or game.discovered.has(game.cells[cell]),"lower geometry is limited to discovered cells")
+			var belongs_to_known := false
+			for offset in [Vector2.ZERO,Vector2(0.1,0),Vector2(-0.1,0),Vector2(0,0.1),Vector2(0,-0.1)]:
+				var cell: Vector2i = game.tile(Vector2(origin.x,-origin.y)+offset)
+				belongs_to_known = belongs_to_known or (game.cells.has(cell) and (game.cells[cell] == -1 or game.discovered.has(game.cells[cell])))
+			check(belongs_to_known,"lower faces belong to discovered cells, including faces on their boundaries")
 		await process_frame
 		await RenderingServer.frame_post_draw
 		check(before == var_to_bytes([Scenario.digest(game),game.effects_rng.state,game.discovered]),"background render preserves simulation and both random streams")
