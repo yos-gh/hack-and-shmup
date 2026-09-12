@@ -57,12 +57,21 @@ func run() -> void:
 	var delta := hidden.get_pixelv(Vector2i(sample)).get_luminance()-absent.get_pixelv(Vector2i(sample)).get_luminance()
 	print("Undiscovered near-side luminance contribution: ",delta)
 	check(delta>0.01,"undiscovered near-facing wall contributes visible pixels")
-	check(hidden.get_pixelv(Vector2i(640,380)).is_equal_approx(absent.get_pixelv(Vector2i(640,380))),"opaque hidden floor masks deeper geometry")
+	var lower_count: int = view.batches.bg_lower.visible_instance_count
+	view.batches.bg_shell.visible_instance_count = count
+	view.batches.bg_lower.visible_instance_count = 0
+	var no_decor: Image = await rendered(view)
+	check(hidden.get_data() != no_decor.get_data(),"hidden room retains visible decorative depth")
+	view.batches.bg_lower.visible_instance_count = lower_count
+	var layout: Array = []
+	for i in range(lower_count): layout.append(view.batches.bg_lower.get_instance_transform(i))
 	view.batches.bg_shell.visible_instance_count = count
 	check(state == var_to_bytes([Scenario.digest(game),game.effects_rng.state,game.discovered]),"rendering hidden sides reveals no room or simulation state")
 	game.discovered[game.cells[target]] = true
 	view.sync(game)
 	background_only(view)
+	check(view.batches.bg_lower.visible_instance_count == lower_count,"discovery does not add or reroll decorative prisms")
+	for i in range(lower_count): check(view.batches.bg_lower.get_instance_transform(i) == layout[i],"discovery preserves decorative positions and sizes")
 	var known: Image = await rendered(view)
 	known.save_png("res://docs/validation/art/discovered-room.png")
 	check(known.get_pixelv(Vector2i(sample)).get_luminance()>hidden.get_pixelv(Vector2i(sample)).get_luminance()+0.01,"discovered wall is distinctly brighter than the hidden wall")

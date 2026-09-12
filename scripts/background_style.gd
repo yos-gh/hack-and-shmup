@@ -10,12 +10,23 @@ const PAIRS := [
 static func palette(game) -> Array:
 	return PAIRS[posmod(hash(game.cells) ^ (game.floor_number*7919),PAIRS.size())]
 
+static func sample_at(seed_value: int, cell: Vector2i, channel: int) -> float:
+	# Integer avalanche avoids the straight bands produced by linear modulo patterns.
+	var value: int = (cell.x*73856093 ^ cell.y*19349663 ^ seed_value ^ channel*83492791) & 0x7fffffff
+	value = ((value ^ (value >> 16))*0x45d9f3b) & 0x7fffffff
+	value = ((value ^ (value >> 16))*0x45d9f3b) & 0x7fffffff
+	return float(value ^ (value >> 16))/2147483648.0
+
+static func deck_at(seed_value: int, panel: Vector2i) -> int:
+	return mini(int(sample_at(seed_value,panel,1)*7),6)
+
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
 	var cores: Array = []
 	var struts: Array = []
 	var edges: Dictionary = {}
 	var lower: Array = []
+	var decor_seed: int = hash(game.cells) ^ (game.floor_number*7919)
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
 	for cell in solids:
@@ -29,44 +40,47 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var known: bool = game.cells[neighbor] == -1 or game.discovered.has(game.cells[neighbor])
 			var middle := point+Vector2(direction)*16
 			var tangent := Vector2(-direction.y,direction.x)*16
-			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer,0.13) if known else Color(0.24,0.34,0.44,0.09)))
-			if not known: continue
-			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner,0.20))
+			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer if known else outer.darkened(0.48),0.13)))
+			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner if known else inner.darkened(0.5),0.20))
 			core.transform.origin.z -= 32
 			cores.append(core)
-		if not solids[cell]: continue
 		# Only the playable inner boundary receives a clear line; depth is subdued.
 		# Sparse deep supports avoid an equally weighted cube lattice.
-		if posmod(cell.x*7+cell.y*11,5) == 0:
+		if sample_at(decor_seed,cell,2) < 0.2:
 			for corner in [Vector2(-16,-16),Vector2(16,16)]:
-				add_edge(edges,point+corner,point+corner,-32,-144,translucent(inner,0.12))
+				add_edge(edges,point+corner,point+corner,-32,-144,translucent(inner if solids[cell] else inner.darkened(0.5),0.12))
 	for cell in game.cells:
-		if game.cells[cell] != -1 and not game.discovered.has(game.cells[cell]): continue
+		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
+		var ink := inner if known else inner.darkened(0.5)
 		var p: Vector2 = game.center(cell)
 		# World-fixed decorative masses, unrelated to hidden room contents.
 		var panel := Vector2i(floori(cell.x/3.0),floori(cell.y/3.0))
-		var pattern := posmod(panel.x*13+panel.y*7,7)
+		var pattern := deck_at(decor_seed,panel)
 		if pattern < 4:
 			var depth := 64.0+pattern*24.0
-			lower.append(view.entry(p,Vector3(32,32,1),translucent(inner,0.30),-depth+22))
+			lower.append(view.entry(p,Vector3(32,32,1),translucent(ink,0.30),-depth+22))
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 				var neighbor: Vector2i = cell+direction
 				var other_panel := Vector2i(floori(neighbor.x/3.0),floori(neighbor.y/3.0))
-				var same_deck := posmod(other_panel.x*13+other_panel.y*7,7) == pattern
-				if game.cells.has(neighbor) and (game.cells[neighbor] == -1 or game.discovered.has(game.cells[neighbor])) and same_deck: continue
+				var same_deck := deck_at(decor_seed,other_panel) == pattern
+				if game.cells.has(neighbor) and same_deck: continue
 				var middle := p+Vector2(direction)*16
 				var tangent := Vector2(-direction.y,direction.x)*16
-				var side := wall_entry(middle-tangent,middle+tangent,44,translucent(inner,0.30))
+				var side := wall_entry(middle-tangent,middle+tangent,44,translucent(ink,0.30))
 				side.transform.origin.z -= depth-22
 				lower.append(side)
 		# Occasional tall, inset prisms provide a different spatial scale.
-		if posmod(cell.x*17+cell.y*31,19) == 0:
-			lower.append(view.entry(p,Vector3(23,23,1),translucent(inner,0.33),-52))
+		if sample_at(decor_seed,cell,3) < 0.065:
+			var width := roundf(lerpf(14,25,sample_at(decor_seed,cell,4)))
+			var height := roundf(lerpf(64,128,sample_at(decor_seed,cell,5)))
+			var top_depth := roundf(lerpf(46,76,sample_at(decor_seed,cell,6)))
+			p += (Vector2(sample_at(decor_seed,cell,7)-0.5,sample_at(decor_seed,cell,8)-0.5)*(30-width)).round()
+			lower.append(view.entry(p,Vector3(width,width,1),translucent(ink,0.33),-top_depth))
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				var middle := p+Vector2(direction)*11.5
-				var tangent := Vector2(-direction.y,direction.x)*11.5
-				var side := wall_entry(middle-tangent,middle+tangent,96,translucent(inner,0.33))
-				side.transform.origin.z -= 52
+				var middle := p+Vector2(direction)*(width*0.5)
+				var tangent := Vector2(-direction.y,direction.x)*(width*0.5)
+				var side := wall_entry(middle-tangent,middle+tangent,height,translucent(ink,0.33))
+				side.transform.origin.z -= top_depth
 				lower.append(side)
 	for edge in edges.values(): struts.append(edge)
 	view.upload("bg_shell",shells)

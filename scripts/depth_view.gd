@@ -396,8 +396,9 @@ func rebuild_floor(game) -> void:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
 		# Nearly continuous floor; only a quiet seam every four cells.
-		var shade := Color("101923").lerp(outer,0.08) if known else Color("0c1420")
-		shade.a = 0.50 if known else 1.0
+		var shade := Color("101923").lerp(outer,0.08)
+		if not known: shade = shade.darkened(0.38)
+		shade.a = 0.50 if known else 0.65
 		var panel := Vector2i(floori(cell.x/4.0), floori(cell.y/4.0))
 		# Coordinate-derived variation cannot consume simulation or effects RNG.
 		shade = shade.lightened(posmod(panel.x*17+panel.y*31,4)*0.003) if known else shade
@@ -413,7 +414,7 @@ func rebuild_floor(game) -> void:
 			contacts.append(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
 			var tangent := Vector2(-direction.y,direction.x)*16
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
-			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13) if known else Color("172736")))
+			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13) if known else outer.darkened(0.55)))
 	Background.build(self,game,pillars,palette)
 	upload("floor", floors)
 	upload("contact", contacts)

@@ -35,11 +35,11 @@ func run() -> void:
 		check(lower.visible_instance_count > 0,"visible room has a decorative lower layer")
 		for index in range(lower.visible_instance_count):
 			var origin := lower.get_instance_transform(index).origin
-			var belongs_to_known := false
+			var belongs_to_floor := false
 			for offset in [Vector2.ZERO,Vector2(0.1,0),Vector2(-0.1,0),Vector2(0,0.1),Vector2(0,-0.1)]:
 				var cell: Vector2i = game.tile(Vector2(origin.x,-origin.y)+offset)
-				belongs_to_known = belongs_to_known or (game.cells.has(cell) and (game.cells[cell] == -1 or game.discovered.has(game.cells[cell])))
-			check(belongs_to_known,"lower faces belong to discovered cells, including faces on their boundaries")
+				belongs_to_floor = belongs_to_floor or game.cells.has(cell)
+			check(belongs_to_floor,"decorative lower faces remain within the floor footprint")
 		await process_frame
 		await RenderingServer.frame_post_draw
 		check(before == var_to_bytes([Scenario.digest(game),game.effects_rng.state,game.discovered]),"background render preserves simulation and both random streams")
@@ -58,7 +58,7 @@ func run() -> void:
 		game.restart_attempt()
 		game.depth_view.sync(game)
 		check(Background.palette(game) == palette,"retry keeps the floor palette")
-		check(game.depth_view.batches.bg_lower.visible_instance_count < count,"retry discards lower-room geometry with discovery")
+		check(game.depth_view.batches.bg_lower.visible_instance_count == count,"retry preserves decoration layout while restoring hidden colors")
 		if seen.size() == Background.PAIRS.size(): break
 	check(seen.size() == 4,"different floor seeds cover all four two-color palettes")
 	game.free()
