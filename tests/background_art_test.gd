@@ -1,4 +1,5 @@
 extends SceneTree
+const Background = preload("res://scripts/background_style.gd")
 const Scenario = preload("res://tools/dev_scenario.gd")
 var failures := 0
 
@@ -32,6 +33,20 @@ func run() -> void:
 	game.set_process_unhandled_input(false)
 	game.set_depth_view(true)
 	var view = game.depth_view
+	var masks: MultiMesh = view.batches.wall_mask
+	for i in range(masks.visible_instance_count):
+		var point := masks.get_instance_transform(i).origin
+		var inside_room := false
+		for room in game.rooms: inside_room = inside_room or room.has_point(game.tile(Vector2(point.x,-point.y)))
+		check(inside_room,"occlusion excludes spaces enclosed by corridor loops")
+	var prisms: MultiMesh = view.batches.bg_lower
+	for i in range(prisms.visible_instance_count):
+		if not is_equal_approx(prisms.get_instance_color(i).a,0.33): continue
+		var part := prisms.get_instance_transform(i)
+		check(is_equal_approx(part.basis.x.length(),20.0),"all decorative prism faces have a common width")
+		if absf(part.basis.y.z)>0.1:
+			check(is_equal_approx(part.basis.y.length(),96.0),"all decorative prisms have a common height")
+
 	view.set_process(false)
 	DirAccess.make_dir_recursive_absolute("res://docs/validation/art")
 	# Choose an actual undiscovered room's exposed near edge.

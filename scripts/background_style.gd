@@ -46,6 +46,13 @@ static func enclosed_solids(cells: Dictionary, solids: Dictionary) -> Array:
 		if not exterior: enclosed.append_array(region)
 	return enclosed
 
+static func is_room_obstacle(game, cell: Vector2i) -> bool:
+	# Corridor loops can enclose empty space; only actual room footprints get caps.
+	for i in range(game.rooms.size()):
+		var shape: int = game.room_shapes[i] if i < game.room_shapes.size() else 0
+		if game.rooms[i].has_point(cell) and game.room_contains(cell,game.rooms[i],shape): return true
+	return false
+
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
 	var masks: Array = []
@@ -57,6 +64,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
 	for cell in enclosed_solids(game.cells,solids):
+		if not is_room_obstacle(game,cell): continue
 		masks.append(view.entry(game.center(cell),Vector3(32,32,1),Color("080e17"),-0.25))
 	for cell in solids:
 		var point: Vector2 = game.center(cell)
@@ -102,9 +110,9 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 				lower.append(side)
 		# Occasional tall, inset prisms provide a different spatial scale.
 		if sample_at(decor_seed,cell,3) < 0.065:
-			var width := roundf(lerpf(14,25,sample_at(decor_seed,cell,4)))
-			var height := roundf(lerpf(64,128,sample_at(decor_seed,cell,5)))
-			var top_depth := roundf(lerpf(46,76,sample_at(decor_seed,cell,6)))
+			var width := 20.0
+			var height := 96.0
+			var top_depth := 56.0
 			p += (Vector2(sample_at(decor_seed,cell,7)-0.5,sample_at(decor_seed,cell,8)-0.5)*(30-width)).round()
 			lower.append(view.entry(p,Vector3(width,width,1),translucent(ink,0.33),-top_depth))
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
