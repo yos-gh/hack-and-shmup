@@ -56,7 +56,7 @@ func run() -> void:
 	check(minimum>0.2 and maximum/minimum<1.06,"edge brightness/width stays stable through subpixel motion")
 	view.camera.position = baseline
 	view.batches.bg_strut.visible_instance_count = 0
-	view.upload("bg_shell",[view.entry(target,Vector3(32,32,96),Color(0.32,0.52,0.55,0.13),-48)])
+	view.upload("bg_shell",[Background.wall_entry(target+Vector2(16,16),target+Vector2(-16,16),96,Color(0.32,0.52,0.55,0.13))])
 	await process_frame
 	await process_frame
 	await process_frame
@@ -69,18 +69,9 @@ func run() -> void:
 	var wall_light := frame.get_pixelv(Vector2i(front)).get_luminance()-frame.get_pixel(0,0).get_luminance()
 	var support_light := frame.get_pixelv(Vector2i(below)).get_luminance()-frame.get_pixel(0,0).get_luminance()
 	check(wall_light>support_light*3.0,"near wall is distinct from the transparent lower support")
-	# The next cube's roof must hide the preceding cube's near face.
-	view.upload("bg_cap",[view.entry(target+Vector2(0,32),Vector3(32,32,0.1),Color(0.08,0.12,0.14),-0.15)])
-	for wait_frame in range(3):
-		await process_frame
-		await RenderingServer.frame_post_draw
-	var covered: Image = view.viewport.get_texture().get_image()
-	view.batches.bg_shell.visible_instance_count = 0
-	for wait_frame in range(3):
-		await process_frame
-		await RenderingServer.frame_post_draw
-	var roof_only: Image = view.viewport.get_texture().get_image()
-	check(covered.get_pixelv(Vector2i(front)).is_equal_approx(roof_only.get_pixelv(Vector2i(front))),"roof occludes the rear cube face")
+	check(not view.batches.has("bg_cap"),"no roof fill is rendered")
+	var wall: Transform3D = view.batches.bg_shell.get_instance_transform(0)
+	check(absf(wall.basis.y.normalized().z)>0.999 and is_zero_approx(wall.basis.x.z),"wall geometry is vertical only, with no horizontal roof")
 	DirAccess.make_dir_recursive_absolute("res://docs/validation/edges")
 	frame.save_png("res://docs/validation/edges/front-face.png")
 	game.free()

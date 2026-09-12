@@ -1,8 +1,9 @@
 shader_type spatial;
-render_mode unshaded, world_vertex_coords, depth_prepass_alpha;
+render_mode unshaded, world_vertex_coords, depth_prepass_alpha, cull_disabled;
 
 uniform vec2 depth_slant = vec2(0.45,-0.30);
 uniform bool front_shell = false;
+uniform bool two_sided = false;
 varying float front_face;
 varying float layer_depth;
 
@@ -15,6 +16,7 @@ void vertex() {
 }
 
 void fragment() {
+	if (!two_sided && !FRONT_FACING) discard;
 	// The near wall has a finite, readable fascia; supports below it recede.
 	float wall_band = front_face * (1.0-smoothstep(31.0,33.0,layer_depth));
 	float support = COLOR.a * exp(-layer_depth/58.0);

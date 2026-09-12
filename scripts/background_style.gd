@@ -12,7 +12,6 @@ static func palette(game) -> Array:
 
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
-	var caps: Array = []
 	var cores: Array = []
 	var struts: Array = []
 	var edges: Dictionary = {}
@@ -22,11 +21,19 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	for cell in solids:
 		if not solids[cell]: continue
 		var point: Vector2 = game.center(cell)
-		# A hollow glass column, with a second colored layer deep inside it.
+		# The contour carries open glass curtains with a second color at depth.
 		var depth := 96.0
-		caps.append(view.entry(point,Vector3(32,32,0.1),outer.darkened(0.78),-0.15))
-		shells.append(view.entry(point,Vector3(31.5,31.5,depth),translucent(outer,0.13),-depth*0.5))
-		cores.append(view.entry(point,Vector3(26,26,depth*0.62),translucent(inner,0.20),-depth*0.63))
+		# Open curtains descend from the playable contour: no roof or outer box.
+		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+			var neighbor: Vector2i = cell+direction
+			if not game.cells.has(neighbor): continue
+			if game.cells[neighbor] != -1 and not game.discovered.has(game.cells[neighbor]): continue
+			var middle := point+Vector2(direction)*16
+			var tangent := Vector2(-direction.y,direction.x)*16
+			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer,0.13)))
+			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner,0.20))
+			core.transform.origin.z -= 32
+			cores.append(core)
 		# Only the playable inner boundary receives a clear line; depth is subdued.
 		for corner in [Vector2(-16,-16),Vector2(16,-16),Vector2(16,16),Vector2(-16,16)]:
 			add_edge(edges,point+corner,point+corner,-32,-depth,translucent(outer,0.12))
@@ -56,7 +63,6 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var size := Vector3(32,3,5) if horizontal else Vector3(3,32,5)
 			lower.append(view.entry(p,size,translucent(outer,0.18),-46))
 	for edge in edges.values(): struts.append(edge)
-	view.upload("bg_cap",caps)
 	view.upload("bg_shell",shells)
 	view.upload("bg_core",cores)
 	view.upload("bg_strut",struts)
@@ -87,4 +93,19 @@ static func line_mesh() -> ArrayMesh:
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for vertex in [Vector3(-0.5,-1,0),Vector3(0.5,-1,0),Vector3(0.5,1,0),Vector3(-0.5,-1,0),Vector3(0.5,1,0),Vector3(-0.5,1,0)]:
 		surface.add_vertex(vertex)
+	return surface.commit()
+
+static func wall_entry(a: Vector2, b: Vector2, depth: float, color: Color) -> Dictionary:
+	var start := Vector3(a.x,-a.y,0)
+	var end := Vector3(b.x,-b.y,0)
+	var along := end-start
+	var down := Vector3(0,0,-depth)
+	return {"transform":Transform3D(Basis(along,down,along.cross(down).normalized()),(start+end+down)*0.5),"color":color,"warning":0.0}
+
+static func wall_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for p in [Vector3(-0.5,-0.5,0),Vector3(0.5,0.5,0),Vector3(0.5,-0.5,0),Vector3(-0.5,-0.5,0),Vector3(-0.5,0.5,0),Vector3(0.5,0.5,0)]:
+		surface.set_normal(Vector3.BACK)
+		surface.add_vertex(p)
 	return surface.commit()
