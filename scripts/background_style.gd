@@ -57,7 +57,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var outer: Color = colors[0]
 	var inner: Color = colors[1]
 	for cell in enclosed_solids(game.cells,solids):
-		masks.append(view.entry(game.center(cell),Vector3(32,32,1),Color("080e17").linear_to_srgb(),-0.25))
+		masks.append(view.entry(game.center(cell),Vector3(32,32,1),Color("080e17"),-0.25))
 	for cell in solids:
 		var point: Vector2 = game.center(cell)
 		# The contour carries open glass curtains with a second color at depth.
