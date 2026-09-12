@@ -69,6 +69,13 @@ func run() -> void:
 	var wall_light := frame.get_pixelv(Vector2i(front)).get_luminance()-frame.get_pixel(0,0).get_luminance()
 	var support_light := frame.get_pixelv(Vector2i(below)).get_luminance()-frame.get_pixel(0,0).get_luminance()
 	check(wall_light>support_light*3.0,"near wall is distinct from the transparent lower support")
+	# Opposite-facing curtains must read as the same wall, not dim lower supports.
+	view.upload("bg_shell",[Background.wall_entry(target+Vector2(-16,16),target+Vector2(16,16),96,Color(0.32,0.52,0.55,0.13))])
+	for wait_frame in range(3):
+		await process_frame
+		await RenderingServer.frame_post_draw
+	var reverse: Image = view.viewport.get_texture().get_image()
+	check(absf(reverse.get_pixelv(Vector2i(front)).get_luminance()-frame.get_pixelv(Vector2i(front)).get_luminance())<0.005,"both orientations retain the same readable wall band")
 	check(not view.batches.has("bg_cap"),"no roof fill is rendered")
 	var wall: Transform3D = view.batches.bg_shell.get_instance_transform(0)
 	check(absf(wall.basis.y.normalized().z)>0.999 and is_zero_approx(wall.basis.x.z),"wall geometry is vertical only, with no horizontal roof")

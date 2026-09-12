@@ -41,8 +41,10 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var middle := point+Vector2(direction)*16
 			var tangent := Vector2(-direction.y,direction.x)*16
 			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer if known else outer.darkened(0.48),0.13)))
-			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner if known else inner.darkened(0.5),0.20))
-			core.transform.origin.z -= 32
+			if direction.y != 0:
+				add_edge(edges,middle-tangent,middle+tangent,-32,-32,translucent(outer if known else outer.darkened(0.48),0.55))
+			var core := wall_entry(middle-tangent,middle+tangent,depth-48,translucent(inner if known else inner.darkened(0.5),0.20))
+			core.transform.origin.z -= 48
 			cores.append(core)
 		# Only the playable inner boundary receives a clear line; depth is subdued.
 		# Sparse deep supports avoid an equally weighted cube lattice.
