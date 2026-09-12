@@ -42,10 +42,13 @@ func run() -> void:
 		if with_feedback: check(game.damage_labels.size() == 2 and game.particles.size() == 9,"feedback produces original labels and particles")
 		else: check(game.damage_labels.is_empty() and game.particles.is_empty(),"combat can run without feedback listener")
 		if with_feedback:
-			check(game.effects.size() == 3, "one impact mark per block or damaging hit")
+			check(game.effects.filter(func(e): return e.kind == 2).size() == 3, "one impact mark per block or damaging hit")
 			check(game.effects[0].blocked and not game.effects[1].blocked, "blocked and damaging hits have distinct marks")
 			for i in range(40): game.combat_feedback.enemy_hit(enemy.p,0.1,false,false,game)
-			check(game.effects.size() == 32, "impact marks have a bounded burst budget")
+			check(game.effects.filter(func(e): return e.kind == 2).size() == 32, "impact marks have a bounded burst budget")
+			check(game.effects.filter(func(e): return e.kind == 5).size() == 1,"lethal hit adds one distinct death effect")
+			for i in range(40): game.combat_feedback.enemy_hit(enemy.p,1,false,true,game)
+			check(game.effects.filter(func(e): return e.kind == 5).size() == 16,"death effects have an independent bounded budget")
 		game.grace = 0
 		game.die("TIME UP")
 		game.die("TIME UP")

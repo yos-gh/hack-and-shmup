@@ -73,7 +73,14 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(tail,b.p,Color(0.45,1,0.86,0.45),4)
 			game.draw_line(tail.lerp(b.p,0.5),b.p,Color("e2fff5"),2)
 		else:
-			game.draw_line(b.p, b.p - b.v.normalized() * 12, bullet_ink if b.hostile else Color("b2fff0"), 4 if b.hostile else 2)
+			var tail: Vector2 = b.p-b.v.normalized()*12
+			if b.hostile:
+				game.draw_line(tail,b.p,Color("151520"),6,true)
+				game.draw_line(tail,b.p,bullet_ink,4,true)
+				game.draw_line(b.p-b.v.normalized()*4,b.p,Color("fff0d5"),1.5,true)
+			else:
+				game.draw_line(tail,b.p,Color(0.35,1,0.82,0.22),4,true)
+				game.draw_line(tail,b.p,Color("d5fff2"),1.5,true)
 	var preview_aim: Vector2 = game.controls.aim(game)
 	var preview_alpha = 0.18 if game.sub_cd <= 0 else 0.06
 	if game.sub_weapon == 0:
@@ -90,18 +97,30 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
 	for effect in game.effects:
-		if effect.kind == 2:
+		if effect.kind == 5:
+			if effect.life < 0.02: continue
+			var progress: float = clampf(1-effect.life/0.30,0,1)
+			var ink := Color(1,0.42,0.55,(1-progress)*0.8)
+			for i in range(6):
+				var axis := Vector2.from_angle(i*TAU/6)
+				var center: Vector2 = effect.p+axis*(8+progress*22)
+				var side := axis.orthogonal()*(3*(1-progress))
+				game.draw_colored_polygon(PackedVector2Array([center-axis*3,center+side,center+axis*5,center-side]),ink)
+			game.draw_arc(effect.p,8+progress*12,0,TAU,24,Color(1,0.8,0.85,(1-progress)*(1-progress)*0.5),1,true)
+		elif effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
+			var radius := 9+(1-fade)*6
 			if effect.blocked:
-				# Open brackets distinguish a shield stop from a damaging hit.
-				var ink := Color(0.55,0.82,1.0,fade*0.8)
-				game.draw_arc(effect.p,12,-0.65,0.65,8,ink,2)
-				game.draw_arc(effect.p,12,PI-0.65,PI+0.65,8,ink,2)
+				var ink := Color(0.55,0.82,1.0,fade)
+				for side in [-1,1]:
+					var points := PackedVector2Array([effect.p+Vector2(side*(radius-4),-8),effect.p+Vector2(side*radius,-4),effect.p+Vector2(side*radius,4),effect.p+Vector2(side*(radius-4),8)])
+					game.draw_polyline(points,ink,2,true)
 			else:
-				var ink := Color(1.0,0.9,0.76,fade*0.85)
+				var ink := Color(1.0,0.9,0.76,fade)
+				game.draw_circle(effect.p,3*fade,Color(1,0.98,0.9,fade*0.8))
 				for i in range(4):
 					var ray := Vector2.from_angle(PI/4+i*PI/2)
-					game.draw_line(effect.p+ray*6,effect.p+ray*11,ink,2)
+					game.draw_line(effect.p+ray*(radius-5),effect.p+ray*radius,ink,2,true)
 		elif effect.kind == 0:
 			var outline = PackedVector2Array()
 			var reach_outline = PackedVector2Array()
@@ -114,12 +133,17 @@ func draw(game, screen: Vector2) -> void:
 			var arrival := maxf(0,1.0-progress/0.45)
 			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))
 			game.draw_polyline(reach_outline,Color(0.4,1,0.9,arrival*0.65),1.5)
-			game.draw_polyline(outline, Color(0.4, 1, 0.9, effect.life / 0.4), 2)
+			game.draw_polyline(outline,Color(0.3,1,0.85,effect.life/0.4*0.16),7,true)
+			game.draw_polyline(outline,Color(0.7,1,0.93,effect.life/0.4),2,true)
 		elif effect.kind == 1:
 			var fade: float = minf(1.0,effect.life/0.09)
 			var core: float = clampf((effect.life-0.16)/0.12,0,1)
 			draw_lance(game,effect.rays,0.28*fade,core)
-	for p in game.particles: game.draw_rect(Rect2(p.p, Vector2(3,3)), Color(p.color, p.life / 0.35))
+	for p in game.particles:
+		var fade: float = clampf(p.life/0.35,0,1)
+		var axis: Vector2 = p.v.normalized()
+		var side := axis.orthogonal()*1.5
+		game.draw_colored_polygon(PackedVector2Array([p.p-axis*(2+fade*3),p.p+side,p.p+axis*2,p.p-side]),Color(p.color,fade))
 	for entry in game.damage_labels:
 		var number = str(int(round(entry.damage))) if is_equal_approx(entry.damage, round(entry.damage)) else "%.1f" % entry.damage
 		var alpha = minf(1.0, entry.life / 0.2)
@@ -178,7 +202,9 @@ func draw_lasers(game) -> void:
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
 		if beam.warning > 0:
-			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5)
+			game.draw_line(beam.a,beam.b,Color(0.08,0.06,0.1,0.65),3,true)
+			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5,true)
 		else:
 			game.draw_line(beam.a,beam.b,Color(1,0.35,0.25,0.35),12)
-			game.draw_line(beam.a,beam.b,Color("ffe2c9"),4)
+			game.draw_line(beam.a,beam.b,Color("ff8c68"),7,true)
+			game.draw_line(beam.a,beam.b,Color("fff3dc"),3,true)
