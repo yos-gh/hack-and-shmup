@@ -8,7 +8,23 @@ const PAIRS := [
 ]
 
 static func palette(game) -> Array:
-	return PAIRS[posmod(hash(game.cells) ^ (game.floor_number*7919),PAIRS.size())]
+	var pair: Array = PAIRS[posmod(hash(game.cells) ^ (game.floor_number*7919),PAIRS.size())]
+	return [with_lightness(pair[0],0.62),with_lightness(pair[1],0.48)]
+
+static func lightness(color: Color) -> float:
+	# Oklab L, from Bjorn Ottosson's public-domain linear-sRGB conversion.
+	# https://bottosson.github.io/posts/oklab/
+	var c := color.srgb_to_linear()
+	var l := pow(0.4122214708*c.r+0.5363325363*c.g+0.0514459929*c.b,1.0/3.0)
+	var m := pow(0.2119034982*c.r+0.6806995451*c.g+0.1073969566*c.b,1.0/3.0)
+	var v := pow(0.0883024619*c.r+0.2817188376*c.g+0.6299787005*c.b,1.0/3.0)
+	return 0.2104542553*l+0.7936177850*m-0.0040720468*v
+
+static func with_lightness(color: Color, target: float) -> Color:
+	# Uniform linear scaling preserves Oklab hue; chroma scales with lightness.
+	var gain := pow(target/maxf(lightness(color),0.0001),3.0)
+	var c := color.srgb_to_linear()
+	return Color(c.r*gain,c.g*gain,c.b*gain,color.a).linear_to_srgb()
 
 static func sample_at(seed_value: int, cell: Vector2i, channel: int) -> float:
 	# Integer avalanche avoids the straight bands produced by linear modulo patterns.
@@ -16,9 +32,6 @@ static func sample_at(seed_value: int, cell: Vector2i, channel: int) -> float:
 	value = ((value ^ (value >> 16))*0x45d9f3b) & 0x7fffffff
 	value = ((value ^ (value >> 16))*0x45d9f3b) & 0x7fffffff
 	return float(value ^ (value >> 16))/2147483648.0
-
-static func deck_at(seed_value: int, panel: Vector2i) -> int:
-	return mini(int(sample_at(seed_value,panel,1)*7),6)
 
 static func enclosed_solids(cells: Dictionary, solids: Dictionary) -> Array:
 	var bounds := Rect2i(cells.keys()[0],Vector2i.ONE)
@@ -92,35 +105,16 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var ink := inner if known else inner.darkened(0.5)
 		var p: Vector2 = game.center(cell)
-		# World-fixed decorative masses, unrelated to hidden room contents.
-		var panel := Vector2i(floori(cell.x/3.0),floori(cell.y/3.0))
-		var pattern := deck_at(decor_seed,panel)
-		if pattern < 4:
-			var depth := 64.0+pattern*24.0
-			lower.append(view.entry(p,Vector3(32,32,1),translucent(ink,0.30),-depth+22))
-			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				var neighbor: Vector2i = cell+direction
-				var other_panel := Vector2i(floori(neighbor.x/3.0),floori(neighbor.y/3.0))
-				var same_deck := deck_at(decor_seed,other_panel) == pattern
-				if game.cells.has(neighbor) and same_deck: continue
-				var middle := p+Vector2(direction)*16
-				var tangent := Vector2(-direction.y,direction.x)*16
-				var side := wall_entry(middle-tangent,middle+tangent,44,translucent(ink,0.30))
-				side.transform.origin.z -= depth-22
-				lower.append(side)
-		# Occasional tall, inset prisms provide a different spatial scale.
-		if sample_at(decor_seed,cell,3) < 0.065:
-			var width := 20.0
-			var height := 96.0
-			var top_depth := 56.0
-			p += (Vector2(sample_at(decor_seed,cell,7)-0.5,sample_at(decor_seed,cell,8)-0.5)*(30-width)).round()
-			lower.append(view.entry(p,Vector3(width,width,1),translucent(ink,0.33),-top_depth))
-			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
-				var middle := p+Vector2(direction)*(width*0.5)
-				var tangent := Vector2(-direction.y,direction.x)*(width*0.5)
-				var side := wall_entry(middle-tangent,middle+tangent,height,translucent(ink,0.33))
-				side.transform.origin.z -= top_depth
-				lower.append(side)
+		# One aligned block per floor cell, no overlapping decks or floating prisms.
+		var opacity := lerpf(0.10,0.46,sample_at(decor_seed,cell,1))
+		lower.append(view.entry(p,Vector3(31.5,31.5,1),translucent(ink,opacity),-48))
+		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+			if game.cells.has(cell+direction): continue
+			var middle := p+Vector2(direction)*16
+			var tangent := Vector2(-direction.y,direction.x)*16
+			var side := wall_entry(middle-tangent,middle+tangent,32,translucent(ink,opacity))
+			side.transform.origin.z -= 48
+			lower.append(side)
 	for edge in edges.values(): struts.append(edge)
 	view.upload("wall_mask",masks)
 	view.upload("bg_shell",shells)

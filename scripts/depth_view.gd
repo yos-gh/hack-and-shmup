@@ -390,19 +390,14 @@ func rebuild_floor(game) -> void:
 	var pillars: Dictionary = {}
 	var palette := Background.palette(game)
 	var outer: Color = palette[0]
-	for child in stage.get_children():
-		if child is MultiMeshInstance3D and child.multimesh == batches.floor:
-			child.material_override.set_shader_parameter("inner_color",Vector3(palette[1].r,palette[1].g,palette[1].b))
+	var floor_ink := Background.with_lightness(Color("101923").lerp(outer,0.04),0.19)
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
 		# Nearly continuous floor; only a quiet seam every four cells.
-		var shade := Color("101923").lerp(outer,0.08)
+		var shade := floor_ink
 		if not known: shade = shade.darkened(0.38)
 		shade.a = 0.50 if known else 0.65
-		var panel := Vector2i(floori(cell.x/4.0), floori(cell.y/4.0))
-		# Coordinate-derived variation cannot consume simulation or effects RNG.
-		shade = shade.lightened(posmod(panel.x*17+panel.y*31,4)*0.003) if known else shade
 		var seam_x := 0.7 if posmod(cell.x,4) == 0 else 0.0
 		var seam_y := 0.7 if posmod(cell.y,4) == 0 else 0.0
 		floors.append(entry(p+Vector2(seam_x,seam_y)*0.5, Vector3(32-seam_x,32-seam_y,2), shade, -2))

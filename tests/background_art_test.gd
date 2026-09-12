@@ -39,13 +39,21 @@ func run() -> void:
 		var inside_room := false
 		for room in game.rooms: inside_room = inside_room or room.has_point(game.tile(Vector2(point.x,-point.y)))
 		check(inside_room,"occlusion excludes spaces enclosed by corridor loops")
-	var prisms: MultiMesh = view.batches.bg_lower
-	for i in range(prisms.visible_instance_count):
-		if not is_equal_approx(prisms.get_instance_color(i).a,0.33): continue
-		var part := prisms.get_instance_transform(i)
-		check(is_equal_approx(part.basis.x.length(),20.0),"all decorative prism faces have a common width")
-		if absf(part.basis.y.z)>0.1:
-			check(is_equal_approx(part.basis.y.length(),96.0),"all decorative prisms have a common height")
+	var blocks: MultiMesh = view.batches.bg_lower
+	var top_count := 0
+	var opacities: Dictionary = {}
+	for i in range(blocks.visible_instance_count):
+		var part := blocks.get_instance_transform(i)
+		if absf(part.basis.y.z)>0.1: continue
+		top_count += 1
+		check(is_equal_approx(part.basis.x.length(),31.5) and is_equal_approx(part.origin.z,-48),"floor blocks share size and level")
+		opacities[snappedf(blocks.get_instance_color(i).a,0.01)] = true
+	check(top_count == game.cells.size(),"one lower block per floor cell, no overlapping decorative layers")
+	check(opacities.size()>12,"block transparency varies across the floor")
+	for pair in Background.PAIRS:
+		for target_l in [0.19,0.48,0.62]:
+			for color in pair:
+				check(absf(Background.lightness(Background.with_lightness(color,target_l))-target_l)<0.001,"perceptual lightness is consistent across hues")
 
 	view.set_process(false)
 	DirAccess.make_dir_recursive_absolute("res://docs/validation/art")
