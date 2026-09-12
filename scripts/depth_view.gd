@@ -414,7 +414,7 @@ func rebuild_floor(game) -> void:
 			contacts.append(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
 			var tangent := Vector2(-direction.y,direction.x)*16
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
-			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13) if known else outer.darkened(0.55)))
+			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13)))
 	Background.build(self,game,pillars,palette)
 	upload("floor", floors)
 	upload("contact", contacts)
