@@ -55,6 +55,18 @@ func run() -> void:
 		for effect in game.effects:
 			if effect.kind == 5: effect.life = remaining
 		await frame(game)
+	# The batched shard renderer must remain visible and clear empty batches.
+	game.effects.clear()
+	game.damage_labels.clear()
+	game.particles.clear()
+	game.particles.append({"p":game.player+Vector2(70,0),"v":Vector2(60,0),"life":0.3,"color":Color.WHITE})
+	var shard: Image = await frame(game)
+	var shard_point := Vector2i(game.world_to_screen(game.player+Vector2(70,0)))
+	check(shard.get_pixelv(shard_point).get_luminance()>baseline.get_pixelv(shard_point).get_luminance()+0.1,"batched particle is visible")
+	game.particles.clear()
+	await frame(game)
+	check(game.world_view.particle_batch.visible_instance_count == 0,"empty particle batch leaves no ghost shards")
+	game.combat_feedback.enemy_hit(game.player+Vector2(70,0),1,false,true,game)
 	# Existing lifetime processing must also remove the new bounded death bursts.
 	game.replay_input = {"movement":Vector2.ZERO,"aim":Vector2.RIGHT,"primary":false,"secondary":false}
 	game.grace = 2

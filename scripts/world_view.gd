@@ -1,6 +1,8 @@
 extends RefCounted
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+var particle_batch: MultiMesh
+var particles_warmed := false
 
 # Read-only 2D presentation. All commands use the host CanvasItem during _draw.
 # Combat coordinates and attack clipping remain owned by the simulation.
@@ -139,11 +141,7 @@ func draw(game, screen: Vector2) -> void:
 			var fade: float = minf(1.0,effect.life/0.09)
 			var core: float = clampf((effect.life-0.16)/0.12,0,1)
 			draw_lance(game,effect.rays,0.28*fade,core)
-	for p in game.particles:
-		var fade: float = clampf(p.life/0.35,0,1)
-		var axis: Vector2 = p.v.normalized()
-		var side := axis.orthogonal()*1.5
-		game.draw_colored_polygon(PackedVector2Array([p.p-axis*(2+fade*3),p.p+side,p.p+axis*2,p.p-side]),Color(p.color,fade))
+	draw_particles(game)
 	for entry in game.damage_labels:
 		var number = str(int(round(entry.damage))) if is_equal_approx(entry.damage, round(entry.damage)) else "%.1f" % entry.damage
 		var alpha = minf(1.0, entry.life / 0.2)
@@ -208,3 +206,34 @@ func draw_lasers(game) -> void:
 			game.draw_line(beam.a,beam.b,Color(1,0.35,0.25,0.35),12)
 			game.draw_line(beam.a,beam.b,Color("ff8c68"),7,true)
 			game.draw_line(beam.a,beam.b,Color("fff3dc"),3,true)
+
+func draw_particles(game) -> void:
+	if particle_batch == null:
+		var surface := SurfaceTool.new()
+		surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for p in [Vector3(-1,0,0),Vector3(0,1,0),Vector3(1,0,0),Vector3(-1,0,0),Vector3(1,0,0),Vector3(0,-1,0)]:
+			surface.add_vertex(p)
+		particle_batch = MultiMesh.new()
+		particle_batch.transform_format = MultiMesh.TRANSFORM_2D
+		particle_batch.use_colors = true
+		particle_batch.mesh = surface.commit()
+		particle_batch.instance_count = 2048
+	var count: int = game.particles.size()
+	if particle_batch.instance_count < count: particle_batch.instance_count = maxi(count,particle_batch.instance_count*2)
+	particle_batch.visible_instance_count = count
+	for i in range(count):
+		var p: Dictionary = game.particles[i]
+		var fade: float = clampf(p.life/0.35,0,1)
+		var axis: Vector2 = p.v.normalized()
+		particle_batch.set_instance_transform_2d(i,Transform2D(axis*(2+fade*3),axis.orthogonal()*1.5,p.p))
+		particle_batch.set_instance_color(i,Color(p.color,fade))
+	if count > 0:
+		game.draw_multimesh(particle_batch,null)
+		particles_warmed = true
+	elif not particles_warmed:
+		# Prepare the canvas pipeline before the first mass kill, not during it.
+		particle_batch.visible_instance_count = 1
+		particle_batch.set_instance_transform_2d(0,Transform2D.IDENTITY)
+		particle_batch.set_instance_color(0,Color.TRANSPARENT)
+		game.draw_multimesh(particle_batch,null)
+		particles_warmed = true
