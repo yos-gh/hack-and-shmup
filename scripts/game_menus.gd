@@ -138,7 +138,7 @@ func choose(index: int) -> void:
 func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
 	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
-	_label(Rect2(24,y-177,screen.x-48,45),"← / → BOSS   ↑ / ↓ FLOOR   TAB + ENTER",15,Color("8194aa"))
+	_label(Rect2(24,y-177,screen.x-48,45),"A / D or ← / → BOSS   W / S or ↑ / ↓ FLOOR   TAB + ENTER",15,Color("8194aa"))
 	for i in range(7):
 		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (Esc)"][i-3]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())

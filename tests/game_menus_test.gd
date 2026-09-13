@@ -74,6 +74,16 @@ func run():
 	up.pressed = true
 	root.push_input(up)
 	check(game.practice.depth == 10, "focused control preserves practice arrow shortcut")
+	# Exercise the viewport route while a button owns focus, not just the handler.
+	for item in [[KEY_A,1,10],[KEY_D,2,10],[KEY_D,0,10],[KEY_A,2,10],[KEY_W,2,15],[KEY_S,2,10]]:
+		var wasd := InputEventKey.new()
+		wasd.keycode = item[0]
+		wasd.pressed = true
+		root.push_input(wasd)
+		wasd = wasd.duplicate()
+		wasd.pressed = false
+		root.push_input(wasd)
+		check(game.practice.variant == item[1] and game.practice.depth == item[2], "WASD selects once with GUI focus and wraps bosses")
 	game.practice.depth = 100
 	game.practice.activate(game,4)
 	check(game.practice.depth == 100, "practice upper depth bound retained")
