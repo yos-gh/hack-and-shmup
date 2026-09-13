@@ -5,7 +5,7 @@ var enemy_audio = preload("res://scripts/enemy_audio.gd").new()
 var music := AudioStreamPlayer.new()
 var voices: Array[AudioStreamPlayer] = []
 var clips: Dictionary = {}
-var audio_mode := 0
+var audio_mode := 1
 var headless := false
 var paused_state := false
 var warning_step := 6
@@ -27,7 +27,7 @@ func _ready() -> void:
 	loop.loop_begin = 0
 	loop.loop_end = int(round(loop.get_length() * loop.mix_rate))
 	music.stream = loop
-	music.volume_db = -10
+	_refresh_music_level()
 	for i in range(12):
 		var voice := AudioStreamPlayer.new()
 		voice.playback_type = AudioServer.PLAYBACK_TYPE_STREAM

@@ -19,7 +19,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	var sound = game.sound
-	sound.set_audio_mode(1)
+	check(game.audio_mode == 1 and sound.audio_mode == 1 and sound.music.volume_db <= -80, "startup defaults to effects only with music muted")
 	for i in range(20): sound.play_sfx("shock")
 	check(not sound.voices[0].playing and not sound.voices[1].playing, "ordinary effects cannot occupy reserved alert slots")
 	sound.play_sfx("warning")

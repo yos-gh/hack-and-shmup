@@ -28,7 +28,7 @@ var goal_room := 0
 var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
-var audio_mode := 0
+var audio_mode := 1
 var preferences = preload("res://scripts/user_settings.gd").new()
 var settings_menu: CanvasLayer
 var menus: CanvasLayer
