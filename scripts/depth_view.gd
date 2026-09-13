@@ -57,22 +57,22 @@ func _ready() -> void:
 	make_batch("chaser", Glyph.plate([Vector2(1,1),Vector2(-1,0.76),Vector2(-1,-0.76),Vector2(1,-1)],0.22))
 	make_batch("sniper", sniper_mesh())
 	make_batch("siege_base", Glyph.annulus(0.55,4))
-	make_batch("siege_armor", beveled_square())
+	make_batch("siege_armor", Glyph.plate([Vector2(-1,-0.7),Vector2(0.6,-1),Vector2(1,-0.6),Vector2(1,0.6),Vector2(0.6,1),Vector2(-1,0.7)],-0.12))
 	make_batch("siege_barrel", beveled_square())
-	make_batch("siege_core", beveled_square())
+	make_batch("siege_core", Glyph.boss_core())
 	make_batch("hunter_body", Glyph.chevron())
-	make_batch("hunter_wing", beveled_square())
-	make_batch("hunter_core", beveled_square())
+	make_batch("hunter_wing", Glyph.plate([Vector2(-1,-0.7),Vector2(0.3,-1),Vector2(1,-0.3),Vector2(1,0.3),Vector2(0.3,1),Vector2(-1,0.7)],0.2))
+	make_batch("hunter_core", Glyph.boss_core())
 	make_batch("hunter_drive", beveled_square())
 	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
-	make_batch("halo_ring", Glyph.annulus(24.0/29.0,64,true))
+	make_batch("halo_ring", Glyph.annulus(24.0/29.0,16,true))
 	var disk := CylinderMesh.new()
 	disk.top_radius = 1.0
 	disk.bottom_radius = 1.0
 	disk.height = 1.0
 	disk.radial_segments = 48
 	make_batch("halo_base", disk)
-	make_batch("halo_core", beveled_square())
+	make_batch("halo_core", Glyph.boss_core())
 	sync(get_parent())
 
 func make_batch(key: String, mesh: Mesh) -> void:

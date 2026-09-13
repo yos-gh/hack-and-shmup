@@ -66,3 +66,23 @@ static func annulus(inner: float, segments: int = 48, torus_axes: bool = false) 
 				for k in range(4): points[k] = Basis(Vector3.RIGHT,-PI/2)*points[k]
 			quad(s,points[0],points[1],points[2],points[3],tint)
 	return s.commit()
+
+static func boss_core() -> ArrayMesh:
+	# A recessed octagonal seat and raised crystal share one static mesh.
+	var s := SurfaceTool.new()
+	s.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var outline: Array[Vector2] = [Vector2(1,0.65),Vector2(0.65,1),Vector2(-0.65,1),Vector2(-1,0.65),Vector2(-1,-0.65),Vector2(-0.65,-1),Vector2(0.65,-1),Vector2(1,-0.65)]
+	for i in range(outline.size()):
+		var a := outline[i]
+		var b := outline[(i+1)%outline.size()]
+		var lower_a := Vector3(a.x,a.y,0)
+		var lower_b := Vector3(b.x,b.y,0)
+		var rim_a := Vector3(a.x,a.y,0.35)
+		var rim_b := Vector3(b.x,b.y,0.35)
+		var top_a := Vector3(a.x*0.65,a.y*0.65,1)
+		var top_b := Vector3(b.x*0.65,b.y*0.65,1)
+		quad(s,lower_a,lower_b,rim_b,rim_a,Color(0.25,0.36,0.43))
+		quad(s,rim_a,rim_b,top_b,top_a,Color(0.65,0.76,0.82) if i%2 == 0 else Color.WHITE)
+		face(s,Vector3(0,0,1),top_a,top_b,Color(0.9,0.94,1))
+		face(s,Vector3.ZERO,lower_b,lower_a,Color(0.25,0.32,0.4))
+	return s.commit()
