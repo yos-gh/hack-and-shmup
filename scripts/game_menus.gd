@@ -59,6 +59,19 @@ func _label(rect: Rect2, text: String, size: int = 18, ink: Color = Color.WHITE)
 	surface.add_child(label)
 	return label
 
+# Decorative plates ignore input; button rectangles remain authoritative.
+func _plate(rect: Rect2) -> void:
+	var plate := Panel.new()
+	plate.position = rect.position
+	plate.size = rect.size
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("101c27")
+	style.border_color = Color("304956")
+	style.set_border_width_all(1)
+	plate.add_theme_stylebox_override("panel",style)
+	surface.add_child(plate)
+
 func _button(rect: Rect2, text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.position = rect.position
@@ -71,7 +84,7 @@ func _button(rect: Rect2, text: String, callback: Callable) -> Button:
 func _title(screen: Vector2) -> void:
 	var y := screen.y*0.5
 	_label(Rect2(24,y-130,screen.x-48,65),"HACK / SHMUP",48,Color("63f5ce"))
-	_label(Rect2(24,y-65,screen.x-48,30),"ENDLESS DESCENT / PROTOTYPE",18,Color("8194aa"))
+	_label(Rect2(24,y-65,screen.x-48,30),"ENDLESS DESCENT",18,Color("8194aa"))
 	_label(Rect2(24,y-12,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
 	_button(Rect2(screen.x*0.5-190,y+50,380,46),"START (Enter)",func():
 		if game.title_screen and not game.settings_menu.panel.visible: game.start_run(); sync())
@@ -104,13 +117,17 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 			var button := _button(rect,"",func(): choose(i))
 			button.tooltip_text = definition.title + ": " + definition.description
 			cards.append(button)
-			_label(Rect2(rect.position+Vector2(12,12),Vector2(rect.size.x-24,48)),"%d / %s" % [i+1,definition.title],18,Color("63f5ce"))
-			_label(Rect2(rect.position+Vector2(12,65),Vector2(rect.size.x-24,72)),definition.description,15,Color("a4b3c6"))
+			_label(Rect2(rect.position+Vector2(12,8),Vector2(rect.size.x-24,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
+			_label(Rect2(rect.position+Vector2(12,34),Vector2(rect.size.x-24,40)),definition.title,20,Color("63f5ce"))
+			_label(Rect2(rect.position+Vector2(12,80),Vector2(rect.size.x-24,58)),definition.description,15,Color("a4b3c6"))
 	var stats: Array = game.player_stats()
 	var width := minf(230,(screen.x-72)/3)
 	for i in range(stats.size()):
 		var x := screen.x*0.5+(i-1)*(width+12)-width*0.5
-		_label(Rect2(x,y+170,width,100),"%s\n%s\n%s" % [stats[i].name,stats[i].value,stats[i].detail],18,Color("63f5ce"))
+		_plate(Rect2(x,y+170,width,100))
+		_label(Rect2(x+6,y+175,width-12,22),stats[i].name,12,Color("8194aa"))
+		_label(Rect2(x+6,y+198,width-12,34),stats[i].value,27,Color("d9e8ed"))
+		_label(Rect2(x+6,y+238,width-12,26),stats[i].detail,13,Color("91aaaf"))
 
 func choose(index: int) -> void:
 	if not game.choosing or game.paused or game.title_screen or game.settings_menu.panel.visible: return

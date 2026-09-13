@@ -10,7 +10,9 @@ func draw(game, screen: Vector2) -> void:
 	var layout := hud_layout(screen)
 	var weapon: Rect2 = layout.weapon
 	var timer: Rect2 = layout.timer
-	game.draw_rect(Rect2(0,0,screen.x,76), Color("0b111c"))
+	game.draw_rect(Rect2(0,0,screen.x,76), Color("090f18"))
+	game.draw_line(Vector2(0,75),Vector2(screen.x,75),Color("304956"),1)
+	game.draw_rect(Rect2(weapon.position-Vector2(10,4),weapon.size+Vector2(20,8)),Color("111f2b"))
 	label_at(game, Vector2(26,32), "DEPTH  %02d" % game.floor_number, 23)
 	label_at(game, Vector2(26,56), "KILLS %d   /   RETRIES %d" % [game.kills, game.deaths], 13, Color("8194aa"))
 	game.draw_line(Vector2(238,18),Vector2(238,58),Color("263847"),1)
@@ -47,7 +49,8 @@ func draw(game, screen: Vector2) -> void:
 			var mp = map_origin + (Vector2(game.rooms[i].position)-bounds.position)*map_scale
 			game.draw_rect(Rect2(mp,Vector2(game.rooms[i].size)*map_scale),Color("63f5ce") if game.cells.get(game.tile(game.player),-1)==i else (Color("354858") if game.discovered.has(i) else Color("171f2b")))
 			if i == game.goal_room and game.stairs_unlocked: game.draw_circle(mp+Vector2(game.rooms[i].size)*map_scale*0.5,2,Color("ffb95e"))
-	game.draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("0b111c"))
+	game.draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("090f18"))
+	game.draw_line(Vector2(0,screen.y-40),Vector2(screen.x,screen.y-40),Color("304956"),1)
 	var help := "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
 	if not game.preferences.bindings.is_empty(): help = game.preferences.controls_caption() + "   ESC PAUSE   M AUDIO"
 	label_at(game, Vector2(26,screen.y - 15), help, 13, Color("a4b3c6"))
