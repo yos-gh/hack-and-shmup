@@ -17,6 +17,10 @@ var active := true
 var applied_pitch := -1.0
 var max_sync_ms := 0.0
 var last_rebuild_ms := 0.0
+var floor_entries: Dictionary = {}
+var recording_floor := false
+var floor_updates: Dictionary = {}
+var shown_rooms: Dictionary = {}
 
 func _ready() -> void:
 	viewport.own_world_3d = true
@@ -301,6 +305,7 @@ func entry(point: Vector2, scale_value: Vector3, color: Color, height: float = 0
 	return {"transform": Transform3D(basis.scaled(scale_value), origin), "color": color, "warning": warning}
 
 func upload(key: String, entries: Array) -> void:
+	if recording_floor: floor_entries[key] = entries
 	_upload_mesh(batches[key],entries)
 	if wire_batches.has(key): _upload_mesh(wire_batches[key],entries)
 
@@ -346,9 +351,12 @@ func sync(game) -> void:
 			if child is MultiMeshInstance3D and child.multimesh in [batches.bg_shell,batches.bg_core,batches.bg_strut,batches.bg_lower,batches.wall_v,batches.wall_h]:
 				child.material_override.set_shader_parameter("depth_slant",Vector2(0.45,-0.30) if pitch == 0 else Vector2.ZERO)
 	var discovery: int = hash(game.discovered)
-	if cached_floor != game.floor_revision or cached_discovery != discovery:
+	if cached_floor != game.floor_revision:
 		rebuild_floor(game)
 		cached_floor = game.floor_revision
+		cached_discovery = discovery
+	elif cached_discovery != discovery:
+		refresh_discovery(game)
 		cached_discovery = discovery
 	var squares: Array = []
 	var rings: Array = []
@@ -421,7 +429,27 @@ func sync_halo(game) -> void:
 	upload("halo_base",bases)
 	upload("halo_core",cores)
 
+func refresh_discovery(game) -> void:
+	var started := Time.get_ticks_usec()
+	for owner in floor_updates:
+		if game.discovered.has(owner) == shown_rooms.has(owner): continue
+		for update in floor_updates[owner]:
+			var item: Dictionary = update.item
+			var known := false
+			for id in item.owners:
+				if id == -1 or game.discovered.has(id):
+					known = true
+					break
+			var ink: Color = item.light if known else item.dark
+			if ink == item.color: continue
+			item.color = ink
+			batches[update.key].set_instance_color(update.index,ink)
+	shown_rooms = game.discovered.duplicate()
+	last_rebuild_ms = (Time.get_ticks_usec()-started)/1000.0
+
 func rebuild_floor(game) -> void:
+	floor_entries.clear()
+	recording_floor = true
 	var started := Time.get_ticks_usec()
 	var floors: Array = []
 	var contacts: Array = []
@@ -440,14 +468,14 @@ func rebuild_floor(game) -> void:
 		shade.a = 0.50 if known else 0.65
 		var seam_x := 0.7 if posmod(cell.x,4) == 0 else 0.0
 		var seam_y := 0.7 if posmod(cell.y,4) == 0 else 0.0
-		floors.append(entry(p+Vector2(seam_x,seam_y)*0.5, Vector3(32-seam_x,32-seam_y,2), shade, -2))
+		floors.append(Background.tracked(entry(p+Vector2(seam_x,seam_y)*0.5, Vector3(32-seam_x,32-seam_y,2), shade, -2),[game.cells[cell]],Color(floor_ink,0.50),Color(floor_ink.darkened(0.38),0.65)))
 		for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 			if game.cells.has(cell+direction): continue
 			var solid: Vector2i = cell+direction
 			pillars[solid] = known or pillars.get(solid,false)
 			var wall_center: Vector2 = p+Vector2(direction)*16.65
 			var contact_size := Vector3(2,32,0.1) if direction.x != 0 else Vector3(32,2,0.1)
-			contacts.append(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8))
+			contacts.append(Background.tracked(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8),[game.cells[cell]],Color("101b28"),Color("0a111b")))
 			var tangent := Vector2(-direction.y,direction.x)*16
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
 			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13)))
@@ -456,4 +484,16 @@ func rebuild_floor(game) -> void:
 	upload("contact", contacts)
 	upload("wall_v", vertical_walls)
 	upload("wall_h", horizontal_walls)
+	recording_floor = false
+	floor_updates.clear()
+	shown_rooms = game.discovered.duplicate()
+	for key in floor_entries:
+		var entries: Array = floor_entries[key]
+		for i in range(entries.size()):
+			var item: Dictionary = entries[i]
+			if not item.has("owners"): continue
+			for owner in item.owners:
+				if owner == -1: continue
+				if not floor_updates.has(owner): floor_updates[owner] = []
+				floor_updates[owner].append({"key":key,"index":i,"item":item})
 	last_rebuild_ms = (Time.get_ticks_usec()-started)/1000.0

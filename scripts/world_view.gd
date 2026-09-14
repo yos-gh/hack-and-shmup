@@ -3,6 +3,33 @@ extends RefCounted
 const Catalog = preload("res://scripts/combat_catalog.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
+var radial_cache: Dictionary = {}
+var radial_floor := -1
+var radial_discovery := -1
+
+func shock_outline(game, origin: Vector2, radius: float) -> PackedVector2Array:
+	var discovery: int = game.discovered.hash()
+	if radial_floor != game.floor_revision or radial_discovery != discovery:
+		radial_cache.clear()
+		radial_floor = game.floor_revision
+		radial_discovery = discovery
+	if not radial_cache.has(origin):
+		if radial_cache.size() >= 8: radial_cache.clear()
+		var reach := PackedVector2Array()
+		for i in range(97): reach.append(game.attack_end(origin,Vector2.from_angle(i*TAU/96),game.SHOCK_RADIUS))
+		radial_cache[origin] = reach
+	var full: PackedVector2Array = radial_cache[origin]
+	if radius >= game.SHOCK_RADIUS: return full
+	var outline := PackedVector2Array()
+	for i in range(97):
+		var ray := Vector2.from_angle(i*TAU/96)
+		var distance := origin.distance_to(full[i])
+		var length := minf(radius,distance)
+		# Keep the existing four-pixel ray march's partial final sample exactly.
+		if radius > distance and radius < distance+4.001 and game.attack_open(origin+ray*radius): length = radius
+		outline.append(origin+ray*length)
+	return outline
+
 
 # Read-only 2D presentation. All commands use the host CanvasItem during _draw.
 # Combat coordinates and attack clipping remain owned by the simulation.
@@ -93,7 +120,7 @@ func draw(game, screen: Vector2) -> void:
 		draw_lance(game,game.LanceTrace.lanes(game,game.player,preview_aim),preview_alpha,0)
 	if game.sub_weapon == 1:
 		var outline = PackedVector2Array()
-		for i in range(97): outline.append(game.attack_end(game.player, Vector2.from_angle(i * TAU / 96), game.SHOCK_RADIUS))
+		outline = shock_outline(game,game.player,game.SHOCK_RADIUS)
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
 	for effect in game.effects:
@@ -125,10 +152,8 @@ func draw(game, screen: Vector2) -> void:
 			var outline = PackedVector2Array()
 			var reach_outline = PackedVector2Array()
 			var progress: float = 1.0 - effect.life / 0.4
-			for i in range(97):
-				var ray := Vector2.from_angle(i * TAU / 96)
-				outline.append(game.attack_end(effect.p, ray, game.SHOCK_RADIUS * minf(1, progress * 3)))
-				reach_outline.append(game.attack_end(effect.p, ray, game.SHOCK_RADIUS))
+			outline = shock_outline(game,effect.p,game.SHOCK_RADIUS * minf(1, progress * 3))
+			reach_outline = shock_outline(game,effect.p,game.SHOCK_RADIUS)
 			# Damage is immediate: show the clipped full reach from the first frame.
 			var arrival := maxf(0,1.0-progress/0.45)
 			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))

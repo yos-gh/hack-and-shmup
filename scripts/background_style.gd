@@ -70,6 +70,12 @@ static func is_room_obstacle(game, cell: Vector2i) -> bool:
 		if game.rooms[i].has_point(cell) and game.room_contains(cell,game.rooms[i],shape): return true
 	return false
 
+static func tracked(item: Dictionary, owners: Array, light: Color, dark: Color) -> Dictionary:
+	item["owners"] = owners
+	item["light"] = light
+	item["dark"] = dark
+	return item
+
 static func build(view, game, solids: Dictionary, colors: Array) -> void:
 	var shells: Array = []
 	var masks: Array = []
@@ -94,17 +100,17 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 			var known: bool = game.cells[neighbor] == -1 or game.discovered.has(game.cells[neighbor])
 			var middle := point+Vector2(direction)*16
 			var tangent := Vector2(-direction.y,direction.x)*16
-			shells.append(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer if known else outer.darkened(0.48),0.13)))
+			shells.append(tracked(wall_entry(middle-tangent,middle+tangent,depth,translucent(outer if known else outer.darkened(0.48),0.13)),[game.cells[neighbor]],translucent(outer,0.13),translucent(outer.darkened(0.48),0.13)))
 			if direction.y != 0:
-				add_edge(edges,middle-tangent,middle+tangent,-32,-32,translucent(outer if known else outer.darkened(0.48),0.55))
+				add_edge(edges,middle-tangent,middle+tangent,-32,-32,translucent(outer if known else outer.darkened(0.48),0.55),[game.cells[neighbor]],translucent(outer,0.55),translucent(outer.darkened(0.48),0.55))
 			var core := wall_entry(middle-tangent,middle+tangent,depth-32,translucent(inner if known else inner.darkened(0.5),0.20))
 			core.transform.origin.z -= 32
-			cores.append(core)
+			cores.append(tracked(core,[game.cells[neighbor]],translucent(inner,0.20),translucent(inner.darkened(0.5),0.20)))
 		# Only the playable inner boundary receives a clear line; depth is subdued.
 		# Sparse deep supports avoid an equally weighted cube lattice.
 		if sample_at(decor_seed,cell,2) < 0.2:
 			for corner in [Vector2(-16,-16),Vector2(16,16)]:
-				add_edge(edges,point+corner,point+corner,-32,-144,translucent(inner if solids[cell] else inner.darkened(0.5),0.12))
+				add_edge(edges,point+corner,point+corner,-32,-144,translucent(inner if solids[cell] else inner.darkened(0.5),0.12),solid_owners(game,cell),translucent(inner,0.12),translucent(inner.darkened(0.5),0.12))
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var ink := inner if known else inner.darkened(0.5)
@@ -114,7 +120,7 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 		var pattern := deck_at(decor_seed,panel)
 		if pattern < 4:
 			var depth := 64.0+pattern*24.0
-			lower.append(view.entry(p,Vector3(32,32,1),translucent(ink,0.30),-depth+22))
+			lower.append(tracked(view.entry(p,Vector3(32,32,1),translucent(ink,0.30),-depth+22),[game.cells[cell]],translucent(inner,0.30),translucent(inner.darkened(0.5),0.30)))
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 				var neighbor: Vector2i = cell+direction
 				var other_panel := Vector2i(floori(neighbor.x/3.0),floori(neighbor.y/3.0))
@@ -124,20 +130,20 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 				var tangent := Vector2(-direction.y,direction.x)*16
 				var side := wall_entry(middle-tangent,middle+tangent,44,translucent(ink,0.30))
 				side.transform.origin.z -= depth-22
-				lower.append(side)
+				lower.append(tracked(side,[game.cells[cell]],translucent(inner,side.color.a),translucent(inner.darkened(0.5),side.color.a)))
 		# Occasional tall, inset prisms provide a different spatial scale.
 		if sample_at(decor_seed,cell,3) < 0.065:
 			var width := 20.0
 			var height := 96.0
 			var top_depth := 56.0
 			p += (Vector2(sample_at(decor_seed,cell,7)-0.5,sample_at(decor_seed,cell,8)-0.5)*(30-width)).round()
-			lower.append(view.entry(p,Vector3(width,width,1),translucent(ink,0.33),-top_depth))
+			lower.append(tracked(view.entry(p,Vector3(width,width,1),translucent(ink,0.33),-top_depth),[game.cells[cell]],translucent(inner,0.33),translucent(inner.darkened(0.5),0.33)))
 			for direction in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 				var middle := p+Vector2(direction)*(width*0.5)
 				var tangent := Vector2(-direction.y,direction.x)*(width*0.5)
 				var side := wall_entry(middle-tangent,middle+tangent,height,translucent(ink,0.33))
 				side.transform.origin.z -= top_depth
-				lower.append(side)
+				lower.append(tracked(side,[game.cells[cell]],translucent(inner,side.color.a),translucent(inner.darkened(0.5),side.color.a)))
 	for edge in edges.values(): struts.append(edge)
 	view.upload("wall_mask",masks)
 	view.upload("bg_shell",shells)
@@ -148,7 +154,13 @@ static func build(view, game, solids: Dictionary, colors: Array) -> void:
 static func translucent(color: Color, opacity: float) -> Color:
 	return Color(color.r,color.g,color.b,opacity)
 
-static func add_edge(edges: Dictionary, a: Vector2, b: Vector2, za: float, zb: float, color: Color) -> void:
+static func solid_owners(game, cell: Vector2i) -> Array:
+	var owners := []
+	for d in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+		if game.cells.has(cell+d): owners.append(game.cells[cell+d])
+	return owners
+
+static func add_edge(edges: Dictionary, a: Vector2, b: Vector2, za: float, zb: float, color: Color, owners: Array = [], light: Color = Color.WHITE, dark: Color = Color.BLACK) -> void:
 	var start := Vector3(a.x,-a.y,za)
 	var end := Vector3(b.x,-b.y,zb)
 	if start > end:
@@ -156,7 +168,7 @@ static func add_edge(edges: Dictionary, a: Vector2, b: Vector2, za: float, zb: f
 		start = end
 		end = swap
 	var key := [start,end]
-	if not edges.has(key): edges[key] = line_entry(start,end,color)
+	if not edges.has(key): edges[key] = tracked(line_entry(start,end,color),owners,light,dark)
 	elif color.a > edges[key].color.a: edges[key].color = color
 
 static func line_entry(a: Vector3, b: Vector3, color: Color) -> Dictionary:
