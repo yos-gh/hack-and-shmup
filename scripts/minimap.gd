@@ -99,13 +99,13 @@ func locate(game, point: Vector2, rect: Rect2) -> Vector2:
 
 func draw(game, panel: Rect2) -> void:
 	prepare(game)
-	game.draw_rect(panel,Color("101c28"))
+	game.draw_rect(panel,Color("101c2870"))
 	game.draw_line(panel.position,panel.position+Vector2(panel.size.x,0),Color("3a5968"),1)
 	game.hud.label_at(game,panel.position+Vector2(7,12),"PASSAGE" if active_room < 0 else "ROOM %02d" % (active_room+1),10,Color("a9c3ce"))
 	var rect := projection(panel)
 	var envelope := PackedVector2Array()
 	for p in overview: envelope.append(rect.position+(p-Vector2(bounds.position))*rect.size/Vector2(bounds.size))
-	if envelope.size()>=3: game.draw_colored_polygon(envelope,Color("1d2b37"))
+	if envelope.size()>=3: game.draw_colored_polygon(envelope,Color("1d2b3759"))
 	game.draw_texture_rect(texture,rect,false)
 	var goal := locate(game,game.stairs,rect)
 	game.draw_circle(goal,4,Color("101c28"))
