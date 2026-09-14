@@ -16,6 +16,12 @@ Reach the stairs before time runs out. Defeat enemies to earn more time, and cho
 | Esc | Pause |
 | F10 on title or pause | Settings |
 
+## Subweapons
+
+- **Scatter** — A close-range spread.
+- **Shockwave** — Push enemies back and clear nearby bullets.
+- **Lance** — A piercing beam.
+
 Boss practice is available from the title screen.
 
 ## Run and build

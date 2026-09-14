@@ -25,6 +25,7 @@ func restart_attempt(game) -> void:
 	game.damage_labels.clear()
 	game.discovered.clear()
 	game.discovered[0] = true
+	game.hud.minimap.reset(game)
 	game.camera_pos = game.player
 	game.main_cd = 0.0
 	game.sub_cd = 0.0

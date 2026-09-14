@@ -455,6 +455,7 @@ func _physics_process(delta: float) -> void:
 	if room_id >= 0:
 		if not discovered.has(room_id): combat_events.room_entered.emit(room_id,player)
 		discovered[room_id] = true
+	hud.minimap.observe(self)
 	var aim: Vector2 = controls.aim(self)
 	if fire_armed and primary and main_cd <= 0:
 		emit_shot(player, aim.rotated(rng.randf_range(-Catalog.PRIMARY.spread, Catalog.PRIMARY.spread)), Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)

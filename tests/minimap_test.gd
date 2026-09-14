@@ -40,7 +40,12 @@ func run() -> void:
 			found = true
 			break
 	check(found,"fixture contains passage")
+	check(not map.detailed(game,passage),"remote corridor is hidden before walking")
+	for cell in game.cells:
+		if game.cells[cell] > 0: check(not map.detailed(game,cell),"unvisited rooms remain hidden")
 	game.player = game.center(passage)
+	map.observe(game)
+	check(map.detailed(game,passage),"walking reveals corridor detail")
 	map.prepare(game)
 	check(map.active_room == -1,"passage does not highlight an unrelated room")
 	var p: Vector2 = map.locate(game,game.player,rect)
@@ -48,10 +53,11 @@ func run() -> void:
 	check(q.x>p.x and is_equal_approx(q.y,p.y),"position marker moves within one tile in corridors")
 	await snapshot(game,"passage")
 	check(game.rng.state == rng_state,"minimap does not consume gameplay random numbers")
+	game.restart_attempt()
+	check(not map.detailed(game,passage),"retry resets corridor exploration")
 	game.new_floor()
 	map.prepare(game)
 	check(is_same(map.cached_cells,game.cells),"floor reset invalidates silhouette")
 	game.free()
 	if failures == 0: print("PASS: minimap room, passage position, cache, reset and RNG isolation")
 	quit(1 if failures else 0)
-
