@@ -41,11 +41,16 @@ def inventory():
         if path.is_file() and path.suffix in {'.dll', '.exe', '.wasm'}:
             dependencies.append({'path': path.relative_to(ROOT).as_posix(), 'bytes': path.stat().st_size,
                                  'sha256': digest(path), 'notice': 'addons/sentry/LICENSE.md'})
+    for path in sorted((ROOT / 'assets/fonts').glob('*.ttf')):
+        family = path.name.split('-')[0]
+        dependencies.append({'path': path.relative_to(ROOT).as_posix(), 'bytes': path.stat().st_size,
+                             'sha256': digest(path), 'notice': f'assets/fonts/{family}-OFL.txt',
+                             'source': f'https://github.com/google/fonts/tree/main/ofl/{family.lower()}', 'license': 'OFL-1.1'})
     bundle = ROOT / 'addons/sentry/web/sentry-bundle.js'
     if bundle.is_file():
         dependencies.append({'path': bundle.relative_to(ROOT).as_posix(), 'bytes': len(content(bundle)),
                              'sha256': digest(bundle), 'notice': 'addons/sentry/LICENSE.md'})
-    return {'schema': 1, 'scope': 'assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader',
+    return {'schema': 1, 'scope': 'assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader; bundled fonts in dependencies',
             'rights_status': 'Project-local source identified; this inventory does not assign a license or establish ownership.',
             'dependency_version_policy': 'Exact bundled bytes are pinned below. Upstream SDK release and transitive notice completeness are not established by these hashes.',
             'dependencies': dependencies,

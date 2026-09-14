@@ -9,6 +9,8 @@ var viewport := SubViewport.new()
 var camera := Camera3D.new()
 var stage := Node3D.new()
 var batches: Dictionary = {}
+var wire_batches: Dictionary = {}
+var warm_frames := 3
 var cached_floor := -1
 var cached_discovery := 0
 var active := true
@@ -73,6 +75,7 @@ func _ready() -> void:
 	disk.radial_segments = 48
 	make_batch("halo_base", disk)
 	make_batch("halo_core", Glyph.boss_core())
+	make_batch("actor_core", Glyph.boss_core())
 	sync(get_parent())
 
 func make_batch(key: String, mesh: Mesh) -> void:
@@ -116,10 +119,32 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	instance.multimesh = MultiMesh.new()
 	instance.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	instance.multimesh.use_colors = true
-	instance.multimesh.use_custom_data = key in ["ring", "sniper"]
+	instance.multimesh.use_custom_data = true
 	instance.multimesh.mesh = mesh
+	if not key.begins_with("bg_") and key not in ["floor","contact","wall_mask","wall_v","wall_h"]: instance.multimesh.instance_count = 128
 	stage.add_child(instance)
 	batches[key] = instance.multimesh
+	if key in ["actor_core","siege_core","hunter_core","halo_core"]:
+		var core_material := StandardMaterial3D.new()
+		core_material.vertex_color_use_as_albedo = true
+		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		instance.material_override = core_material
+	elif key in ["square","chaser","ring","sniper","player_barrel"] or key.begins_with("siege_") or key.begins_with("hunter_") or key == "halo_ring":
+		var wire := MultiMeshInstance3D.new()
+		var wire_material := ShaderMaterial.new()
+		wire_material.shader = preload("res://scripts/glyph_wire.gdshader")
+		wire_material.set_shader_parameter("opening_mode",1 if key == "ring" else (2 if key == "sniper" else 0))
+		wire_material.render_priority = 12
+		wire.material_override = wire_material
+		wire.multimesh = MultiMesh.new()
+		wire.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		wire.multimesh.use_colors = true
+		wire.multimesh.use_custom_data = true
+		wire.multimesh.mesh = preload("res://scripts/glyph_wire.gd").build(mesh)
+		wire.multimesh.instance_count = 128
+		stage.add_child(wire)
+		wire_batches[key] = wire.multimesh
+		batches[key+"_wire"] = wire.multimesh
 
 func beveled_square(top_ratio: Vector2 = Vector2(0.73,0.73)) -> ArrayMesh:
 	var surface := SurfaceTool.new()
@@ -276,14 +301,22 @@ func entry(point: Vector2, scale_value: Vector3, color: Color, height: float = 0
 	return {"transform": Transform3D(basis.scaled(scale_value), origin), "color": color, "warning": warning}
 
 func upload(key: String, entries: Array) -> void:
-	var mesh: MultiMesh = batches[key]
+	_upload_mesh(batches[key],entries)
+	if wire_batches.has(key): _upload_mesh(wire_batches[key],entries)
+
+func _upload_mesh(mesh: MultiMesh, entries: Array) -> void:
 	if mesh.instance_count < entries.size():
 		mesh.instance_count = maxi(entries.size(), mesh.instance_count*2)
 	mesh.visible_instance_count = entries.size()
+	if entries.is_empty() and warm_frames>0 and get_parent().title_screen:
+		if mesh.instance_count == 0: mesh.instance_count = 1
+		mesh.visible_instance_count = 1
+		mesh.set_instance_transform(0,Transform3D(Basis.from_scale(Vector3.ZERO),Vector3.ZERO))
+		mesh.set_instance_color(0,Color.TRANSPARENT)
 	for i in range(entries.size()):
 		mesh.set_instance_transform(i, entries[i].transform)
 		mesh.set_instance_color(i, entries[i].color)
-		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, 0, 0, 0))
+		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, 1.0 if get_parent().preferences.reduce_flash else 0.0, 0))
 
 func set_active(value: bool) -> void:
 	active = value
@@ -293,9 +326,10 @@ func set_active(value: bool) -> void:
 
 func _process(_delta: float) -> void:
 	if not active: return
+	warm_frames = maxi(0,warm_frames-1)
 	var game = get_parent()
-	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED if game.title_screen else SubViewport.UPDATE_ALWAYS
-	if not game.title_screen: sync(game)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	sync(game)
 
 func sync(game) -> void:
 	var started := Time.get_ticks_usec()
@@ -305,6 +339,7 @@ func sync(game) -> void:
 	var pitch := deg_to_rad(game.view_pitch_degrees)
 	camera.rotation = Vector3(pitch,0,0)
 	camera.position = project_point(game.view_origin())+Vector3(0,-sin(pitch),cos(pitch))*1500
+	if game.title_screen: camera.position.x += sin(game.presentation.clock*0.12)*70
 	if applied_pitch != game.view_pitch_degrees:
 		applied_pitch = game.view_pitch_degrees
 		for child in stage.get_children():
@@ -319,11 +354,15 @@ func sync(game) -> void:
 	var rings: Array = []
 	var chasers: Array = []
 	var snipers: Array = []
+	var actor_cores: Array = []
 	var world_screen: Vector2 = screen/game.view_scale()
 	var bounds := Rect2(game.view_origin()-world_screen*0.5-Vector2(64,64), world_screen+Vector2(128,128))
 	for enemy in game.enemies:
 		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
+		var core_ink := Color("f3637a") if enemy.kind == 0 else (Color("ffb95e") if enemy.kind == 1 else Color("ad8fff"))
+		var core_pos: Vector2 = enemy.p-enemy.dir*8 if enemy.kind == 1 else enemy.p
+		actor_cores.append(chaser_entry(core_pos,enemy.dir,Vector3(2.6,2.6,3),core_ink.lerp(Color.WHITE,warning*0.7),5))
 		if enemy.kind == 1:
 			var facing: Vector2 = (game.player-enemy.p).normalized() if enemy.active else enemy.dir
 			var shell := chaser_entry(enemy.p, facing, Vector3(10.8,10.8,7), Color("ffb95e").lerp(Color("fff4dd"), maxf(warning,game.boss.shot_flash(game,enemy.p))), 3)
@@ -340,11 +379,12 @@ func sync(game) -> void:
 			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius,radius,2), color.darkened(0.65), 1))
 			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	var barrels: Array = []
-	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
+	if game.preferences.reduce_flash or game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 		var aim: Vector2 = game.controls.aim(game)
 		for side in [-1.0,1.0]:
 			barrels.append(chaser_entry(game.player+aim*14+aim.orthogonal()*side*3.5,aim,Vector3(5,1.25,2),Color("3ba88f"),7))
+	upload("actor_core",actor_cores)
 	upload("player_barrel", barrels)
 	upload("square", squares)
 	upload("chaser", chasers)

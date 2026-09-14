@@ -117,7 +117,7 @@ func _rebuild(focus_action: String = "") -> void:
 		body.add_child(slider)
 		sliders[property] = slider
 	var flash := CheckButton.new()
-	flash.text = "Reduce death flash"
+	flash.text = "Reduce flashes"
 	flash.button_pressed = game.preferences.reduce_flash
 	flash.toggled.connect(func(value: bool): game.preferences.reduce_flash = value; game.queue_redraw())
 	body.add_child(flash)

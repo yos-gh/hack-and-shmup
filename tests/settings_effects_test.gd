@@ -57,6 +57,7 @@ func run() -> void:
 	game.controls.handle_event(game,escape)
 	check(game.paused and not menu.panel.visible and not game.fire_armed, "closing settings preserves pause and prevents firing")
 	var snapshot: PackedByteArray = var_to_bytes([game.player, game.enemies, game.time_left, game.rng.state, game.session.run.floor_number])
+	sound.set_audio_mode(0) # Explicit ALL mode when testing music gain composition.
 	game.preferences.master_volume = 0.5
 	game.preferences.music_volume = 0.5
 	game.preferences.effects_volume = 0.25

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader",
+  "scope": "assets/audio/*.wav, assets/definitions/*.tres, scripts/*.gdshader; bundled fonts in dependencies",
   "rights_status": "Project-local source identified; this inventory does not assign a license or establish ownership.",
   "dependency_version_policy": "Exact bundled bytes are pinned below. Upstream SDK release and transitive notice completeness are not established by these hashes.",
   "dependencies": [
@@ -51,6 +51,30 @@
       "bytes": 1463296,
       "sha256": "291783f7adbf0f81c64bf1d39144adf44124ca58662002181fa983654efc844f",
       "notice": "addons/sentry/LICENSE.md"
+    },
+    {
+      "path": "assets/fonts/Barlow-Medium.ttf",
+      "bytes": 103536,
+      "sha256": "f8906f762cb73dca441da034bc363b2d8e2e68bc10d5c05e58717646c20cc4b4",
+      "notice": "assets/fonts/Barlow-OFL.txt",
+      "source": "https://github.com/google/fonts/tree/main/ofl/barlow",
+      "license": "OFL-1.1"
+    },
+    {
+      "path": "assets/fonts/Barlow-Regular.ttf",
+      "bytes": 104068,
+      "sha256": "95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea",
+      "notice": "assets/fonts/Barlow-OFL.txt",
+      "source": "https://github.com/google/fonts/tree/main/ofl/barlow",
+      "license": "OFL-1.1"
+    },
+    {
+      "path": "assets/fonts/Rajdhani-SemiBold.ttf",
+      "bytes": 390340,
+      "sha256": "94bbd25a18ca665999feb05a537de9fd2b860dcfb78bbe9ca00270825bf235da",
+      "notice": "assets/fonts/Rajdhani-OFL.txt",
+      "source": "https://github.com/google/fonts/tree/main/ofl/rajdhani",
+      "license": "OFL-1.1"
     },
     {
       "path": "addons/sentry/web/sentry-bundle.js",
@@ -354,16 +378,51 @@
       "source": "assets/definitions/weapon_shock.tres"
     },
     {
+      "path": "scripts/background_edge.gdshader",
+      "bytes": 997,
+      "sha256": "376450300b87895f582f0383a931a0b2e48ebd8d26240dce7a713cb80b92c365",
+      "kind": "authored_shader",
+      "source": "scripts/background_edge.gdshader"
+    },
+    {
+      "path": "scripts/background_floor.gdshader",
+      "bytes": 671,
+      "sha256": "a4cfbecc2ebbf089dcc9bd238b30586a042ac229cde11e22aef2f4c68a758fa7",
+      "kind": "authored_shader",
+      "source": "scripts/background_floor.gdshader"
+    },
+    {
+      "path": "scripts/background_glass.gdshader",
+      "bytes": 1380,
+      "sha256": "d2a998c551679faf73a5e969d8a8377976b8b51fc138c64152e6ba3be49ed694",
+      "kind": "authored_shader",
+      "source": "scripts/background_glass.gdshader"
+    },
+    {
+      "path": "scripts/glyph_surface.gdshader",
+      "bytes": 470,
+      "sha256": "5ce8621a4b3b82d97b63194fc8a8812304993ea3cedabd884fb5c5c2390f1bc8",
+      "kind": "authored_shader",
+      "source": "scripts/glyph_surface.gdshader"
+    },
+    {
+      "path": "scripts/glyph_wire.gdshader",
+      "bytes": 1159,
+      "sha256": "afefb28b60735d7fad6db4960d0aaba641488da5b88aeefa470d970eb99e3caf",
+      "kind": "authored_shader",
+      "source": "scripts/glyph_wire.gdshader"
+    },
+    {
       "path": "scripts/sniper_iris.gdshader",
-      "bytes": 644,
-      "sha256": "85c4fe0f240445e6ffdc4eaa259bce6807aa593d410c835e1756fba2b3886256",
+      "bytes": 996,
+      "sha256": "316806067c7756639a06a43d93a6cbc1091722b18203a27bcb3910ccdc0c162b",
       "kind": "authored_shader",
       "source": "scripts/sniper_iris.gdshader"
     },
     {
       "path": "scripts/triangular_iris.gdshader",
-      "bytes": 266,
-      "sha256": "914a6c18f680b1ff51f591a124ef9abba5eff7ac7dc2751dec62cea2a59833a3",
+      "bytes": 653,
+      "sha256": "cf132e49abf8df8404157b36612bad4f9f6f13dfde8bfefd38bbae393a831782",
       "kind": "authored_shader",
       "source": "scripts/triangular_iris.gdshader"
     }

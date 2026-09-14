@@ -26,6 +26,8 @@ func _initialize() -> void:
 		quit(1)
 		return
 	text += "\nSENTRY GODOT SDK\n\n" + sentry
+	for family in ["Rajdhani","Barlow"]:
+		text += "\nFONT: "+family+"\n\n"+FileAccess.get_file_as_string("res://assets/fonts/"+family+"-OFL.txt")
 	var output := FileAccess.open(args[0],FileAccess.WRITE)
 	if output == null:
 		printerr("Cannot write notices")

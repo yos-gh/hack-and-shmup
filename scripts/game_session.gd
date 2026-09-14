@@ -11,6 +11,7 @@ var pending_respawn := false
 var fire_armed := false
 
 func restart_attempt(game) -> void:
+	game.presentation.reset()
 	game.boss.reset()
 	game.sound.enemy_audio.reset()
 	game.stairs_unlocked = not game.boss_floor
@@ -33,6 +34,7 @@ func restart_attempt(game) -> void:
 	game.flow_cd = 0.0
 	game.pending_respawn = false
 	game.banner = 3.0
+	game.combat_events.scene_changed.emit("arrival")
 	game.choosing = false
 
 
@@ -65,6 +67,8 @@ func return_to_title(game) -> void:
 	game.choosing = false
 	game.pending_respawn = false
 	game.sound.set_paused(false)
+	game.presentation.reset()
+	game.combat_events.scene_changed.emit("title")
 	game.queue_redraw()
 
 

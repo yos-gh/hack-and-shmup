@@ -134,7 +134,9 @@ var combat_feedback = preload("res://scripts/combat_feedback.gd").new()
 var controls = preload("res://scripts/player_input.gd").new()
 var world_view = preload("res://scripts/world_view.gd").new()
 var hud = preload("res://scripts/game_hud.gd").new()
-var font := ThemeDB.fallback_font
+var font: Font = preload("res://assets/fonts/Rajdhani-SemiBold.ttf")
+var body_font: Font = preload("res://assets/fonts/Barlow-Regular.ttf")
+var presentation = preload("res://scripts/presentation.gd").new()
 var boss = preload("res://scripts/boss.gd").new()
 var boss_floor := false
 var stairs_unlocked := true
@@ -152,9 +154,11 @@ func _ready() -> void:
 	add_child(menus)
 	menus.setup(self)
 	combat_feedback.bind_to(self)
+	presentation.bind_to(self)
 	rng.randomize()
 	effects_rng.randomize()
 	new_floor()
+	set_depth_view(true)
 
 func tile(p: Vector2) -> Vector2i:
 	return Queries.tile(self,p)
@@ -247,6 +251,7 @@ func attack_reaches(origin: Vector2, target: Vector2) -> bool:
 func fire_sub(aim: Vector2) -> void:
 	var definition = Catalog.WEAPONS[sub_weapon]
 	sound.play_sfx(definition.sound)
+	combat_events.weapon_fired.emit(player,aim,sub_weapon)
 	sub_cd_total = definition.cooldown
 	match sub_weapon:
 		0:
@@ -363,6 +368,7 @@ func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 		var hit_wall := not walkable(e.p + velocity * delta)
 		if e.charge <= 0 or hit_wall:
 			if hit_wall: e.cd = Catalog.ENEMIES[2].wall_recovery
+			combat_events.charge_changed.emit(e.p,e.dir,false)
 			e.charge = 0.0
 			e.stun = Catalog.ENEMIES[2].stun_duration
 			return Vector2.ZERO
@@ -370,11 +376,13 @@ func shield_velocity(e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	if e.cd <= 0:
 		e.dir = toward
 		e.charge = Catalog.ENEMIES[2].charge_duration
+		combat_events.charge_changed.emit(e.p,e.dir,true)
 		e.cd = Catalog.ENEMIES[2].charge_recovery
 	return Vector2.ZERO
 
 func enemy_attack_cue(key: String, position: Vector2, flash: bool = true) -> void:
 	sound.enemy_audio.request(self,key,position)
+	combat_events.actor_fired.emit(position,key)
 	if flash and attack_open(position):
 		var count := 0
 		for effect in effects:
@@ -382,6 +390,7 @@ func enemy_attack_cue(key: String, position: Vector2, flash: bool = true) -> voi
 		if count < 64: effects.append({"kind":4,"p":position,"life":0.16})
 
 func emit_shot(p: Vector2, direction: Vector2, speed: float, damage: float, hostile: bool, distance: float = 10000.0) -> void:
+	if not hostile and distance == Catalog.PRIMARY.reach: combat_events.weapon_fired.emit(p,direction,-1)
 	bullets.append({"p": p, "v": direction * speed, "damage": damage, "hostile": hostile, "life": distance / speed})
 
 func burst(p: Vector2, color: Color, count: int = 8) -> void:
@@ -399,6 +408,7 @@ func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: flo
 	if killed and not boss_floor and e.kind < 3:
 		time_left += Catalog.ENEMIES[e.kind].time_bonus
 	combat_events.enemy_hit.emit(e.p,damage,false,killed)
+	if killed and e.kind == 3: combat_events.boss_destroyed.emit(e.p,boss.COLORS[boss_variant])
 
 
 func die(reason: String = "HIT") -> void:
@@ -406,6 +416,7 @@ func die(reason: String = "HIT") -> void:
 
 func _physics_process(delta: float) -> void:
 	sound.set_paused(paused)
+	if not paused: presentation.advance(self,delta)
 	if title_screen or paused or choosing:
 		queue_redraw()
 		return
@@ -436,10 +447,14 @@ func _physics_process(delta: float) -> void:
 	grace = maxf(0, grace - delta)
 	banner -= delta
 	var movement: Vector2 = controls.movement(self)
+	var previous_player := player
 	player = slide(player, movement.normalized() * (SPEED + move_bonus) * delta, PLAYER_HIT_RADIUS)
+	presentation.track_motion(self,previous_player,player,delta)
 	camera_pos = camera_pos.lerp(player, 1.0 - exp(-12 * delta))
 	var room_id: int = cells.get(tile(player), -1)
-	if room_id >= 0: discovered[room_id] = true
+	if room_id >= 0:
+		if not discovered.has(room_id): combat_events.room_entered.emit(room_id,player)
+		discovered[room_id] = true
 	var aim: Vector2 = controls.aim(self)
 	if fire_armed and primary and main_cd <= 0:
 		emit_shot(player, aim.rotated(rng.randf_range(-Catalog.PRIMARY.spread, Catalog.PRIMARY.spread)), Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)
@@ -462,7 +477,9 @@ func _physics_process(delta: float) -> void:
 		if not e.active and not e.searching and not discovered.has(e.room) and e.push == Vector2.ZERO:
 			if (simulation_tick + e.room) % IDLE_UPDATE_PHASES != 0: continue
 			enemy_delta = patrol_elapsed.get(e.room, delta)
+		var was_active: bool = e.active
 		update_awareness(e, room_id, delta)
+		if not was_active and e.active: combat_events.actor_alerted.emit(e.p,e.dir)
 		if e.active: e.cd -= delta
 		var toward: Vector2 = (player - e.p).normalized()
 		var velocity := Vector2.ZERO
@@ -524,6 +541,7 @@ func _physics_process(delta: float) -> void:
 	enemies = enemies.filter(func(e: Dictionary) -> bool: return e.hp > 0)
 	if boss_floor and not stairs_unlocked and boss.remaining(self) == 0:
 		stairs_unlocked = true
+		combat_events.stairs_opened.emit(stairs)
 		enemies.clear()
 		boss.reset()
 		bullets = bullets.filter(func(b: Dictionary) -> bool: return not b.hostile)
@@ -545,6 +563,7 @@ func _physics_process(delta: float) -> void:
 		sound.play_sfx("clear")
 		best_cleared = maxi(best_cleared, floor_number)
 		choosing = true
+		combat_events.scene_changed.emit("cards")
 	queue_redraw()
 
 func label_at(p: Vector2, value: String, size: int = 18, color: Color = Color.WHITE) -> void:
@@ -559,6 +578,7 @@ func attack_warning(e: Dictionary) -> float:
 func _draw() -> void:
 	var screen := get_viewport_rect().size
 	if title_screen:
+		world_view.draw_particles(self)
 		hud.draw_title(self, screen)
 		return
 	world_view.draw(self, screen)
@@ -600,13 +620,13 @@ func set_depth_view(enabled: bool) -> void:
 
 
 func menu_origin_y(screen: Vector2, is_pause: bool) -> float:
-	var top := -30.0 - font.get_ascent(28) if is_pause else -130.0 - font.get_ascent(24)
+	var top: float = -30.0 - font.get_ascent(28) if is_pause else -130.0 - font.get_ascent(24)
 	return (screen.y - top - 275.0) * 0.5
 
 func upgrade_card_rect(screen: Vector2, index: int) -> Rect2:
 	var width := minf(290.0,(screen.x-88.0)/3.0)
 	var total := width*3+40
-	return Rect2((screen.x-total)*0.5+index*(width+20), menu_origin_y(screen, false)-40,width,150)
+	return Rect2((screen.x-total)*0.5+index*(width+20), menu_origin_y(screen, false)-40,width,190)
 
 func player_stats() -> Array[Dictionary]:
 	return [

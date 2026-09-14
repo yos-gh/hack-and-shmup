@@ -34,10 +34,10 @@ func sync() -> void:
 		child.queue_free()
 	cards.clear()
 	if state.is_empty(): return
-	var background := ColorRect.new()
-	background.color = Color("0b111c") if state in ["title","practice"] else Color(0.02,0.03,0.06,0.93)
+	var background = preload("res://scripts/menu_art.gd").new()
+	background.game = game
+	background.kind = state
 	background.size = screen
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	surface.add_child(background)
 	if state == "title": _title(screen)
 	elif state == "practice": _practice(screen)
@@ -50,6 +50,7 @@ func _label(rect: Rect2, text: String, size: int = 18, ink: Color = Color.WHITE)
 	label.position = rect.position
 	label.size = rect.size
 	label.text = text
+	label.add_theme_font_override("font",game.font if size>=20 else game.body_font)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -73,7 +74,7 @@ func _plate(rect: Rect2) -> void:
 	surface.add_child(plate)
 
 func _button(rect: Rect2, text: String, callback: Callable) -> Button:
-	var button := Button.new()
+	var button := preload("res://scripts/art_button.gd").new()
 	button.position = rect.position
 	button.size = rect.size
 	button.text = text
@@ -83,7 +84,7 @@ func _button(rect: Rect2, text: String, callback: Callable) -> Button:
 
 func _title(screen: Vector2) -> void:
 	var y := screen.y*0.5
-	_label(Rect2(24,y-130,screen.x-48,65),"HACK / SHMUP",48,Color("63f5ce"))
+	# The vector wordmark is drawn by MenuArt, with no font dependency.
 	_label(Rect2(24,y-65,screen.x-48,30),"ENDLESS DESCENT",18,Color("8194aa"))
 	_label(Rect2(24,y-12,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
 	_button(Rect2(screen.x*0.5-190,y+50,380,46),"START (Enter)",func():
@@ -117,9 +118,15 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 			var button := _button(rect,"",func(): choose(i))
 			button.tooltip_text = definition.title + ": " + definition.description
 			cards.append(button)
-			_label(Rect2(rect.position+Vector2(12,8),Vector2(rect.size.x-24,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
-			_label(Rect2(rect.position+Vector2(12,34),Vector2(rect.size.x-24,40)),definition.title,20,Color("63f5ce"))
-			_label(Rect2(rect.position+Vector2(12,80),Vector2(rect.size.x-24,58)),definition.description,15,Color("a4b3c6"))
+			var icon = preload("res://scripts/menu_art.gd").new()
+			icon.icon = preload("res://scripts/visual_icons.gd").UPGRADES[game.choices[i]]
+			icon.position = rect.position+Vector2(12,32)
+			icon.size = Vector2(64,64)
+			surface.add_child(icon)
+			_label(Rect2(rect.position+Vector2(78,8),Vector2(rect.size.x-90,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
+			_label(Rect2(rect.position+Vector2(78,34),Vector2(rect.size.x-90,40)),definition.title,20,Color("63f5ce"))
+			_label(Rect2(rect.position+Vector2(78,82),Vector2(rect.size.x-90,48)),definition.description.split(" ")[0],34,Color("dffff3"))
+			_label(Rect2(rect.position+Vector2(16,140),Vector2(rect.size.x-32,38)),definition.description.substr(definition.description.find(" ")+1),14,Color("a4b3c6"))
 	var stats: Array = game.player_stats()
 	var width := minf(230,(screen.x-72)/3)
 	for i in range(stats.size()):
@@ -138,7 +145,7 @@ func choose(index: int) -> void:
 func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
 	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
-	_label(Rect2(24,y-177,screen.x-48,45),"A / D or ← / → BOSS   W / S or ↑ / ↓ FLOOR   TAB + ENTER",15,Color("8194aa"))
+	_label(Rect2(24,y-177,screen.x-48,45),"A / D: BOSS   W / S: FLOOR   ARROW KEYS ALSO WORK   TAB + ENTER",15,Color("8194aa"))
 	for i in range(7):
 		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (Esc)"][i-3]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())

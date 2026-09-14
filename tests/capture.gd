@@ -2,6 +2,7 @@ extends SceneTree
 func _initialize() -> void:
 	call_deferred("capture")
 func capture() -> void:
+	DirAccess.make_dir_recursive_absolute("res://docs/captures/prototype")
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.start_run()
@@ -19,7 +20,7 @@ func capture() -> void:
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/prototype.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/prototype.png")
 	game.effects.clear()
 	game.damage_labels.clear()
 	game.sub_weapon = 0
@@ -27,7 +28,7 @@ func capture() -> void:
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/scatter-preview.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/scatter-preview.png")
 	game.power = 1.7
 	game.fire_rate = 1.4
 	game.move_bonus = 40
@@ -35,19 +36,19 @@ func capture() -> void:
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/pause.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/pause.png")
 	game.paused = false
 	game.choosing = true
 	game.choices.assign([0,1,2])
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/upgrades.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/upgrades.png")
 	game.return_to_title()
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/title.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/title.png")
 	game.floor_number = 5
 	game.new_floor(0)
 	game.title_screen = false
@@ -62,7 +63,7 @@ func capture() -> void:
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/boss.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/boss.png")
 	for variant in [1,2]:
 		game.new_floor(variant)
 		game.player = game.center(Vector2i(3,1))
@@ -78,7 +79,7 @@ func capture() -> void:
 		game.queue_redraw()
 		await process_frame
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://docs/boss-%d.png" % (variant+1))
+		root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-%d.png" % (variant+1))
 	for variant in [0,2]:
 		game.floor_number = 15
 		game.new_floor(variant)
@@ -100,7 +101,7 @@ func capture() -> void:
 		game.queue_redraw()
 		await process_frame
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://docs/boss-gaps-%d.png" % variant)
+		root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-gaps-%d.png" % variant)
 	for phase in range(3):
 		game.floor_number = 15
 		game.new_floor(2)
@@ -117,14 +118,14 @@ func capture() -> void:
 		game.queue_redraw()
 		await process_frame
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://docs/halo-pattern-%d.png" % phase)
+		root.get_texture().get_image().save_png("res://docs/captures/prototype/halo-pattern-%d.png" % phase)
 	game.practice.open(game)
 	game.practice.variant = 2
 	game.practice.depth = 45
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/boss-practice-menu.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-practice-menu.png")
 	game.practice.start(game)
 	game.player = game.center(Vector2i(6,1))
 	game.discovered[1] = true
@@ -136,7 +137,7 @@ func capture() -> void:
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/boss-practice-play.png")
+	root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-practice-play.png")
 	game.queue_free()
 	await process_frame
 	await process_frame

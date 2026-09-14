@@ -46,7 +46,7 @@ func run() -> void:
 	game.replay_input = {"cursor": Vector2(800, 500), "movement": Vector2.LEFT, "primary": true, "secondary": false}
 	game.player = Vector2(120, 70)
 	game.camera_pos = Vector2(100, 50)
-	var expected: Vector2 = (Vector2(800, 500) - game.get_viewport_rect().size * 0.5 + game.camera_pos - game.player).normalized()
+	var expected: Vector2 = (game.screen_to_world(Vector2(800,500))-game.player).normalized()
 	check(game.controls.aim(game).is_equal_approx(expected), "aim includes camera lag and screen center")
 	check(game.controls.movement(game) == Vector2.LEFT and game.controls.primary(game) and not game.controls.secondary(game), "replay overrides input devices")
 	game.replay_input.aim = Vector2.DOWN

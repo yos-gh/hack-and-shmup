@@ -46,8 +46,9 @@ func run() -> void:
 	check(not game.controls.primary(game) and game.controls.movement(game) == Vector2.LEFT,"replay overrides live actions")
 	Input.action_release("fire_primary")
 	game.replay_input.clear()
+	var previous_audio: int = game.audio_mode
 	click(game,MOUSE_BUTTON_LEFT,game.audio_button_rect().get_center())
-	check(game.title_screen and game.audio_mode == 1,"audio click cannot start run")
+	check(game.title_screen and game.audio_mode == (previous_audio+1)%3,"audio click cannot start run")
 	key(game,KEY_ENTER,true)
 	check(game.title_screen,"confirm echo ignored")
 	key(game,KEY_ENTER)

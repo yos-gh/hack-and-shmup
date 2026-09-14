@@ -7,9 +7,11 @@
   <meta name="description" content="HACK & SHMUP — a fast-paced dungeon shooter. Find your route, fight for more time, and descend into three different boss encounters. Play free in your browser.">
   <title>HACK & SHMUP — Endless descent</title>
   <style>
+    @font-face { font-family:Barlow; src:url("fonts/Barlow-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+    @font-face { font-family:Rajdhani; src:url("fonts/Rajdhani-SemiBold.ttf") format("truetype"); font-weight:600 700; font-display:swap; }
     :root { color-scheme: dark; --bg:#0b111c; --surface:#111e2a; --line:#283b49; --text:#edf5f5; --muted:#a1b3c3; --mint:#63f5ce; --gold:#ffb95e; }
     * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.7 "Segoe UI",Arial,sans-serif; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.7 Barlow,"Segoe UI",Arial,sans-serif; }
     a { color:var(--mint); text-underline-offset:4px; }
     a:hover { color:white; }
     a:focus-visible { outline:2px solid var(--mint); outline-offset:5px; }
@@ -21,6 +23,7 @@
     nav { display:flex; gap:25px; font-size:13px; }
     .intro { padding:25px 0 20px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
     .eyebrow { color:var(--mint); font-size:11px; font-weight:700; letter-spacing:.18em; margin:0 0 4px; }
+    h1, h2, h3, .brand, .eyebrow { font-family:Rajdhani,Arial,sans-serif; }
     h1 { margin:0; font-size:clamp(26px,3.8vw,42px); line-height:1.2; letter-spacing:-.035em; }
     .intro p:last-child { color:var(--muted); font-size:14px; max-width:350px; margin:0; }
     .game-shell { background:#070c13; border:1px solid var(--line); aspect-ratio:8/5; width:100%; }
@@ -55,15 +58,16 @@
   <a class="skip" href="#how-to-play">Skip to instructions</a>
   <header><div class="wrap"><a class="brand" href="./">HACK <span>&</span> SHMUP</a><nav aria-label="Page navigation"><a href="#how-to-play">How to play</a><a href="https://github.com/yos-gh/hack-and-shmup">GitHub ↗</a></nav></div></header>
   <main class="wrap">
-    <div class="intro"><div><p class="eyebrow">DUNGEON SHOOTER / PLAYABLE PROTOTYPE</p><h1>Find your way. Fight your way.</h1></div><p>A dungeon shooter. Defeat enemies, earn time, and descend.</p></div>
+    <div class="intro"><div><p class="eyebrow">GLASS-FRAME DUNGEON SHOOTER</p><h1>Find your way. Fight your way.</h1></div><p>Transparent arenas. Luminous enemies. Defeat them, earn time, and descend.</p></div>
     <div class="game-shell"><iframe src="game-v2.html" title="HACK & SHMUP playable game" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe></div>
-    <div class="game-note"><p>Desktop keyboard + mouse · Click inside to play and enable audio.</p><a href="game-v2.html">Open game on its own ↗</a></div>
+    <div class="game-note"><p>Desktop keyboard + mouse · Click inside to play · Starts with sound effects only.</p><a href="game-v2.html">Open game on its own ↗</a></div>
     <div class="guide" id="how-to-play">
       <section><p class="eyebrow">01 / THE DESCENT</p><h2>Choose your route.</h2><ol class="rules"><li>Reach the stairs before time runs out. Kills add time.</li><li>Choose an upgrade after each floor.</li><li>Every fifth floor is a boss fight with no timer.</li><li>One hit restarts the floor. Your upgrades stay.</li></ol></section>
-      <section><p class="eyebrow">02 / TAKE CONTROL</p><h2>Keep moving. Keep aiming.</h2><dl class="controls"><div><dt>Move</dt><dd><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></dd></div><div><dt>Aim</dt><dd>Mouse</dd></div><div><dt>Machine gun</dt><dd>Hold left click</dd></div><div><dt>Subweapon</dt><dd>Right click</dd></div><div><dt>Switch subweapon</dt><dd><kbd>Q</kbd> / <kbd>E</kbd> or wheel</dd></div><div><dt>Choose upgrade</dt><dd>Click card or <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dd></div><div><dt>Pause</dt><dd><kbd>Esc</kbd></dd></div><div><dt>Audio mode</dt><dd><kbd>M</kbd></dd></div></dl><p style="margin-top:14px;font-size:13px">Paused: click to resume, Esc to title. M: all audio → effects only → mute.</p></section>
+      <section><p class="eyebrow">02 / TAKE CONTROL</p><h2>Keep moving. Keep aiming.</h2><dl class="controls"><div><dt>Move</dt><dd><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></dd></div><div><dt>Aim</dt><dd>Mouse</dd></div><div><dt>Machine gun</dt><dd>Hold left click</dd></div><div><dt>Subweapon</dt><dd>Right click</dd></div><div><dt>Switch subweapon</dt><dd><kbd>Q</kbd> / <kbd>E</kbd> or wheel</dd></div><div><dt>Choose upgrade</dt><dd>Click card or <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dd></div><div><dt>Pause</dt><dd><kbd>Esc</kbd></dd></div><div><dt>Audio mode</dt><dd><kbd>M</kbd></dd></div><div><dt>Settings / key bindings</dt><dd><kbd>F10</kbd> on title or pause</dd></div></dl><p style="margin-top:14px;font-size:13px">Paused: click to resume, Esc to title. Settings offer volume, reduced flashes, and combat key bindings. Save preferences where browser storage is available; runs and records last only for the session.</p></section>
     </div>
+    <section class="weapons"><p class="eyebrow">BOSS PRACTICE</p><h2>Learn each encounter.</h2><p class="muted">Press B on the title screen. A/D or Left/Right selects a boss; W/S or Up/Down selects a floor. Enter starts, R retries, and B returns to selection during practice. Mouse controls are also available.</p></section>
     <section class="weapons"><p class="eyebrow">03 / YOUR SECOND OPTION</p><h2>Three ways to make space.</h2><div class="weapon-grid"><article class="weapon"><h3>Scatter</h3><p>A close-range spread.</p></article><article class="weapon"><h3>Shockwave</h3><p>Push enemies back and erase nearby bullets.</p></article><article class="weapon"><h3>Lance</h3><p>A wide, piercing beam.</p></article></div></section>
   </main>
-  <footer><div class="wrap"><span>HACK & SHMUP · Built with Godot · Work in progress</span></div></footer>
+  <footer><div class="wrap"><span>HACK & SHMUP · Built with Godot · Work in progress</span><a href="THIRD_PARTY_NOTICES.txt">Engine, SDK &amp; font notices</a></div></footer>
 </body>
 </html>

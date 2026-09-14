@@ -1,3 +1,11 @@
+# Visual polish review (2026-09-14)
+
+Normal launch now uses the 25-degree 3D view. The development scenario still accepts an explicit 2D comparison. Use `polish_review.gd` for protected fixed-step visual/performance fixtures and `polish_journey.gd` for the ordinary-rules movement/fire replay (seed 19045, no invulnerability or clock overrides). Both accept `--output=<directory>`; journey `--no-record` omits PNGs and supports headless execution. PNG sequences are 30fps; the simulation runs at 60Hz. Native recording uses the normal camera, not an art-review framing override. This is scripted gameplay input, not a recorded human playthrough.
+
+`package_review.gd` is an external validation script for the exported PCK: run the Godot editor binary with `--main-pack <export.pck> --script <absolute-path-to-package_review.gd> -- --output=<absolute-directory>`, from the exported folder. Release templates ignore `--script`; verify the release executable separately through its actual UI.
+
+---
+
 # Development validation
 
 Run from the project root with Godot 4.7 stable. These tools are excluded from Web exports.
@@ -36,13 +44,13 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## Publication workflow
 
-The Pages workflow is manual (`workflow_dispatch`). The repository's default branch must receive this workflow change before remote main pushes stop deploying. Local edits alone do not change GitHub behavior. Develop on short `codex/` branches. Review and merge playable changes, then explicitly run **Publish game to Pages** for a reviewed ref with matching `web/` artifacts. This workflow still uploads checked-in files; it does not build them.
+The Pages workflow is manual (`workflow_dispatch`). Develop on short `codex/` branches. Review and merge playable changes, then explicitly run **Publish game to Pages** for a reviewed ref with matching `web/` artifacts. This workflow still uploads checked-in files; it does not build them.
 
-Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prepare rollback, restore `web/` from that tag into a new branch, review the diff, merge and explicitly deploy. No history rewrite is required. Tags, merges, pushes and publication are separate operations; this foundation change has not been pushed or deployed.
+Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prepare rollback, restore `web/` from that tag into a new branch, review the diff, merge and explicitly deploy. No history rewrite is required. Tags, merges, pushes and publication are separate operations; publication must be requested explicitly.
 
 ## Input and session regression
 
-Existing keyboard bindings now live in `project.godot` InputMap (physical WASD for movement). `PlayerInput` routes events, `GameSession` owns transitions, and `FloorSnapshot` keeps the in-memory retry baseline. `FloorGenerator` returns an independent `FloorData` from `FloorSettings` and a seed or saved RNG state. `Game` applies the result and advances its RNG explicitly. Key-binding settings are not implemented yet.
+Existing keyboard bindings now live in `project.godot` InputMap (physical WASD for movement). `PlayerInput` routes events, `GameSession` owns transitions, and `FloorSnapshot` keeps the in-memory retry baseline. `FloorGenerator` returns an independent `FloorData` from `FloorSettings` and a seed or saved RNG state. `Game` applies the result and advances its RNG explicitly. Combat key bindings can be changed from the settings menu.
 
 `session_input_test.gd` checks InputMap bindings/remapping, held inputs and echo suppression, pause/resume shot gating, card/practice transitions and 50 retries across normal floors and all three bosses. Audio regression waits by elapsed time rather than uncapped render frames and exits with a failure result instead of hanging on an assertion.
 
@@ -70,7 +78,7 @@ For an x86-64 Windows package, run `./tools/build.ps1 -Target Windows -Ref HEAD`
 
 `user_settings_test.gd` uses a separate process-specific preferences file and tests overwrite, round trip, invalid values/version, collision rejection, isolation and default restoration.
 
-T15b connects the backend to a scrollable Control/Theme menu (title or pause: button/F10). Levels apply immediately, with explicit Save for persistence. Normal main-scene startup loads preferences; SceneTree-script tests and embedded studies stay session-only. Esc cancels rebinding, then closes settings while preserving pause. Reduced flash suppresses the death overlay only. Master/music/effect gain retains the original audio modes and priority ducking. `settings_effects_test.gd` verifies these state transitions, saved preference application and combat/RNG isolation. Existing drawn menus, Web persistence and interactive audio checks remain separate work.
+T15b connects the backend to a scrollable Control/Theme menu (title or pause: button/F10). Levels apply immediately, with explicit Save for persistence. Normal main-scene startup loads preferences; SceneTree-script tests and embedded studies stay session-only. Esc cancels rebinding, then closes settings while preserving pause. Reduced flash suppresses the death overlay and reduces the new presentation effects and material pulses. Master/music/effect gain retains the original audio modes and priority ducking. `settings_effects_test.gd` verifies these state transitions, saved preference application and combat/RNG isolation. Existing drawn menus, Web persistence and interactive audio checks remain separate work.
 
 
 Settings use a fixed action footer and status area, focus-following scroll content, percentage volume labels and a shared MenuTheme. The settings regression also checks footer bounds, focus scrolling and focus retention after remapping.

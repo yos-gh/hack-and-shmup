@@ -24,10 +24,8 @@ func draw(game, screen: Vector2) -> void:
 					var edge = p + Vector2(16,16) + Vector2(d) * 16
 					var side = Vector2(-d.y, d.x) * 16
 					game.draw_line(edge - side, edge + side, Color("354858") if visible else Color("16202d"), 3)
-	if game.stairs_unlocked and game.discovered.has(game.goal_room):
-		game.draw_rect(Rect2(game.stairs - Vector2(23,23), Vector2(46,46)), Color("24493c"))
-		for i in range(4): game.draw_line(game.stairs + Vector2(-16 + i * 4, -12 + i * 8), game.stairs + Vector2(16, -12 + i * 8), Color("65ffcf"), 3)
-		game.label_at(game.stairs + Vector2(-30,-34), "DESCEND", 13, Color("65ffcf"))
+	game.presentation.draw_world(game)
+	if game.stairs_unlocked and game.discovered.has(game.goal_room): game.presentation.draw_stairs(game)
 	draw_lasers(game)
 	draw_options(game)
 	for e in game.enemies:
@@ -107,7 +105,7 @@ func draw(game, screen: Vector2) -> void:
 				var axis := Vector2.from_angle(i*TAU/6)
 				var center: Vector2 = effect.p+axis*(8+progress*22)
 				var side := axis.orthogonal()*(3*(1-progress))
-				game.draw_colored_polygon(PackedVector2Array([center-axis*3,center+side,center+axis*5,center-side]),ink)
+				game.draw_polyline(PackedVector2Array([center-axis*3-side,center+side,center+axis*5+side]),ink,1.6,true)
 			game.draw_arc(effect.p,8+progress*12,0,TAU,24,Color(1,0.8,0.85,(1-progress)*(1-progress)*0.5),1,true)
 		elif effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
@@ -135,7 +133,7 @@ func draw(game, screen: Vector2) -> void:
 			var arrival := maxf(0,1.0-progress/0.45)
 			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))
 			game.draw_polyline(reach_outline,Color(0.4,1,0.9,arrival*0.65),1.5)
-			game.draw_polyline(outline,Color(0.3,1,0.85,effect.life/0.4*0.16),7,true)
+			game.draw_polyline(outline,Color(0.3,1,0.85,effect.life/0.4*0.22),11,true)
 			game.draw_polyline(outline,Color(0.7,1,0.93,effect.life/0.4),2,true)
 		elif effect.kind == 1:
 			var fade: float = minf(1.0,effect.life/0.09)
@@ -147,7 +145,7 @@ func draw(game, screen: Vector2) -> void:
 		var alpha = minf(1.0, entry.life / 0.2)
 		game.label_at(entry.p + Vector2(1,1), number, 17, Color(0.02,0.03,0.05,alpha))
 		game.label_at(entry.p, number, 17, Color(1.0,0.95,0.75,alpha))
-	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
+	if game.preferences.reduce_flash or game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		if not game.depth_enabled: game.draw_circle(game.player, 12, Color("63f5ce"))
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
