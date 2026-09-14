@@ -448,7 +448,7 @@ func _physics_process(delta: float) -> void:
 	banner -= delta
 	var movement: Vector2 = controls.movement(self)
 	var previous_player := player
-	player = slide(player, movement.normalized() * (SPEED + move_bonus) * delta, PLAYER_HIT_RADIUS)
+	player = preload("res://scripts/player_motion.gd").move(self,player, movement.normalized() * (SPEED + move_bonus) * delta, PLAYER_HIT_RADIUS)
 	presentation.track_motion(self,previous_player,player,delta)
 	camera_pos = camera_pos.lerp(player, 1.0 - exp(-12 * delta))
 	var room_id: int = cells.get(tile(player), -1)
