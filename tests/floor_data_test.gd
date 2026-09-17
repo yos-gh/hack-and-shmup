@@ -15,7 +15,7 @@ func run() -> void:
 	var generator := Generator.new()
 	var settings := Settings.new()
 	var tree_count := root.get_child_count()
-	for depth in [1,5,15,19,45,99]:
+	for depth in [1,4,5,6,9,10,11,15,19,45,99]:
 		settings.depth = depth
 		for seed_value in range(10):
 			var data = generator.generate(settings,seed_value)

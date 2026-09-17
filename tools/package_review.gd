@@ -47,9 +47,6 @@ func run() -> void:
 	await capture(game,"play")
 	game.paused = true
 	await capture(game,"pause")
-	game.settings_menu.open()
-	await capture(game,"settings")
-	game.settings_menu.close()
 	game.paused = false
 	game.choosing = true
 	game.choices.assign([0,1,2])

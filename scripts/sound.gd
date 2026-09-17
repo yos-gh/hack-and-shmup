@@ -10,15 +10,22 @@ var headless := false
 var paused_state := false
 var warning_step := 6
 var critical_priority := 0
-var master_gain := 1.0
-var music_gain := 1.0
-var effects_gain := 1.0
-var voice_levels: Array[float] = []
+var hit_gap := 0.0
+var burst_gaps: Dictionary = {}
+var effects_bus_name := ""
 const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
-	for key in ["shot","scatter","shock","lance","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","halo_option","hunter_burst"]:
+	effects_bus_name = "GameEffects_%s" % get_instance_id()
+	AudioServer.add_bus()
+	var bus_index := AudioServer.bus_count - 1
+	AudioServer.set_bus_name(bus_index, effects_bus_name)
+	var limiter := AudioEffectHardLimiter.new()
+	limiter.ceiling_db = -2.5
+	limiter.pre_gain_db = -2.0
+	AudioServer.add_bus_effect(bus_index, limiter)
+	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","halo_option","hunter_burst"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
@@ -31,15 +38,32 @@ func _ready() -> void:
 	for i in range(12):
 		var voice := AudioStreamPlayer.new()
 		voice.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+		voice.bus = effects_bus_name
 		add_child(voice)
 		voice.volume_db = -5
 		voices.append(voice)
-		voice_levels.append(-5.0)
 	add_child(enemy_audio)
+	for voice in enemy_audio.voices: voice.bus = effects_bus_name
 	if not headless: music.play()
+
+func _process(delta: float) -> void:
+	hit_gap = maxf(0, hit_gap - delta)
+	for key in burst_gaps: burst_gaps[key] = maxf(0, burst_gaps[key] - delta)
+
+func hear_hit(_position: Vector2, _damage: float, blocked: bool, killed: bool) -> void:
+	if blocked or killed or hit_gap > 0 or paused_state: return
+	hit_gap = 0.055
+	play_sfx("hit")
+
+func _exit_tree() -> void:
+	var bus_index := AudioServer.get_bus_index(effects_bus_name)
+	if bus_index > 0: AudioServer.remove_bus(bus_index)
 
 func play_sfx(key: String) -> void:
 	if audio_mode == 2 or headless: return
+	if key in ["kill", "shield"]:
+		if burst_gaps.get(key, 0.0) > 0: return
+		burst_gaps[key] = 0.045
 	if CRITICAL_PRIORITIES.has(key):
 		var priority: int = CRITICAL_PRIORITIES[key]
 		if voices[0].playing and priority < critical_priority: return
@@ -92,20 +116,8 @@ func set_audio_mode(value: int) -> void:
 	if audio_mode == 2:
 		for voice in voices: voice.stop()
 
-func _safe_gain(value: float) -> float:
-	return clampf(value, 0.0, 1.0) if is_finite(value) else 1.0
-
-func set_levels(master: float, background: float, effects: float) -> void:
-	master_gain = _safe_gain(master)
-	music_gain = _safe_gain(background)
-	effects_gain = _safe_gain(effects)
-	enemy_audio.set_gain(master_gain*effects_gain)
-	_refresh_music_level()
-	for i in range(voices.size()): _set_voice_level(i, voice_levels[i])
-
 func _refresh_music_level() -> void:
-	music.volume_db = -10 + linear_to_db(master_gain * music_gain) if audio_mode == 0 else -80
+	music.volume_db = -10 if audio_mode == 0 else -80
 
 func _set_voice_level(index: int, baseline: float) -> void:
-	voice_levels[index] = baseline
-	voices[index].volume_db = baseline + linear_to_db(master_gain * effects_gain)
+	voices[index].volume_db = baseline

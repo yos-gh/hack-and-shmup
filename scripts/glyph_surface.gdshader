@@ -2,7 +2,7 @@ shader_type spatial;
 render_mode depth_draw_never;
 varying float breath;
 
-void vertex() { breath = INSTANCE_CUSTOM.b > 0.5 ? 1.0 : 0.98+0.02*sin(INSTANCE_CUSTOM.g*1.6); }
+void vertex() { breath = 0.98+0.02*sin(INSTANCE_CUSTOM.g*1.6); }
 
 void fragment() {
 	float facing = abs(dot(normalize(NORMAL), normalize(VIEW)));

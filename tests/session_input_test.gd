@@ -58,13 +58,7 @@ func run() -> void:
 	check(game.sub_weapon == 1,"one weapon switch per press")
 	click(game,MOUSE_BUTTON_WHEEL_DOWN)
 	check(game.sub_weapon == 0,"wheel previous preserved")
-	# Event routing uses InputMap rather than a hard-coded key.
-	var remap := InputEventKey.new()
-	remap.keycode = KEY_Z
-	InputMap.action_add_event("weapon_next",remap)
-	key(game,KEY_Z)
-	check(game.sub_weapon == 1,"alternative action binding routes correctly")
-	InputMap.action_erase_event("weapon_next",remap)
+	key(game,KEY_E)
 	key(game,KEY_ESCAPE)
 	var time_before: float = game.time_left
 	key(game,KEY_Q)
@@ -134,5 +128,5 @@ func run() -> void:
 	key(game,KEY_ENTER)
 	check(game.floor_number == 1 and game.power == 1 and game.deaths == 0 and game.best_cleared == 12,"new run resets progression but keeps session record")
 	game.free()
-	if failures == 0: print("PASS: InputMap, remap, echo, pause/resume, cards, practice, 50 isolated retries and run reset")
+	if failures == 0: print("PASS: fixed InputMap, echo, pause/resume, cards, practice, 50 isolated retries and run reset")
 	quit(1 if failures else 0)

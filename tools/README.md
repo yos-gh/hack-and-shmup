@@ -16,6 +16,9 @@ For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario siege5`, `
 # All regression tests; audio and view-state checks use a display.
 ./tools/test.ps1
 
+# Play from the normal floor-11 spawn with ten automatic upgrades.
+./tools/play_study.ps1 -Scenario normal11
+
 # Play a repeatable Lv19 floor. Weapon: 0 scatter, 1 shockwave, 2 lance.
 Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal19 --seed=19045 --weapon=1 --frames=0
 
@@ -30,7 +33,7 @@ Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal
 Godot_console.exe --path . --disable-crash-handler --log-file scenario.log --max-fps 60 --script res://tools/scenario.gd -- --scenario=halo45 --frames=3600 --output=res://docs/validation/halo45.json --capture=res://docs/validation/halo45.png
 ```
 
-Measurement mode disables live gameplay input, keeps the player stationary and protected, rotates aim, and fires both weapons whenever ready. Time is replenished. Interactive mode (`frames=0`) uses normal damage, time and controls. These fixtures measure a defined encounter, not maximum load or survival difficulty. Normal19 enters room 1; other rooms retain normal sleeping behavior.
+Measurement mode disables live gameplay input, keeps the player stationary and protected, rotates aim, and fires both weapons whenever ready. Time is replenished. Interactive mode (`frames=0`) uses normal damage, time and controls. These fixtures measure a defined encounter, not maximum load or survival difficulty. Normal11 starts at the normal spawn with ten automatic upgrades; Normal19 enters room 1; other rooms retain normal sleeping behavior.
 
 Reports contain engine, CPU, display backend, sample count, CPU-update p95/p99/max, frame-interval p95/p99/max, initial enemies, peak bullets, and a final simulation digest. `--headless` can measure CPU work but cannot capture images or validate rendered frame performance. Fixed-step simulation time is frames/60; wall time can differ. Startup/import is not included; the first update is included. Record GPU, driver, browser and competing workloads separately when comparing hardware.
 
@@ -72,23 +75,11 @@ Run `python tools/verify_build.py <build-directory>` to check loose files, sourc
 
 For an x86-64 Windows package, run `./tools/build.ps1 -Target Windows -Ref HEAD`. This uses the committed Windows preset, requires the release executable/PCK/Sentry DLL and crash handler dependencies, and launches the exported executable headlessly for 30 frames with a 30-second timeout. Only a clean exit/log allows packaging. The manifest marks `startup_verified`; the verifier rejects Windows packages without that result. The output contains `windows.zip` and a `windows/` directory. Extract the complete ZIP, then run `hack-and-shmup.exe`; keep its PCK and DLL files together. This startup gate does not test interactive input, audio output, or GPU rendering in the exported application.
 
-## Settings backend
+## Session controls
 
-`user_settings.gd` provides explicit JSON load/save and physical-key remapping. Construction does not access disk or change InputMap. Call `apply_bindings()` explicitly; reset then apply restores project defaults including mouse/wheel bindings. Remapping currently accepts nonreserved Latin letters/digits for eight combat actions and rejects collisions with unchanged defaults. Reserved menu keys remain fixed. Saving writes a temporary file before replacement; loading reports corrupt/unsupported files without overwriting them. Settings contain volume/reduced-effect preferences only, with no run records. The menu and audio/visual consumers are connected in T15b below.
+Controls use the fixed project InputMap. Audio modes and fullscreen can be changed for the current session; startup uses SE ONLY. There is no settings screen, preference file, or persistent record.
 
-`user_settings_test.gd` uses a separate process-specific preferences file and tests overwrite, round trip, invalid values/version, collision rejection, isolation and default restoration.
-
-T15b connects the backend to a scrollable Control/Theme menu (title or pause: button/F10). Levels apply immediately, with explicit Save for persistence. Normal main-scene startup loads preferences; SceneTree-script tests and embedded studies stay session-only. Esc cancels rebinding, then closes settings while preserving pause. Reduced flash suppresses the death overlay and reduces the new presentation effects and material pulses. Master/music/effect gain retains the original audio modes and priority ducking. `settings_effects_test.gd` verifies these state transitions, saved preference application and combat/RNG isolation. Existing drawn menus, Web persistence and interactive audio checks remain separate work.
-
-
-Settings use a fixed action footer and status area, focus-following scroll content, percentage volume labels and a shared MenuTheme. The settings regression also checks footer bounds, focus scrolling and focus retention after remapping.
-
-GameMenus owns Control-based title, pause and upgrade screens using MenuTheme. Card Control rectangles share the pointer helper; resource descriptions wrap within them. Menu refresh preserves focused controls, settings suppresses underlying controls, and guarded card callbacks prevent duplicate transitions. game_menus_test covers these paths, including actual Viewport Enter dispatch. Boss practice also uses shared Controls and hit rectangles. Its arrow shortcuts take priority over GUI focus navigation; Tab/Enter activates controls. Tests cover depth bounds and guarded start without record mixing.
-
-
-Key settings offer individual default restoration with collision checks, distinguish reserved/unsupported/conflicting inputs, and reject modifier chords. InputMap-derived captions drive the remapped controls guide in title/HUD. Individual resets preserve volume and other settings.
-
-On Web, Save checks OS.is_userfs_persistent before claiming a persistent save. Unavailable storage leaves preferences active for the session and displays that limitation. This check does not verify asynchronous IndexedDB completion or browser reload behavior.
+GameMenus owns title, pause, practice and upgrade Controls. Card rectangles share the pointer helper, keyboard focus survives refresh, and guarded callbacks prevent duplicate transitions. Pause and card screens show all seven player stats, including sub range, radius, width and recharge caps.
 
 ## Manual CI
 

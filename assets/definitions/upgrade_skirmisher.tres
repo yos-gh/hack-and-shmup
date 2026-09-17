@@ -1,0 +1,8 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/upgrade_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "SKIRMISHER"
+description = "+30 movement speed / -10% base damage"
+power = -0.1
+move_speed = 30.0

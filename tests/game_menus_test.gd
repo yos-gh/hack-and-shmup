@@ -49,12 +49,6 @@ func run():
 	check(not game.paused and not game.fire_armed, "resume control preserves input gate")
 	game.paused = true
 	menus.sync()
-	game.settings_menu.open()
-	menus.sync()
-	check(menus.surface.get_child_count() == 0, "settings suppresses underlying menu controls")
-	game.settings_menu.close()
-	menus.sync()
-	check(menus.surface.get_child_count() > 0 and game.paused, "closing settings restores paused menu")
 	for width in [640,960,1280]:
 		var screen := Vector2(width,720)
 		for i in range(3):

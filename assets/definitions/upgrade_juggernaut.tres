@@ -1,0 +1,8 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/upgrade_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "JUGGERNAUT"
+description = "+45% base damage / -30 movement speed"
+power = 0.45
+move_speed = -30.0

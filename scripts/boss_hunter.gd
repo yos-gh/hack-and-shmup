@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 # Variant-specific behavior; attack queues and warnings remain shared in Boss.
 
 func hunter_velocity(boss, game, e: Dictionary, toward: Vector2) -> Vector2:
@@ -15,12 +17,12 @@ func hunter_velocity(boss, game, e: Dictionary, toward: Vector2) -> Vector2:
 func summon(boss, game, e: Dictionary) -> void:
 	var adds := 0
 	for enemy in game.enemies:
-		if enemy.kind < 3 and enemy.hp > 0: adds += 1
+		if Catalog.is_mob(enemy.kind) and enemy.hp > 0: adds += 1
 	var count := mini(2+boss.tier(game),8)
 	for i in range(mini(count,24-adds)):
 		var p: Vector2 = e.p + Vector2.from_angle(TAU*i/count+e.shots)*100
 		if game.cells.get(game.tile(p),-1) != 1 or not game.walkable(p) or p.distance_to(game.player) < 96: continue
-		var kind := i%2
+		var kind: int = Catalog.Enemy.CHASER if i%2 == 0 else Catalog.Enemy.SNIPER
 		boss.pending_summons.append({"p":p,"kind":kind,"hp":game.enemy_health(kind,game.floor_number),"room":1,
 			"active":false,"searching":true,"notice":0.65,"turn_speed":2.4,"cd":0.6,
 			"charge":0.0,"stun":0.0,"dir":Vector2.from_angle(TAU*i/count),"push":Vector2.ZERO})

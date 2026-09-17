@@ -20,10 +20,6 @@ func secondary(game) -> bool:
 
 # Event routing keeps the original context priority and one-shot semantics.
 func handle_event(game, event: InputEvent) -> void:
-	if game.settings_menu.handle_event(event): return
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F10:
-		game.settings_menu.open()
-		return
 	if game.view_comparison and event is InputEventKey and event.pressed and not event.echo and event.is_action_pressed("compare_view"):
 		game.set_depth_view(not game.depth_enabled)
 		return

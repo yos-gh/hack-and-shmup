@@ -1,6 +1,6 @@
 extends RefCounted
 const WEAPONS = ["scatter","shock","lance"]
-const UPGRADES = ["damage","rate","move","hybrid"]
+const UPGRADES = ["damage","rate","move","hybrid","skirmisher","juggernaut","expansion","capacitor"]
 static func draw_wordmark(canvas: CanvasItem, center: Vector2, width: float) -> void:
 	var glyphs := {
 		"H":[[Vector2(0,0),Vector2(0,1)],[Vector2(1,0),Vector2(1,1)],[Vector2(0,0.5),Vector2(1,0.5)]],
@@ -24,6 +24,10 @@ static func draw_wordmark(canvas: CanvasItem, center: Vector2, width: float) -> 
 static func draw_icon(canvas: CanvasItem, kind: String, center: Vector2, radius: float, ink: Color) -> void:
 	var paths: Array = []
 	match kind:
+		"skirmisher": paths = [[Vector2(-1,-0.8),Vector2(0,0),Vector2(-1,0.8)],[Vector2(0,-0.8),Vector2(1,0),Vector2(0,0.8)]]
+		"juggernaut": paths = [[Vector2(-0.8,-1),Vector2(0.8,-1),Vector2(1,0.4),Vector2(0,1),Vector2(-1,0.4),Vector2(-0.8,-1)]]
+		"expansion": paths = [[Vector2(-1,-0.3),Vector2(-1,-1),Vector2(-0.3,-1)],[Vector2(0.3,1),Vector2(1,1),Vector2(1,0.3)],[Vector2(-0.5,0.5),Vector2(0.5,-0.5)]]
+		"capacitor": paths = [[Vector2(0.4,-1),Vector2(-0.5,0.15),Vector2(0.35,0.15),Vector2(-0.4,1)]]
 		"scatter": paths = [[Vector2(-1,0),Vector2(1,-0.65)],[Vector2(-1,0),Vector2(1,0)],[Vector2(-1,0),Vector2(1,0.65)]]
 		"shock":
 			canvas.draw_arc(center,radius,0,TAU,32,ink,1.5,true)

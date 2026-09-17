@@ -2,6 +2,8 @@
 
 Find your way. Fight your way.
 
+A roguelite dungeon shooter.
+
 [Play in your browser](https://yos-gh.github.io/hack-and-shmup/) — desktop keyboard and mouse.
 
 Reach the stairs before time runs out. Defeat enemies to earn more time, and choose upgrades as you descend.
@@ -14,7 +16,7 @@ Reach the stairs before time runs out. Defeat enemies to earn more time, and cho
 | Left / Right click | Fire / Subweapon |
 | Q / E or wheel | Switch subweapon |
 | Esc | Pause |
-| F10 on title or pause | Settings |
+| M | Cycle audio mode |
 
 ## Subweapons
 

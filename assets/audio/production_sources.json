@@ -1,0 +1,50 @@
+{
+  "shot.wav": {
+    "sha256": "4be2d75fdc613fcbe8a27f7fc74faf581fc1d628d35f50587ab34adce9a082e2",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "scatter.wav": {
+    "sha256": "c044405eed9afb6f288ae34d1e08b664bc3f7996bb12b6e5477db12ffe4452e7",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "shock.wav": {
+    "sha256": "769dccd80d9c0535d60cdfb67449d07111d20e372e977efee08bc8df0b946ba8",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "lance.wav": {
+    "sha256": "245d8fa9c63e91a77f223aa5a9011c829997186b9ab2c95fa1adde802444c7d2",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "hit.wav": {
+    "sha256": "035fdc8c21aeac9ae6466f9a94719a04767d33b032ae5b46f187727c4d806690",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "kill.wav": {
+    "sha256": "86a08d26669e112dad9c25594bfda48f3916fe4ce1d82e7f8fcb4db488730787",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "hunter_lock.wav": {
+    "sha256": "770d335070028f08f0713f1d1cf49d9fc0866bd4407a37cc9788191b87feb569",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  },
+  "death.wav": {
+    "sha256": "5f418488fe1a7afefdccd7020f13d5eacf79c39b60164223ef1e771c5089fbac",
+    "source": "tools/audio/reaper_sample.lua",
+    "project": "docs/audio/production_se/effects_source.rpp",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+  }
+}

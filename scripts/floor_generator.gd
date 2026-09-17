@@ -1,5 +1,6 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
 const Data = preload("res://scripts/floor_data.gd")
 const Settings = preload("res://scripts/floor_settings.gd")
 const Boss = preload("res://scripts/boss.gd")
@@ -92,15 +93,24 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 		var candidates: Array[Vector2i] = []
 		for cell in data.cells:
 			if data.cells[cell] == i and data.entry_safe(data.center(cell),i): candidates.append(cell)
-		for n in range(mini(18+data.floor_number*4,85)):
+		var count := mini(mini(18+data.floor_number*4,85),candidates.size())
+		var flankers := mini(6,roundi(count*0.10)) if data.floor_number >= 6 else 0
+		var interceptors := mini(2,roundi(count*0.05)) if data.floor_number >= 11 else 0
+		var replacement_index := 0
+		for n in range(count):
 			if candidates.is_empty(): break
 			var candidate_index: int = data.rng.randi_range(0,candidates.size()-1)
 			var p := candidates[candidate_index]
 			candidates.remove_at(candidate_index)
-			var kind := 0
-			if n % 7 == 0: kind = 1
-			elif n % 11 == 0: kind = 2
+			var kind := Catalog.Enemy.CHASER
+			if n % 7 == 0: kind = Catalog.Enemy.SNIPER
+			elif n % 11 == 0: kind = Catalog.Enemy.SHIELD
+			else:
+				if replacement_index < flankers: kind = Catalog.Enemy.FLANKER
+				elif replacement_index < flankers + interceptors: kind = Catalog.Enemy.INTERCEPTOR
+				replacement_index += 1
 			data.enemies.append({"p":data.center(p), "kind":kind, "hp":data.enemy_health(kind, data.floor_number),
+				"flank_side":1 if n % 2 == 0 else -1, "warp_cd":0.0, "warp_warning":0.0, "arrival":0.0, "escape_time":0.0,
 				"room":i, "active":false, "searching":false, "notice":data.rng.randf_range(0.35,0.85), "turn_speed":data.rng.randf_range(1.8,3.8),
 				"cd":data.rng.randf_range(0.25,0.65), "charge":0.0, "stun":0.0, "dir":Vector2.from_angle(data.rng.randf()*TAU), "push":Vector2.ZERO})
 	data.player = data.spawn_point

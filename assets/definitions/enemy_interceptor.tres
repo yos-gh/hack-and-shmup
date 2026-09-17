@@ -1,0 +1,8 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+health_one = 1.0
+health_fifteen = 2.0
+time_bonus = 0.2
+move_speed = 86.0

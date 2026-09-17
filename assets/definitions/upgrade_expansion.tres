@@ -1,0 +1,8 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/upgrade_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "EXPANSION"
+description = "+10% Scatter range / +5% Shock radius & Lance width / Max 5"
+expansion = 0.1
+max_stacks = 5

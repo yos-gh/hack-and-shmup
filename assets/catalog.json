@@ -98,15 +98,21 @@
     },
     {
       "path": "assets/audio/death.wav",
-      "bytes": 17684,
-      "sha256": "72692957be94afa1cb786678e5373e905795ed3f8e76e4665d5ca1f2764e0e22",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 82674,
+      "sha256": "5f418488fe1a7afefdccd7020f13d5eacf79c39b60164223ef1e771c5089fbac",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "5f418488fe1a7afefdccd7020f13d5eacf79c39b60164223ef1e771c5089fbac",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 8820
+      "sample_rate": 48000,
+      "frames": 20640
     },
     {
       "path": "assets/audio/descent.wav",
@@ -145,6 +151,24 @@
       "frames": 2426
     },
     {
+      "path": "assets/audio/hit.wav",
+      "bytes": 21234,
+      "sha256": "035fdc8c21aeac9ae6466f9a94719a04767d33b032ae5b46f187727c4d806690",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "035fdc8c21aeac9ae6466f9a94719a04767d33b032ae5b46f187727c4d806690",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
+      "sample_bytes": 2,
+      "sample_rate": 48000,
+      "frames": 5280
+    },
+    {
       "path": "assets/audio/hunter_burst.wav",
       "bytes": 4454,
       "sha256": "4fdf0843b97efe8b97819a68de4d0d920db116eaef541c4b0c7f1ac289f05494",
@@ -170,51 +194,75 @@
     },
     {
       "path": "assets/audio/hunter_lock.wav",
-      "bytes": 11510,
-      "sha256": "43336cac52ecb350cbf4424f02f9f4f1e0098ef643eabfbbce5aa73154f213de",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 57714,
+      "sha256": "770d335070028f08f0713f1d1cf49d9fc0866bd4407a37cc9788191b87feb569",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "770d335070028f08f0713f1d1cf49d9fc0866bd4407a37cc9788191b87feb569",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 5733
+      "sample_rate": 48000,
+      "frames": 14400
     },
     {
       "path": "assets/audio/kill.wav",
-      "bytes": 3352,
-      "sha256": "b387f8cd44c296c7d3b6cac28d6db6427a4f697d2dc6015b8e63216e43ce2b5f",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 38514,
+      "sha256": "86a08d26669e112dad9c25594bfda48f3916fe4ce1d82e7f8fcb4db488730787",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "86a08d26669e112dad9c25594bfda48f3916fe4ce1d82e7f8fcb4db488730787",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 1654
+      "sample_rate": 48000,
+      "frames": 9600
     },
     {
       "path": "assets/audio/lance.wav",
-      "bytes": 8864,
-      "sha256": "4d76c60859fe011da3f581c339c3fc1c5914cc3594d6f5c8c3694085bd47a4c4",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 51954,
+      "sha256": "245d8fa9c63e91a77f223aa5a9011c829997186b9ab2c95fa1adde802444c7d2",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "245d8fa9c63e91a77f223aa5a9011c829997186b9ab2c95fa1adde802444c7d2",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 4410
+      "sample_rate": 48000,
+      "frames": 12960
     },
     {
       "path": "assets/audio/scatter.wav",
-      "bytes": 6218,
-      "sha256": "c57c7a4e8db00d3e43d73f6f2bcb46bb4a16fae55764a64985494d965e9d1959",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 44274,
+      "sha256": "c044405eed9afb6f288ae34d1e08b664bc3f7996bb12b6e5477db12ffe4452e7",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "c044405eed9afb6f288ae34d1e08b664bc3f7996bb12b6e5477db12ffe4452e7",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 3087
+      "sample_rate": 48000,
+      "frames": 11040
     },
     {
       "path": "assets/audio/shield.wav",
@@ -230,27 +278,39 @@
     },
     {
       "path": "assets/audio/shock.wav",
-      "bytes": 14156,
-      "sha256": "e1dec38b3ef11555adec8b6d212922200be98f6bbd44f6ab66a8e50c42880322",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 76914,
+      "sha256": "769dccd80d9c0535d60cdfb67449d07111d20e372e977efee08bc8df0b946ba8",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "769dccd80d9c0535d60cdfb67449d07111d20e372e977efee08bc8df0b946ba8",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 7056
+      "sample_rate": 48000,
+      "frames": 19200
     },
     {
       "path": "assets/audio/shot.wav",
-      "bytes": 2910,
-      "sha256": "0ed7bfa3ad0edddcf369bb7fce4d506d744f1446257cfb60936387945434b3a7",
-      "kind": "generated_audio",
-      "source": "tools/generate_audio.py",
-      "source_sha256": "f091ec05ba6989f54a794a8e55b0fe0edacf8f1f52babc157c7429563398c361",
-      "channels": 1,
+      "bytes": 26994,
+      "sha256": "4be2d75fdc613fcbe8a27f7fc74faf581fc1d628d35f50587ab34adce9a082e2",
+      "kind": "rendered_audio",
+      "source": "tools/audio/reaper_sample.lua",
+      "source_sha256": "d6218cf2fb8aa68d8394f29c3ed77b749fe27a6efb3abc7404ee1ae126a8f450",
+      "production": {
+        "sha256": "4be2d75fdc613fcbe8a27f7fc74faf581fc1d628d35f50587ab34adce9a082e2",
+        "source": "tools/audio/reaper_sample.lua",
+        "project": "docs/audio/production_se/effects_source.rpp",
+        "method": "REAPER Magical 8bit Plug 2 and stock effects; 48 kHz stereo 16-bit PCM"
+      },
+      "channels": 2,
       "sample_bytes": 2,
-      "sample_rate": 22050,
-      "frames": 1433
+      "sample_rate": 48000,
+      "frames": 6720
     },
     {
       "path": "assets/audio/siege_fire.wav",
@@ -308,6 +368,20 @@
       "source": "assets/definitions/enemy_chaser.tres"
     },
     {
+      "path": "assets/definitions/enemy_flanker.tres",
+      "bytes": 240,
+      "sha256": "32130a81a58d8c1e637e807c5184d822e2757910a0bb496ea8bf12deda8592d4",
+      "kind": "authored_definition",
+      "source": "assets/definitions/enemy_flanker.tres"
+    },
+    {
+      "path": "assets/definitions/enemy_interceptor.tres",
+      "bytes": 239,
+      "sha256": "d545f8f25fabfe089124b71a9ea3e05b8b756adcd37edf53d3fcc6a541917912",
+      "kind": "authored_definition",
+      "source": "assets/definitions/enemy_interceptor.tres"
+    },
+    {
       "path": "assets/definitions/enemy_shield.tres",
       "bytes": 352,
       "sha256": "30b95b1b5214b91bff027c73dc6f6406f36872d5eebe5daa60630a55e4308f18",
@@ -322,6 +396,13 @@
       "source": "assets/definitions/enemy_sniper.tres"
     },
     {
+      "path": "assets/definitions/upgrade_capacitor.tres",
+      "bytes": 280,
+      "sha256": "35e3155b9f41a5c7bb2d739590c97bc9b2c894eb9213a4def1764ec0063ef5b7",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_capacitor.tres"
+    },
+    {
       "path": "assets/definitions/upgrade_damage.tres",
       "bytes": 246,
       "sha256": "ffcbc9a0bc211bf0409c3f8623c5fbad0c3dac4330fe54ff35ff160780d3296d",
@@ -329,11 +410,25 @@
       "source": "assets/definitions/upgrade_damage.tres"
     },
     {
+      "path": "assets/definitions/upgrade_expansion.tres",
+      "bytes": 295,
+      "sha256": "ec8e12d115985271d31652eb2b357c17b3e01321ca0df89474740417956bf943",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_expansion.tres"
+    },
+    {
       "path": "assets/definitions/upgrade_hybrid.tres",
       "bytes": 257,
       "sha256": "1f06105d73dd1784c230856235261370c5fb44525bd0972bc630145e97e6f78d",
       "kind": "authored_definition",
       "source": "assets/definitions/upgrade_hybrid.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_juggernaut.tres",
+      "bytes": 275,
+      "sha256": "4ee1d7e0de15a30553c71dccdc7e778c1353da1d84bafbc338e1653048f5b36d",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_juggernaut.tres"
     },
     {
       "path": "assets/definitions/upgrade_move.tres",
@@ -348,6 +443,13 @@
       "sha256": "590ea062daff17fdcba0903690ab6b81d36f39561504a5791ed059ec6618f216",
       "kind": "authored_definition",
       "source": "assets/definitions/upgrade_rate.tres"
+    },
+    {
+      "path": "assets/definitions/upgrade_skirmisher.tres",
+      "bytes": 274,
+      "sha256": "4a1609f547c217fd361bcd7475f4adf8681bb884b80d6fdc098030b0ecbd7a01",
+      "kind": "authored_definition",
+      "source": "assets/definitions/upgrade_skirmisher.tres"
     },
     {
       "path": "assets/definitions/weapon_lance.tres",
@@ -400,8 +502,8 @@
     },
     {
       "path": "scripts/glyph_surface.gdshader",
-      "bytes": 470,
-      "sha256": "5ce8621a4b3b82d97b63194fc8a8812304993ea3cedabd884fb5c5c2390f1bc8",
+      "bytes": 438,
+      "sha256": "8142cf734e4445a63082cc3c5e2416f9dc1ec23f4eab072a2632adece6e3def9",
       "kind": "authored_shader",
       "source": "scripts/glyph_surface.gdshader"
     },
@@ -414,15 +516,15 @@
     },
     {
       "path": "scripts/sniper_iris.gdshader",
-      "bytes": 996,
-      "sha256": "316806067c7756639a06a43d93a6cbc1091722b18203a27bcb3910ccdc0c162b",
+      "bytes": 964,
+      "sha256": "e4541c68494a6d24b6f11df0481fbf59c2835d9668b7593c391a2c6855d0edce",
       "kind": "authored_shader",
       "source": "scripts/sniper_iris.gdshader"
     },
     {
       "path": "scripts/triangular_iris.gdshader",
-      "bytes": 653,
-      "sha256": "cf132e49abf8df8404157b36612bad4f9f6f13dfde8bfefd38bbae393a831782",
+      "bytes": 621,
+      "sha256": "3b8146a68af19f6a4b593a9dcd0c55645fe751236786c4eeab478c06b349933a",
       "kind": "authored_shader",
       "source": "scripts/triangular_iris.gdshader"
     }

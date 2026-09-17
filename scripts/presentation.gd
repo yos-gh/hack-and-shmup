@@ -1,4 +1,6 @@
 extends RefCounted
+
+const Catalog = preload("res://scripts/combat_catalog.gd")
 ## Presentation clock and bounded value snapshots. Never consumes gameplay RNG.
 var clock := 0.0
 var transition := 0.0
@@ -60,7 +62,7 @@ func track_motion(game, a: Vector2, b: Vector2, delta: float) -> void:
 	for enemy in game.enemies:
 		if enemy.hp<=0 or not game.attack_open(enemy.p): continue
 		if enemy.charge>0: add_trail(enemy.p,enemy.dir,Color("ad8fff"),15,0.15)
-		elif enemy.kind == 3 and game.boss_variant == 1 and game.boss.lasers.is_empty(): add_trail(enemy.p,enemy.dir,Color("7be8ff"),18,0.15)
+		elif enemy.kind == Catalog.Enemy.BOSS and game.boss_variant == 1 and game.boss.lasers.is_empty(): add_trail(enemy.p,enemy.dir,Color("7be8ff"),18,0.15)
 func add_trail(p: Vector2, direction: Vector2, color: Color, radius: float, life: float) -> void:
 	var item: Dictionary = trails.pop_front() if trail_pool.is_empty() else trail_pool.pop_back()
 	item.p = p
@@ -70,10 +72,9 @@ func add_trail(p: Vector2, direction: Vector2, color: Color, radius: float, life
 	item.life = life
 	trails.append(item)
 func draw_world(game) -> void:
-	var quiet: float = 0.35 if game.preferences.reduce_flash else 1.0
 	for t in trails:
 		if not game.attack_open(t.p): continue
-		var alpha: float = t.life/0.15*0.35*quiet
+		var alpha: float = t.life/0.15*0.35
 		var side: Vector2 = t.direction.orthogonal()*t.radius
 		var end: Vector2 = game.attack_end(t.p,-t.direction,18)
 		game.draw_line(t.p+side*0.5,end+side*0.2,Color(t.color,alpha),2,true)
@@ -81,7 +82,7 @@ func draw_world(game) -> void:
 	for p in pulses:
 		if not game.attack_open(p.p): continue
 		var progress: float = 1-p.life/p.duration
-		var ink := Color(p.color,(1-progress)*quiet*0.7)
+		var ink := Color(p.color,(1-progress)*0.7)
 		if p.kind == "room":
 			var outline := PackedVector2Array()
 			for tip in p.boundary: outline.append(p.p.lerp(tip,progress))
@@ -103,7 +104,7 @@ func draw_world(game) -> void:
 			game.draw_polyline(PackedVector2Array([center-side-axis*6,center,center+side-axis*6]),ink,2,true)
 	if muzzle>0:
 		var end: Vector2 = game.attack_end(game.player,muzzle_direction,25)
-		game.draw_line(game.player+muzzle_direction*12,end,Color(0.85,1,0.94,muzzle/0.16*quiet),3,true)
+		game.draw_line(game.player+muzzle_direction*12,end,Color(0.85,1,0.94,muzzle/0.16),3,true)
 func draw_stairs(game) -> void:
 	var point: Vector2 = game.stairs
 	var phase := fmod(clock*0.7,1.0)

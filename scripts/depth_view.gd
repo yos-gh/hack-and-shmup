@@ -1,5 +1,8 @@
 extends Node
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
+const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Background = preload("res://scripts/background_style.gd")
 const Glyph = preload("res://scripts/glyph_meshes.gd")
 
@@ -62,6 +65,8 @@ func _ready() -> void:
 	make_batch("player_barrel", beveled_square())
 	make_batch("chaser", Glyph.plate([Vector2(1,1),Vector2(-1,0.76),Vector2(-1,-0.76),Vector2(1,-1)],0.22))
 	make_batch("sniper", sniper_mesh())
+	make_batch("flanker",MobVisuals.mesh(Catalog.Enemy.FLANKER))
+	make_batch("interceptor",MobVisuals.mesh(Catalog.Enemy.INTERCEPTOR))
 	make_batch("siege_base", Glyph.annulus(0.55,4))
 	make_batch("siege_armor", Glyph.plate([Vector2(-1,-0.7),Vector2(0.6,-1),Vector2(1,-0.6),Vector2(1,0.6),Vector2(0.6,1),Vector2(-1,0.7)],-0.12))
 	make_batch("siege_barrel", beveled_square())
@@ -90,7 +95,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if key in ["floor", "contact", "wall_mask"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
-	if key in ["square","player_barrel","chaser"] or key.begins_with("siege_") or key.begins_with("hunter_") or key.begins_with("halo_"):
+	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("siege_") or key.begins_with("hunter_") or key.begins_with("halo_"):
 		var glyph_surface := ShaderMaterial.new()
 		glyph_surface.shader = preload("res://scripts/glyph_surface.gdshader")
 		instance.material_override = glyph_surface
@@ -133,7 +138,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		core_material.vertex_color_use_as_albedo = true
 		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		instance.material_override = core_material
-	elif key in ["square","chaser","ring","sniper","player_barrel"] or key.begins_with("siege_") or key.begins_with("hunter_") or key == "halo_ring":
+	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("siege_") or key.begins_with("hunter_") or key == "halo_ring":
 		var wire := MultiMeshInstance3D.new()
 		var wire_material := ShaderMaterial.new()
 		wire_material.shader = preload("res://scripts/glyph_wire.gdshader")
@@ -252,7 +257,7 @@ func sync_other_bosses(game) -> void:
 	var parts := {"siege_base":[],"siege_armor":[],"siege_barrel":[],"siege_core":[],"hunter_body":[],"hunter_wing":[],"hunter_core":[],"hunter_drive":[]}
 	if game.boss_floor and game.boss_variant != 2:
 		for enemy in game.enemies:
-			if enemy.kind != 3 or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
+			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
 			var warning: float = game.attack_warning(enemy)
 			var facing: Vector2 = enemy.p.direction_to(game.player) if enemy.active else enemy.dir
 			if game.boss_variant == 0:
@@ -321,7 +326,7 @@ func _upload_mesh(mesh: MultiMesh, entries: Array) -> void:
 	for i in range(entries.size()):
 		mesh.set_instance_transform(i, entries[i].transform)
 		mesh.set_instance_color(i, entries[i].color)
-		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, 1.0 if get_parent().preferences.reduce_flash else 0.0, 0))
+		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, 0.0, 0))
 
 func set_active(value: bool) -> void:
 	active = value
@@ -362,24 +367,31 @@ func sync(game) -> void:
 	var rings: Array = []
 	var chasers: Array = []
 	var snipers: Array = []
+	var flankers: Array = []
+	var interceptors: Array = []
 	var actor_cores: Array = []
 	var world_screen: Vector2 = screen/game.view_scale()
 	var bounds := Rect2(game.view_origin()-world_screen*0.5-Vector2(64,64), world_screen+Vector2(128,128))
 	for enemy in game.enemies:
-		if enemy.kind >= 3 or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
+		if not Catalog.is_mob(enemy.kind) or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
-		var core_ink := Color("f3637a") if enemy.kind == 0 else (Color("ffb95e") if enemy.kind == 1 else Color("ad8fff"))
-		var core_pos: Vector2 = enemy.p-enemy.dir*8 if enemy.kind == 1 else enemy.p
+		var core_ink := Color("f3637a") if enemy.kind == Catalog.Enemy.CHASER else (Color("ffb95e") if enemy.kind == Catalog.Enemy.SNIPER else Color("ad8fff"))
+		if enemy.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]: core_ink = MobVisuals.ink(enemy.kind)
+		var core_pos: Vector2 = enemy.p-enemy.dir*8 if enemy.kind == Catalog.Enemy.SNIPER else enemy.p
 		actor_cores.append(chaser_entry(core_pos,enemy.dir,Vector3(2.6,2.6,3),core_ink.lerp(Color.WHITE,warning*0.7),5))
-		if enemy.kind == 1:
+		if enemy.kind == Catalog.Enemy.SNIPER:
 			var facing: Vector2 = (game.player-enemy.p).normalized() if enemy.active else enemy.dir
 			var shell := chaser_entry(enemy.p, facing, Vector3(10.8,10.8,7), Color("ffb95e").lerp(Color("fff4dd"), maxf(warning,game.boss.shot_flash(game,enemy.p))), 3)
 			shell.warning = warning
 			snipers.append(shell)
-		elif enemy.kind == 0:
+		elif enemy.kind == Catalog.Enemy.CHASER:
 			var heading := chaser_heading(game, enemy)
 			chasers.append(chaser_entry(enemy.p, heading, Vector3(11,11,2), Color("582536"), 1))
 			chasers.append(chaser_entry(enemy.p, heading, Vector3(10.56,10.56,5), Color("f3637a"), 3))
+		elif enemy.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]:
+			var shell := chaser_entry(enemy.p,enemy.dir,Vector3(12,12,5),core_ink,3)
+			if enemy.kind == Catalog.Enemy.FLANKER: flankers.append(shell)
+			else: interceptors.append(shell)
 		else:
 			var radius: float = 12.0-warning*2.0
 			var color := Color("ad8fff").lerp(Color("fff4dd"), warning)
@@ -387,7 +399,7 @@ func sync(game) -> void:
 			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius,radius,2), color.darkened(0.65), 1))
 			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	var barrels: Array = []
-	if game.preferences.reduce_flash or game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
+	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
 		var aim: Vector2 = game.controls.aim(game)
 		for side in [-1.0,1.0]:
@@ -397,6 +409,8 @@ func sync(game) -> void:
 	upload("square", squares)
 	upload("chaser", chasers)
 	upload("sniper", snipers)
+	upload("flanker",flankers)
+	upload("interceptor",interceptors)
 	upload("ring", rings)
 	sync_halo(game)
 	sync_other_bosses(game)
@@ -410,7 +424,7 @@ func sync_halo(game) -> void:
 	if game.boss_floor and game.boss_variant == 2:
 		var ink: Color = game.boss.COLORS[2]
 		for enemy in game.enemies:
-			if enemy.kind != 3 or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
+			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
 			var warning: float = game.attack_warning(enemy)
 			var extent := lerpf(12.0,7.0,warning)
 			bases.append(entry(enemy.p,Vector3(24,24,4),ink.darkened(0.75),3,true))

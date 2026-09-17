@@ -11,6 +11,10 @@ import wave
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / 'assets/catalog.json'
+PRODUCTION = ROOT / 'assets/audio/production_sources.json'
+
+def production_sources():
+    return json.loads(PRODUCTION.read_text()) if PRODUCTION.exists() else {}
 
 def content(path):
     data = path.read_bytes()
@@ -21,6 +25,7 @@ def digest(path):
 
 def inventory():
     rows = []
+    rendered = production_sources()
     paths = sorted((ROOT / 'assets/audio').glob('*.wav'))
     paths += sorted((ROOT / 'assets/definitions').glob('*.tres'))
     paths += sorted((ROOT / 'scripts').glob('*.gdshader'))
@@ -28,8 +33,12 @@ def inventory():
         relative = path.relative_to(ROOT).as_posix()
         row = {'path': relative, 'bytes': len(content(path)), 'sha256': digest(path)}
         if path.suffix == '.wav':
-            source = 'tools/generate_warning.py' if path.stem == 'warning' else 'tools/generate_audio.py'
-            row.update(kind='generated_audio', source=source, source_sha256=digest(ROOT / source))
+            production = rendered.get(path.name)
+            if production and digest(path) != production['sha256']:
+                raise ValueError('Approved audio hash differs: ' + relative)
+            source = production['source'] if production else ('tools/generate_warning.py' if path.stem == 'warning' else 'tools/generate_audio.py')
+            row.update(kind='rendered_audio' if production else 'generated_audio', source=source, source_sha256=digest(ROOT / source))
+            if production: row.update(production=production)
             with wave.open(str(path), 'rb') as audio:
                 row.update(channels=audio.getnchannels(), sample_bytes=audio.getsampwidth(),
                            sample_rate=audio.getframerate(), frames=audio.getnframes())
@@ -66,8 +75,12 @@ def verify_audio():
             shutil.copy2(ROOT / 'tools' / name, workspace / 'tools' / name)
             subprocess.run([sys.executable, str(workspace / 'tools' / name)], check=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        expected = {p.name: digest(p) for p in (ROOT / 'assets/audio').glob('*.wav')}
-        generated = {p.name: digest(p) for p in output.glob('*.wav')}
+        rendered = production_sources()
+        for name, metadata in rendered.items():
+            if digest(ROOT / 'assets/audio' / name) != metadata['sha256']:
+                raise ValueError('Approved render differs: ' + name)
+        expected = {p.name: digest(p) for p in (ROOT / 'assets/audio').glob('*.wav') if p.name not in rendered}
+        generated = {p.name: digest(p) for p in output.glob('*.wav') if p.name not in rendered}
         if expected != generated:
             changed = sorted(name for name in expected.keys() | generated.keys()
                              if expected.get(name) != generated.get(name))
@@ -81,7 +94,7 @@ def main():
     args = parser.parse_args()
     current = inventory()
     if args.regenerate_audio:
-        print(f'PASS: {verify_audio()} audio files regenerate byte-for-byte')
+        print(f'PASS: {verify_audio()} legacy audio files regenerate; {len(production_sources())} approved render hashes verified')
     if args.write:
         CATALOG.write_text(json.dumps(current, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     elif json.loads(CATALOG.read_text(encoding='utf-8')) != current:

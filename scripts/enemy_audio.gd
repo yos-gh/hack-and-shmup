@@ -12,7 +12,6 @@ var ranks: Array[float] = []
 var levels: Array[float] = []
 var paused := false
 var muted := false
-var gain := 1.0
 
 func _ready() -> void:
 	for i in range(5):
@@ -74,7 +73,7 @@ func _process(delta: float) -> void:
 		voice.position = cue.screen
 		ranks[slot] = cue.score
 		levels[slot] = cue.db
-		voice.volume_db = cue.db+linear_to_db(gain)
+		voice.volume_db = cue.db
 		voice.stream = sound.clips[cue.key]
 		voice.play()
 	refresh_mix()
@@ -82,7 +81,7 @@ func _process(delta: float) -> void:
 func refresh_mix() -> void:
 	for i in range(voices.size()):
 		var duck := 6.0 if i > 0 and voices[0].playing else 0.0
-		voices[i].volume_db = levels[i]+linear_to_db(gain)-duck
+		voices[i].volume_db = levels[i]-duck
 
 func reset() -> void:
 	pending.clear()
@@ -93,7 +92,3 @@ func set_paused(value: bool) -> void:
 	paused = value
 	if value: reset()
 	# Transient attack sounds never resume after a pause.
-
-func set_gain(value: float) -> void:
-	gain = value
-	refresh_mix()

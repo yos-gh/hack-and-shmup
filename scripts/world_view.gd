@@ -1,18 +1,21 @@
 extends RefCounted
 
+const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Catalog = preload("res://scripts/combat_catalog.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
 var radial_cache: Dictionary = {}
 var radial_floor := -1
 var radial_discovery := -1
+var radial_reach := -1.0
 
 func shock_outline(game, origin: Vector2, radius: float) -> PackedVector2Array:
 	var discovery: int = game.discovered.hash()
-	if radial_floor != game.floor_revision or radial_discovery != discovery:
+	if radial_floor != game.floor_revision or radial_discovery != discovery or radial_reach != game.SHOCK_RADIUS:
 		radial_cache.clear()
 		radial_floor = game.floor_revision
 		radial_discovery = discovery
+		radial_reach = game.SHOCK_RADIUS
 	if not radial_cache.has(origin):
 		if radial_cache.size() >= 8: radial_cache.clear()
 		var reach := PackedVector2Array()
@@ -58,27 +61,30 @@ func draw(game, screen: Vector2) -> void:
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
+		MobVisuals.draw_warning(game,e)
 		var warning = game.attack_warning(e)
-		if game.depth_enabled and e.kind == 3: continue
+		if game.depth_enabled and e.kind == Catalog.Enemy.BOSS: continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
-		if game.depth_enabled and e.kind < 3:
-			if e.kind == 2:
+		if game.depth_enabled and Catalog.is_mob(e.kind):
+			if e.kind == Catalog.Enemy.SHIELD:
 				var facing: Vector2 = e.dir
 				var edge: Vector2 = facing.orthogonal()*15
 				game.draw_line(p+facing*16-edge, p+facing*16+edge, Color("c7eaff"), 4)
 			continue
-		if e.kind == 0:
+		if e.kind == Catalog.Enemy.CHASER:
 			game.draw_rect(Rect2(p - Vector2(10,10), Vector2(20,20)), Color("f3637a"))
-		elif e.kind == 1:
+		elif e.kind == Catalog.Enemy.SNIPER:
 			game.draw_circle(p, 12, Color("ffb95e").lerp(Color("fff4dd"),maxf(warning,game.boss.shot_flash(game,e.p))))
 			game.draw_circle(p, lerpf(5.0,1.5,warning), Color("342338"))
-		elif e.kind == 2:
+		elif e.kind == Catalog.Enemy.SHIELD:
 			var extent = 12.0 - warning*2.0
 			game.draw_rect(Rect2(p - Vector2.ONE*extent, Vector2.ONE*extent*2), Color("ad8fff").lerp(Color("fff4dd"),warning))
 			var dir: Vector2 = e.dir
 			var side = dir.orthogonal() * 15
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
+		elif e.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]:
+			MobVisuals.draw_body(game,e)
 		else:
 			var ink: Color = game.boss.COLORS[game.boss_variant]
 			ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
@@ -112,7 +118,7 @@ func draw(game, screen: Vector2) -> void:
 	var preview_alpha = 0.18 if game.sub_cd <= 0 else 0.06
 	if game.sub_weapon == 0:
 		var fan = PackedVector2Array([game.player])
-		for i in range(25): fan.append(game.attack_end(game.player, preview_aim.rotated((i / 24.0 - 0.5) * Catalog.WEAPONS[0].spread * (Catalog.WEAPONS[0].pellets-1)), Catalog.WEAPONS[0].reach))
+		for i in range(25): fan.append(game.attack_end(game.player, preview_aim.rotated((i / 24.0 - 0.5) * Catalog.WEAPONS[0].spread * (Catalog.WEAPONS[0].pellets-1)), game.session.run.sub_reach(0)))
 		fan.append(game.player)
 		draw_radial_fill(game, game.player, fan, Color(1,0.75,0.4,preview_alpha * 0.4))
 		game.draw_polyline(fan,Color(1,0.75,0.4,preview_alpha * 2),1)
@@ -166,11 +172,11 @@ func draw(game, screen: Vector2) -> void:
 			draw_lance(game,effect.rays,0.28*fade,core)
 	draw_particles(game)
 	for entry in game.damage_labels:
-		var number = str(int(round(entry.damage))) if is_equal_approx(entry.damage, round(entry.damage)) else "%.1f" % entry.damage
+		var number = damage_number(entry.damage)
 		var alpha = minf(1.0, entry.life / 0.2)
 		game.label_at(entry.p + Vector2(1,1), number, 17, Color(0.02,0.03,0.05,alpha))
 		game.label_at(entry.p, number, 17, Color(1.0,0.95,0.75,alpha))
-	if game.preferences.reduce_flash or game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
+	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		if not game.depth_enabled: game.draw_circle(game.player, 12, Color("63f5ce"))
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
@@ -260,3 +266,6 @@ func draw_particles(game) -> void:
 		particle_batch.set_instance_color(0,Color.TRANSPARENT)
 		game.draw_multimesh(particle_batch,null)
 		particles_warmed = true
+
+static func damage_number(damage: float) -> String:
+	return str(roundi(damage * 10.0))

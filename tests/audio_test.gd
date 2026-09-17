@@ -9,11 +9,17 @@ func _initialize() -> void:
 func run() -> void:
 	var sound = load("res://scripts/sound.gd").new()
 	root.add_child(sound)
+	check(sound.audio_mode == 1, "startup remains SE only")
+	check(sound.music.bus == &"Master", "SE limiter does not alter BGM routing")
+	check(sound.clips.has("hit"), "approved nonlethal hit clip installed")
+	for key in ["shot","scatter","shock","lance","hit","kill","hunter_lock","death"]:
+		check(sound.clips[key].mix_rate == 48000 and sound.clips[key].stereo, "approved 48 kHz stereo effect: " + key)
 	check(sound.music.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "use the Godot mixer on Web")
 	check(sound.music.stream.format == AudioStreamWAV.FORMAT_16_BITS, "BGM uses PCM")
 	check(sound.music.stream.loop_end == sound.music.stream.data.size() / 2, "full PCM loop")
 	for voice in sound.voices:
 		check(voice.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "SE uses the Godot mixer")
+		check(voice.bus == sound.effects_bus_name, "SE routes through its dedicated limiter")
 	for clip in sound.clips.values():
 		check(clip.format == AudioStreamWAV.FORMAT_16_BITS, "SE uses PCM")
 	await create_timer(0.2).timeout

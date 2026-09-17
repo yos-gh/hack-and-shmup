@@ -10,11 +10,8 @@ func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
-	game.settings_menu.open()
-	game.settings_menu.waiting_action = "move_left"
 	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
-	check(game.title_screen and not game.paused and game.settings_menu.waiting_action.is_empty(), "focus loss cancels key capture without starting a run")
-	game.settings_menu.close()
+	check(game.title_screen and not game.paused, "title focus loss does not start a run")
 	game.start_run()
 	game.fire_armed = true
 	var before: PackedByteArray = var_to_bytes([game.player,game.enemies,game.time_left,game.rng.state,game.bullets])
@@ -41,5 +38,5 @@ func run() -> void:
 	check(game.choosing and not game.paused, "upgrade selection remains available after focus return")
 	game.queue_free()
 	await process_frame
-	if failures == 0: print("PASS: focus pause, frozen state, key capture cancellation and resume gating")
+	if failures == 0: print("PASS: focus pause, frozen state, resume gating")
 	quit(1 if failures else 0)

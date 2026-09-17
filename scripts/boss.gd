@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+
 var siege = preload("res://scripts/boss_siege.gd").new()
 var hunter = preload("res://scripts/boss_hunter.gd").new()
 var halo = preload("res://scripts/boss_halo.gd").new()
@@ -77,7 +79,7 @@ func build_layout(data) -> void:
 	var positions := turret_positions(data)
 	if data.boss_variant != 0: positions = [Vector2i(14,1)]
 	for i in range(positions.size()):
-		data.enemies.append({"p":data.center(positions[i]),"kind":3,"hp":hp if data.boss_variant == 0 else hp*TURRETS,"room":1,
+		data.enemies.append({"p":data.center(positions[i]),"kind":Catalog.Enemy.BOSS,"hp":hp if data.boss_variant == 0 else hp*TURRETS,"room":1,
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
 			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"pressure_cd":1.1,"orbit_side":1.0,"laser_cd":2.0})
@@ -90,13 +92,13 @@ func build_layout(data) -> void:
 func remaining(game) -> int:
 	var count := 0
 	for e in game.enemies:
-		if e.kind == 3 and e.hp > 0: count += 1
+		if e.kind == Catalog.Enemy.BOSS and e.hp > 0: count += 1
 	return count
 
 func health(game) -> float:
 	var hp := 0.0
 	for e in game.enemies:
-		if e.kind == 3: hp += maxf(0.0,e.hp)
+		if e.kind == Catalog.Enemy.BOSS: hp += maxf(0.0,e.hp)
 	return hp
 
 func present_siege_shot(game, e: Dictionary) -> void:
