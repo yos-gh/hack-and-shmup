@@ -41,6 +41,6 @@ Preview with Python 3:
 python tools/serve_web.py web
 ```
 
-Open [localhost:8123](http://localhost:8123). To publish, commit the updated `web/` files, push to `main`, then run **Publish game to Pages** from GitHub Actions.
+Open [localhost:8123](http://localhost:8123). To publish, export the latest game, commit the updated `web/` files, and push to `main`. GitHub Actions publishes Pages automatically.
 
 [Development tools](tools/README.md) · [Asset sources and notices](assets/README.md)
