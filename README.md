@@ -1,8 +1,6 @@
 # HACK & SHMUP
 
-Find your way. Fight your way.
-
-A roguelite dungeon shooter.
+Find your way. Fight your way. A roguelite dungeon shooter.
 
 [Play in your browser](https://yos-gh.github.io/hack-and-shmup/) — desktop keyboard and mouse.
 
