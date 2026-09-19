@@ -10,3 +10,4 @@ addons/sentry/bin/macos/
 addons/sentry/bin/windows/x86_32/
 addons/sentry/bin/windows/arm64/
 addons/sentry/dotnet/
+addons/sentry/bin/windows/x86_64/~libsentry.windows.debug.x86_64.dll

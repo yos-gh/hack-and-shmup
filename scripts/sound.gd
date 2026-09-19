@@ -44,7 +44,7 @@ func _ready() -> void:
 		voices.append(voice)
 	add_child(enemy_audio)
 	for voice in enemy_audio.voices: voice.bus = effects_bus_name
-	if not headless: music.play()
+	_refresh_music_level()
 
 func _process(delta: float) -> void:
 	hit_gap = maxf(0, hit_gap - delta)
@@ -118,6 +118,12 @@ func set_audio_mode(value: int) -> void:
 
 func _refresh_music_level() -> void:
 	music.volume_db = -10 if audio_mode == 0 else -80
+	# Muting alone still decodes and mixes the looping track on Web.
+	if audio_mode != 0:
+		music.stop()
+	elif not headless and music.is_inside_tree() and not music.playing:
+		music.play()
+		music.stream_paused = paused_state
 
 func _set_voice_level(index: int, baseline: float) -> void:
 	voices[index].volume_db = baseline

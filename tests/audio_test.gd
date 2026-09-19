@@ -23,7 +23,9 @@ func run() -> void:
 	for clip in sound.clips.values():
 		check(clip.format == AudioStreamWAV.FORMAT_16_BITS, "SE uses PCM")
 	await create_timer(0.2).timeout
-	check(sound.music.playing, "BGM playback")
+	check(not sound.music.playing, "SE-only does not run an inaudible music stream")
+	sound.set_audio_mode(0)
+	check(sound.music.playing, "ALL starts BGM playback")
 	var before: float = sound.music.get_playback_position()
 	for i in range(45):
 		sound.set_paused(false)
@@ -42,13 +44,13 @@ func run() -> void:
 	check(absf(sound.music.get_playback_position()-paused_position)<0.05, "repeated pause stays frozen")
 	sound.set_paused(false)
 	sound.set_audio_mode(1)
-	check(sound.music.volume_db == -80, "SE only mutes music")
+	check(sound.music.volume_db == -80 and not sound.music.playing, "SE only stops music")
 	sound.play_sfx("shot")
 	check(sound.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing), "SE remains enabled")
 	sound.set_audio_mode(2)
 	check(sound.music.volume_db == -80 and not sound.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing), "mute audio")
 	sound.set_audio_mode(0)
-	check(sound.music.volume_db == -10, "restore music")
+	check(sound.music.volume_db == -10 and sound.music.playing, "restore music")
 	if failures == 0: print("PASS: BGM, SE clips, pause, mute and restore")
 	sound.music.stop()
 	for voice in sound.voices: voice.stop()
