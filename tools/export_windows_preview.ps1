@@ -21,6 +21,8 @@ Expand-Archive -LiteralPath $sourceZip -DestinationPath $sourcePath
 
 # The preview build must neither load nor distribute the telemetry SDK.
 Remove-Item -LiteralPath (Join-Path $sourcePath 'addons/sentry') -Recurse -Force
+Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/catalog.json') -Force
+Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/README.md') -Force
 $projectFile = Join-Path $sourcePath 'project.godot'
 $projectText = Get-Content -LiteralPath $projectFile -Raw
 $projectText = $projectText -replace '(?ms)^\[sentry\]\r?\n.*?(?=^\[|\z)', ''
@@ -35,8 +37,11 @@ $files = @(Get-ChildItem -LiteralPath $buildRoot -File)
 if ($files.Name -notcontains 'HACK-AND-SHMUP-preview.exe' -or $files.Count -ne 4) { throw 'Preview package must contain one executable plus build logs and source archive only' }
 if ((Get-Item -LiteralPath $outputPath).Length -eq 0) { throw 'Preview executable is empty' }
 
+Push-Location $buildRoot
 & $enginePath --headless --main-pack $outputPath --script (Join-Path $PSScriptRoot 'verify_windows_preview.gd') --disable-crash-handler --log-file (Join-Path $buildRoot 'package.log')
-if ($LASTEXITCODE -ne 0) { throw 'Preview package verification failed' }
+$packageExitCode = $LASTEXITCODE
+Pop-Location
+if ($packageExitCode -ne 0 -or (Get-Content -LiteralPath (Join-Path $buildRoot 'package.log') -Raw) -match 'FAIL:|SCRIPT ERROR:|ERROR:') { throw 'Preview package verification failed' }
 
 $startupLog = Join-Path $buildRoot 'startup.log'
 $process = Start-Process -FilePath $outputPath -WorkingDirectory $buildRoot -ArgumentList @('--headless', '--disable-crash-handler', '--log-file', ('"' + $startupLog + '"'), '--quit-after', '30') -WindowStyle Hidden -PassThru
