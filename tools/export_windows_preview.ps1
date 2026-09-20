@@ -35,6 +35,9 @@ $files = @(Get-ChildItem -LiteralPath $buildRoot -File)
 if ($files.Name -notcontains 'HACK-AND-SHMUP-preview.exe' -or $files.Count -ne 4) { throw 'Preview package must contain one executable plus build logs and source archive only' }
 if ((Get-Item -LiteralPath $outputPath).Length -eq 0) { throw 'Preview executable is empty' }
 
+& $enginePath --headless --main-pack $outputPath --script (Join-Path $PSScriptRoot 'verify_windows_preview.gd') --disable-crash-handler --log-file (Join-Path $buildRoot 'package.log')
+if ($LASTEXITCODE -ne 0) { throw 'Preview package verification failed' }
+
 $startupLog = Join-Path $buildRoot 'startup.log'
 $process = Start-Process -FilePath $outputPath -WorkingDirectory $buildRoot -ArgumentList @('--headless', '--disable-crash-handler', '--log-file', ('"' + $startupLog + '"'), '--quit-after', '30') -WindowStyle Hidden -PassThru
 if (-not $process.WaitForExit(30000)) { $process.Kill(); throw 'Preview executable timed out' }
