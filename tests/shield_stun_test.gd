@@ -24,8 +24,9 @@ func run() -> void:
 		check(e.dir == Vector2.RIGHT, "shield direction frozen throughout stun")
 		check(game.shield_velocity(e,0.09,Vector2.UP) == Vector2.ZERO and e.charge == 0, "no new charge during stun")
 	game.shield_velocity(e,0.11,Vector2.UP)
+	var previous_angle: float = e.dir.angle()
 	game.update_awareness(e,e.room,0.01)
-	check(e.dir == Vector2.UP, "rotation resumes after stun expires")
+	check(is_equal_approx(absf(angle_difference(previous_angle,e.dir.angle())),e.turn_speed*0.5*0.01), "rotation resumes at half turn speed after stun")
 	e.p = Vector2(-99999,-99999)
 	e.charge = 1.0
 	e.stun = 0.0

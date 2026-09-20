@@ -140,7 +140,7 @@ func run() -> void:
 	check(game.bullets.size() == 24, "next turret fires after shared gap")
 	var full_hp: float = game.boss_max_hp
 	game.new_floor(1)
-	check(is_equal_approx(game.boss_max_hp,full_hp*0.72), "hunter HP reduced without changing movement")
+	check(is_equal_approx(game.boss_max_hp,full_hp*0.675), "floor 45 hunter HP includes the requested 25 percent reduction")
 	game.new_floor(2)
 	game.boss.fire_halo(game,game.enemies[0],Vector2.RIGHT)
 	check(game.boss.salvos.any(func(s): return s.speed == 110.0) and game.boss.salvos.any(func(s): return s.speed == 220.0), "halo layers slow fences and fast follow-up shots")

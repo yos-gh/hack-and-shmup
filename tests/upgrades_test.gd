@@ -26,12 +26,18 @@ func run() -> void:
 	game.apply_upgrade(2)
 	check(run_state.can_upgrade(5),"speed growth permits another deliberate slowdown")
 	run_state.reset()
+	check(game.LANCE_WIDTH == 39.0,"base lance width unchanged")
+	game.apply_upgrade(6)
+	check(is_equal_approx(game.LANCE_WIDTH,46.8),"one expansion adds twenty percent lance width")
+	check(game.player_stats()[5].value == "1.20x" and game.player_stats()[5].detail == "+20% / MAX +100%","lance stat displays new increment and cap")
+	run_state.reset()
 	for i in range(7):
 		game.apply_upgrade(6)
 		game.apply_upgrade(7)
 	check(is_equal_approx(run_state.expansion,0.5) and is_equal_approx(run_state.recharge,0.5),"sub upgrades capped at five")
 	check(is_equal_approx(game.SHOCK_RADIUS,Catalog.WEAPONS[1].reach*1.25),"shock scales half as much as scatter")
-	check(is_equal_approx(game.LANCE_WIDTH,Catalog.WEAPONS[2].width*1.25),"lance width scales with expansion")
+	check(is_equal_approx(game.LANCE_WIDTH,78.0),"lance width doubles at five expansion stacks")
+	check(game.player_stats()[5].value == "2.00x" and game.player_stats()[5].detail == "+100% / MAX +100%","maximum lance stat matches gameplay")
 	var random := RandomNumberGenerator.new()
 	random.seed = 41
 	var saved: int = random.state
@@ -59,6 +65,11 @@ func run() -> void:
 	check(game.sub_cd == cooldown,"weapon switch cannot reset cooldown")
 	var rays: Array = game.LanceTrace.lanes(game,game.player,Vector2.RIGHT)
 	check(is_equal_approx(rays.size()*rays[0].width,game.LANCE_WIDTH),"lance trace shares upgraded width")
+	var edge_enemy := {"kind":0,"p":game.player+Vector2(100,48)}
+	check(game.LanceTrace.hits(game,edge_enemy,rays,Vector2.RIGHT),"upgraded lance hits target outside previous maximum width")
+	run_state.expansion = 0.0
+	check(not game.LanceTrace.hits(game,edge_enemy,game.LanceTrace.lanes(game,game.player,Vector2.RIGHT),Vector2.RIGHT),"same target misses base lance")
+	run_state.expansion = 0.5
 	var full: PackedVector2Array = game.world_view.shock_outline(game,game.player,game.SHOCK_RADIUS)
 	run_state.reset()
 	var base: PackedVector2Array = game.world_view.shock_outline(game,game.player,game.SHOCK_RADIUS)

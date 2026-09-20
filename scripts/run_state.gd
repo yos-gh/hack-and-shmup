@@ -60,7 +60,10 @@ func sub_reach(weapon: int) -> float:
 	return Catalog.WEAPONS[weapon].reach * (1.0 + expansion * (0.5 if weapon == 1 else 1.0))
 
 func lance_width() -> float:
-	return Catalog.WEAPONS[2].width * (1.0 + expansion * 0.5)
+	return Catalog.WEAPONS[2].width * lance_width_multiplier()
+
+func lance_width_multiplier() -> float:
+	return 1.0 + expansion * 2.0
 
 func sub_cooldown(weapon: int) -> float:
 	return Catalog.WEAPONS[weapon].cooldown / (1.0 + recharge)

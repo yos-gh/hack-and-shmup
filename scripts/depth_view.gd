@@ -1,6 +1,7 @@
 extends Node
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const BossGeometry = preload("res://scripts/boss_geometry.gd")
 
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Background = preload("res://scripts/background_style.gd")
@@ -250,8 +251,10 @@ func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
 
 func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector3, color: Color, height: float) -> Dictionary:
-	var factor := 1.3 if get_parent().boss_variant == 0 else 1.12
-	return chaser_entry(enemy.p+(offset*factor).rotated(facing.angle()),facing,Vector3(size.x*factor,size.y*factor,size.z),color,height)
+	var variant: int = get_parent().boss_variant
+	var factor: float = BossGeometry.model_scale(variant)
+	var scale: float = BossGeometry.SIZE_SCALE[variant]
+	return chaser_entry(enemy.p+(offset*factor).rotated(facing.angle()),facing,Vector3(size.x*factor,size.y*factor,size.z*scale),color,height*scale)
 
 func sync_other_bosses(game) -> void:
 	var parts := {"siege_base":[],"siege_armor":[],"siege_barrel":[],"siege_core":[],"hunter_body":[],"hunter_wing":[],"hunter_core":[],"hunter_drive":[]}
@@ -264,7 +267,7 @@ func sync_other_bosses(game) -> void:
 				var flash: float = game.boss.shot_flash(game,enemy.p)
 				var ink: Color = game.boss.COLORS[0].lerp(Color("fff5ff"),flash*0.8)
 				# Stationary diamond footing, independent of the swivelling turret.
-				parts.siege_base.append(boss_part(enemy,Vector2.RIGHT,Vector2.ZERO,Vector3(20,20,5),ink,2))
+				parts.siege_base.append(boss_part(enemy,Vector2.RIGHT,Vector2.ZERO,Vector3(BossGeometry.SIEGE_EXTENT,BossGeometry.SIEGE_EXTENT,5),ink,2))
 				for side in [-1,1]:
 					parts.siege_armor.append(boss_part(enemy,facing,Vector2(-3,side*10),Vector3(6,3,5),ink.darkened(0.22),4))
 					parts.siege_barrel.append(boss_part(enemy,facing,Vector2(11-warning*3-flash*4,side*4),Vector3(7,2,4),ink.lerp(Color("fff0fc"),warning),6))
@@ -284,7 +287,7 @@ func sync_other_bosses(game) -> void:
 					if beam.owner == enemy: beam_aim += beam.a.direction_to(beam.b)
 				if not beam_aim.is_zero_approx(): facing = beam_aim.normalized()
 				var ink: Color = game.boss.COLORS[1]
-				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(24,18,3),ink.darkened(0.65),1))
+				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(BossGeometry.HUNTER_EXTENT.x,BossGeometry.HUNTER_EXTENT.y,3),ink.darkened(0.65),1))
 				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(22,16,5),ink.darkened(0.18),3))
 				for side in [-1,1]:
 					parts.hunter_wing.append(boss_part(enemy,facing,Vector2(-9,side*(9-laser_charge*2)),Vector3(5,2,4),ink.lerp(Color("e3fcff"),laser_charge*0.6),6))
@@ -423,13 +426,14 @@ func sync_halo(game) -> void:
 	var cores: Array = []
 	if game.boss_floor and game.boss_variant == 2:
 		var ink: Color = game.boss.COLORS[2]
+		var scale: float = BossGeometry.SIZE_SCALE[2]
 		for enemy in game.enemies:
 			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
 			var warning: float = game.attack_warning(enemy)
 			var extent := lerpf(12.0,7.0,warning)
-			bases.append(entry(enemy.p,Vector3(24,24,4),ink.darkened(0.75),3,true))
-			shells.append(entry(enemy.p,Vector3(29,29,12),ink,7,true))
-			cores.append(entry(enemy.p,Vector3(extent,extent,6),ink.lerp(Color.WHITE,maxf(warning,game.boss.shot_flash(game,enemy.p))),7))
+			bases.append(entry(enemy.p,Vector3(24,24,4)*scale,ink.darkened(0.75),3*scale,true))
+			shells.append(entry(enemy.p,Vector3(BossGeometry.HALO_RADIUS,BossGeometry.HALO_RADIUS,12)*scale,ink,7*scale,true))
+			cores.append(entry(enemy.p,Vector3(extent,extent,6)*scale,ink.lerp(Color.WHITE,maxf(warning,game.boss.shot_flash(game,enemy.p))),7*scale))
 		for option in game.boss.options:
 			if option.life <= 0 or option.owner.hp <= 0 or not game.attack_open(option.p): continue
 			var charge: float = game.boss.option_warning(option)

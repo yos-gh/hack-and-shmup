@@ -54,7 +54,9 @@ func run() -> void:
 	key(game,KEY_UP)
 	key(game,KEY_ENTER)
 	check(game.practice.active and not game.title_screen and game.floor_number == 15 and game.boss_variant == 2, "selected boss and floor launch")
-	check(is_equal_approx(game.power,3.0) and is_equal_approx(game.fire_rate,1.8) and is_equal_approx(game.move_bonus,90.0), "fourteen normal upgrades applied")
+	check(is_equal_approx(game.power,2.45) and is_equal_approx(game.fire_rate,1.6) and is_equal_approx(game.move_bonus,60.0), "fourteen balanced upgrades applied")
+	check(is_equal_approx(game.session.run.expansion,0.2) and is_equal_approx(game.session.run.recharge,0.2), "practice includes both sub upgrades")
+	check(is_equal_approx(game.LANCE_WIDTH,54.6) and is_equal_approx(game.session.run.sub_cooldown(2),1.7/1.2), "practice sub geometry and cooldown are effective")
 	game.enemies[0].hp = 1
 	key(game,KEY_R)
 	check(game.enemies == game.initial_enemies, "R retries chosen encounter")
@@ -75,6 +77,17 @@ func run() -> void:
 	click.position = game.practice.button(game.get_viewport_rect().size,0).get_center()
 	game._unhandled_input(click)
 	check(game.practice.variant == 0 and game.practice.selecting, "mouse selects without starting")
+	for depth in [5,30,45,50,100]:
+		game.practice.depth = depth
+		game.practice.start(game)
+		var cards := 0
+		for count in game.session.run.upgrade_counts.values(): cards += count
+		check(cards == depth-1,"practice never loses capped cards or grants extra cards")
+		if depth >= 30:
+			check(is_equal_approx(game.session.run.expansion,0.5) and is_equal_approx(game.session.run.recharge,0.5),"high-floor practice caps both sub upgrades")
+			check(is_equal_approx(game.LANCE_WIDTH,78.0),"high-floor practice has double lance width")
+		game.restart_attempt()
+		check(game.session.run.upgrade_counts.values().reduce(func(total,count): return total+count,0) == depth-1,"retry retains practice build")
 	if failures == 0: print("PASS: layout variety and clearance, satellite attacks, debug input, upgrades, retry and record isolation")
 	game.free()
 	quit(1 if failures else 0)

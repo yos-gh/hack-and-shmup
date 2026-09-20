@@ -1,6 +1,8 @@
 extends Node2D
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const BossGeometry = preload("res://scripts/boss_geometry.gd")
+const SHIELD_TURN_SCALE := 0.5
 
 const LanceTrace = preload("res://scripts/lance_trace.gd")
 
@@ -169,6 +171,8 @@ func new_floor(boss_choice: int = -1) -> void:
 	settings.move_bonus = move_bonus
 	settings.power = power
 	settings.fire_rate = fire_rate
+	settings.recharge = session.run.recharge
+	settings.physics_ticks = float(Engine.physics_ticks_per_second)
 	settings.boss_choice = boss_choice
 	var generated = floor_generator.generate_from_state(settings,rng.state)
 	floor_revision += 1
@@ -205,7 +209,10 @@ func enemy_touches_player(e: Dictionary) -> bool:
 
 func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 	if e.active:
-		if e.charge <= 0 and e.get("stun", 0.0) <= 0: e.dir = e.p.direction_to(player)
+		if e.charge <= 0 and e.get("stun", 0.0) <= 0:
+			if e.kind == Catalog.Enemy.SHIELD:
+				e.dir = Vector2.from_angle(rotate_toward(e.dir.angle(),e.p.angle_to_point(player),e.turn_speed*SHIELD_TURN_SCALE*delta))
+			else: e.dir = e.p.direction_to(player)
 		return
 	if e.room == room_id: e.searching = true
 	if not e.searching: return
@@ -215,7 +222,8 @@ func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 		e.active = true
 		return
 	var target_angle: float = e.p.angle_to_point(player)
-	var angle: float = rotate_toward(e.dir.angle(),target_angle,e.turn_speed*delta)
+	var turn_scale: float = SHIELD_TURN_SCALE if e.kind == Catalog.Enemy.SHIELD else 1.0
+	var angle: float = rotate_toward(e.dir.angle(),target_angle,e.turn_speed*turn_scale*delta)
 	e.dir = Vector2.from_angle(angle)
 	if e.notice <= 0 and absf(angle_difference(angle,target_angle)) < 0.2 and attack_reaches(e.p,player):
 		e.active = true
@@ -262,7 +270,8 @@ func fire_sub(aim: Vector2) -> void:
 			sub_cd = sub_cd_total
 		1:
 			for e in enemies:
-				if e.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, e.p):
+				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
+				if e.p.distance_to(player) <= SHOCK_RADIUS + body_radius and attack_reaches(player, e.p):
 					hurt_enemy(e, power * definition.damage, player.direction_to(e.p), definition.knockback)
 			bullets = bullets.filter(func(b: Dictionary) -> bool: return not (b.hostile and b.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, b.p)))
 			effects.append({"kind": 0, "p": player, "end": player, "life": 0.4})
@@ -295,7 +304,7 @@ func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
 
 func enemy_bullet_radius(e: Dictionary) -> float:
-	return 22.0 if e.get("kind",0) == Catalog.Enemy.BOSS and boss_variant in [0,1] else BULLET_HIT_RADIUS
+	return BossGeometry.hit_radius(boss_variant) if e.get("kind",0) == Catalog.Enemy.BOSS else BULLET_HIT_RADIUS
 
 func rebuild_enemy_buckets() -> void:
 	enemy_buckets.clear()
@@ -604,7 +613,7 @@ func player_stats() -> Array[Dictionary]:
 		{"name":"MOVE SPEED", "value":"%.0f" % (SPEED + move_bonus), "detail":"%+.0f" % move_bonus},
 		{"name":"SCATTER RANGE", "value":"%.2fx" % (1.0+session.run.expansion), "detail":"+%.0f%% / MAX +50%%" % (session.run.expansion*100)},
 		{"name":"SHOCK RADIUS", "value":"%.2fx" % (1.0+session.run.expansion*0.5), "detail":"+%.0f%% / MAX +25%%" % (session.run.expansion*50)},
-		{"name":"LANCE WIDTH", "value":"%.2fx" % (1.0+session.run.expansion*0.5), "detail":"+%.0f%% / MAX +25%%" % (session.run.expansion*50)},
+		{"name":"LANCE WIDTH", "value":"%.2fx" % session.run.lance_width_multiplier(), "detail":"+%.0f%% / MAX +100%%" % ((session.run.lance_width_multiplier()-1.0)*100)},
 		{"name":"SUB RECHARGE", "value":"%.2fx" % (1.0+session.run.recharge), "detail":"+%.0f%% / MAX +50%%" % (session.run.recharge*100)}
 	]
 

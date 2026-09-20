@@ -38,8 +38,9 @@ func run() -> void:
 		check(before == var_to_bytes([Scenario.digest(game),game.boss.salvos,game.boss.options,game.effects_rng.state]),"render leaves attacks and RNG untouched")
 		var picture: Image = game.depth_view.viewport.get_texture().get_image()
 		var center := Vector2i(game.get_viewport_rect().size*0.5)
-		samples.append(picture.get_pixelv(center+Vector2i(9,0)).get_luminance())
-		check(picture.get_pixelv(center+Vector2i(27,0)).get_luminance() > 0.15,"outer ring actually rendered")
+		var scale: float = preload("res://scripts/boss_geometry.gd").SIZE_SCALE[2]
+		samples.append(picture.get_pixelv(center+Vector2i(roundi(9*scale),0)).get_luminance())
+		check(picture.get_pixelv(center+Vector2i(roundi(27*scale),0)).get_luminance() > 0.15,"outer ring actually rendered")
 		check(root.get_texture().get_image().save_png("res://docs/validation/halo-view/phase-%d.png" % phase) == OK,"capture rendered frame")
 	check(samples[0] > samples[1]+0.1 and is_equal_approx(samples[0],samples[2]),"actual core contracts before fire then resets")
 	boss.hp = 0

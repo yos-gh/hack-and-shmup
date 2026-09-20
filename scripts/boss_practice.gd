@@ -4,6 +4,8 @@ var selecting := false
 var active := false
 var variant := 0
 var depth := 5
+const PRACTICE_UPGRADES := [0,1,6,7,3,2]
+const CAPPED_FALLBACK := [0,1,3,2]
 
 func open(game) -> void:
 	game.return_to_title()
@@ -14,7 +16,14 @@ func start(game) -> void:
 	game.start_run()
 	active = true
 	game.floor_number = depth
-	for i in range(depth-1): game.apply_upgrade([0,1,3,2][i%4])
+	# Spend exactly one legal card per cleared floor, including capped sub upgrades.
+	var fallback_index := 0
+	for i in range(depth-1):
+		var kind: int = PRACTICE_UPGRADES[i%PRACTICE_UPGRADES.size()]
+		if not game.session.run.can_upgrade(kind):
+			kind = CAPPED_FALLBACK[fallback_index%CAPPED_FALLBACK.size()]
+			fallback_index += 1
+		game.apply_upgrade(kind)
 	game.new_floor(variant)
 
 func button(screen: Vector2, index: int) -> Rect2:

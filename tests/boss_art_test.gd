@@ -53,8 +53,9 @@ func run() -> void:
     if not frames[0].get_pixelv(center+Vector2i(x,y)).is_equal_approx(frames[1].get_pixelv(center+Vector2i(x,y))): changes += 1
   check(changes>20,"charge visibly changes rendered body")
   game.rebuild_enemy_buckets()
-  check(game.bullet_target(enemy.p+Vector2(20,0)) == enemy,"larger bosses accept edge hits")
-  check(game.bullet_target(enemy.p+Vector2(24,0)).is_empty(),"shots outside enlarged body miss")
+  var radius: float = game.enemy_bullet_radius(enemy)
+  check(game.bullet_target(enemy.p+Vector2(radius-1,0)) == enemy,"larger bosses accept body edge hits")
+  check(game.bullet_target(enemy.p+Vector2(radius+1,0)).is_empty(),"shots outside enlarged body miss")
   if scenario == "siege5":
    game.boss.fire(game,enemy,Vector2.RIGHT)
    check(game.boss.shot_flash(game,enemy.p) == 1.0,"firing triggers immediate local flash")

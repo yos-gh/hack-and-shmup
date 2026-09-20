@@ -88,15 +88,19 @@ func draw(game, screen: Vector2) -> void:
 		else:
 			var ink: Color = game.boss.COLORS[game.boss_variant]
 			ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
+			var geometry = preload("res://scripts/boss_geometry.gd")
+			var scale: float = geometry.model_scale(game.boss_variant)
 			if game.boss_variant == 0:
-				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-20,0),p+Vector2(0,-20),p+Vector2(20,0),p+Vector2(0,20)]),ink.darkened(0.55))
+				var radius: float = geometry.SIEGE_EXTENT*scale
+				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-radius,0),p+Vector2(0,-radius),p+Vector2(radius,0),p+Vector2(0,radius)]),ink.darkened(0.55))
 			elif game.boss_variant == 1:
 				var angle: float = e.dir.angle()
-				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-24,-18).rotated(angle),p+Vector2(24,0).rotated(angle),p+Vector2(-24,18).rotated(angle)]),ink.darkened(0.35))
+				var body: Vector2 = geometry.HUNTER_EXTENT*scale
+				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-body.x,-body.y).rotated(angle),p+Vector2(body.x,0).rotated(angle),p+Vector2(-body.x,body.y).rotated(angle)]),ink.darkened(0.35))
 			else:
-				game.draw_circle(p,24,ink.darkened(0.55))
-				game.draw_arc(p,29,0,TAU,32,ink,2)
-			var extent = lerpf(12.0,7.0,warning)
+				game.draw_circle(p,24*scale,ink.darkened(0.55))
+				game.draw_arc(p,geometry.HALO_RADIUS*scale,0,TAU,32,ink,2*scale)
+			var extent: float = lerpf(12.0,7.0,warning)*scale
 			game.draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),ink.lerp(Color.WHITE,warning))
 	for b in game.bullets:
 		if game.cells.get(game.tile(b.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(b.p)]): continue

@@ -22,7 +22,9 @@ func run() -> void:
 		game.grace = 999
 		var elapsed := 0.0
 		var prior_positions := {}
-		while not game.stairs_unlocked and elapsed < 30.0:
+		# MG-only is a fallback budget; the 10-30s target now includes sub fire.
+		# Combined-fire timing is covered by boss_duration_test and balance_study.
+		while not game.stairs_unlocked and elapsed < 45.0:
 			var target: Dictionary = {}
 			var best := INF
 			for e in game.enemies:
@@ -42,7 +44,7 @@ func run() -> void:
 			game._physics_process(1.0/60)
 			elapsed += 1.0/60
 		if not game.stairs_unlocked:
-			push_error("FAIL: boss damage/travel budget exceeds 30 seconds")
+			push_error("FAIL: MG-only fallback damage/travel budget exceeds 45 seconds")
 			game.free()
 			quit(1)
 			return

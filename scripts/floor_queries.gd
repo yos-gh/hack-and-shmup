@@ -37,7 +37,7 @@ static func build_flow(model) -> void:
 				queue.append(n)
 
 static func enemy_health(_model, kind: int, depth: int) -> float:
-	return Catalog.ENEMIES[kind].health(depth)
+	return preload("res://scripts/combat_balance.gd").mob_health(kind, depth)
 
 static func room_contains(_model, p: Vector2i, r: Rect2i, shape: int) -> bool:
 	var local := p - r.position

@@ -72,10 +72,9 @@ func build_layout(data) -> void:
 	data.spawn_point = data.center(data.rooms[0].get_center())
 	data.stairs = data.center(data.rooms[1].get_center())
 	data.entrances[1] = [data.center(Vector2i(0,0)),data.center(Vector2i(0,1))]
-	# About ten seconds of accurate sustained MG fire in total, leaving room
-	# for dodging and repositioning within a roughly 20-30 second encounter.
-	var hp: float = maxf(8.0, data.power * minf(data.fire_rate / 0.09,60.0) * 1.6)
-	if data.boss_variant == 1: hp *= 0.72
+	# Combined primary/sub budget, fixed at generation and shared by practice mode.
+	var total_hp: float = preload("res://scripts/combat_balance.gd").boss_health(data.power, data.fire_rate, data.recharge, data.boss_variant, data.physics_ticks, data.floor_number)
+	var hp: float = total_hp / TURRETS
 	var positions := turret_positions(data)
 	if data.boss_variant != 0: positions = [Vector2i(14,1)]
 	for i in range(positions.size()):

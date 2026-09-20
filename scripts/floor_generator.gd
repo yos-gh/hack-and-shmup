@@ -17,6 +17,8 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 	data.move_bonus = settings.move_bonus
 	data.power = settings.power
 	data.fire_rate = settings.fire_rate
+	data.recharge = settings.recharge
+	data.physics_ticks = settings.physics_ticks
 	data.boss_floor = settings.depth % 5 == 0
 	if data.boss_floor:
 		data.boss_variant = data.rng.randi_range(0,2) if settings.boss_choice < 0 else clampi(settings.boss_choice,0,2)
