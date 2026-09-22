@@ -3,6 +3,7 @@ extends RefCounted
 const Catalog = preload("res://scripts/combat_catalog.gd")
 
 var fortress = preload("res://scripts/boss_fortress.gd").new()
+var bastion = preload("res://scripts/boss_bastion.gd").new()
 var siege = preload("res://scripts/boss_siege.gd").new()
 var hunter = preload("res://scripts/boss_hunter.gd").new()
 var halo = preload("res://scripts/boss_halo.gd").new()
@@ -24,8 +25,8 @@ func radial_angle(index: int, count: int) -> float:
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
 const MAX_VOLLEY_COUNTS := [22,16,12,9,6,4]
 const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
-const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE", "IRON CITADEL"]
-const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b"), Color("ff9470")]
+const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE", "IRON CITADEL", "BASTION OF STARS"]
+const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b"), Color("ff9470"), Color("e0a5fa")]
 var lasers: Array[Dictionary] = []
 var pending_summons: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
@@ -63,6 +64,7 @@ func rate_scale(game) -> float:
 func build_layout(data) -> void:
 	data.rooms.assign([Rect2i(-12,-4,9,9), Rect2i(0,-10,28,22)])
 	if data.boss_variant == 3: data.rooms[1] = Rect2i(0,-17,48,36)
+	if data.boss_variant == 4: data.rooms[1] = Rect2i(0,-20,32,42)
 	data.room_shapes.assign([0,0])
 	for i in range(2):
 		var room: Rect2i = data.rooms[i]
@@ -72,6 +74,13 @@ func build_layout(data) -> void:
 		for pillar in [Vector2i(7,-11),Vector2i(7,11),Vector2i(39,-11),Vector2i(39,11)]:
 			for y in range(2):
 				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
+	if data.boss_variant == 4:
+		# The solid east wall contains the core; there is no route behind it.
+		for y in range(-20,22):
+			for x in range(27,32): data.cells.erase(Vector2i(x,y))
+		for pillar in [Vector2i(6,-15),Vector2i(6,15),Vector2i(13,-7),Vector2i(13,6)]:
+			for y in range(2):
+				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
 	data.connect_rooms(0,1)
 	data.room_links.append(Vector2i(0,1))
 	data.goal_room = 1
@@ -79,10 +88,11 @@ func build_layout(data) -> void:
 	data.stairs = data.center(data.rooms[1].get_center())
 	data.entrances[1] = [data.center(Vector2i(0,0)),data.center(Vector2i(0,1))]
 	# Combined primary/sub budget, fixed at generation and shared by practice mode.
-	var total_hp: float = preload("res://scripts/combat_balance.gd").boss_health(data.power, data.fire_rate, data.recharge, data.boss_variant, data.physics_ticks, data.floor_number)
+	var total_hp: float = 0.0 if data.boss_variant == 4 else preload("res://scripts/combat_balance.gd").boss_health(data.power, data.fire_rate, data.recharge, data.boss_variant, data.physics_ticks, data.floor_number)
 	var hp: float = total_hp / TURRETS
 	var positions := turret_positions(data)
 	if data.boss_variant != 0: positions = [Vector2i(14,1)]
+	if data.boss_variant == 4: positions = [Vector2i(26,1)]
 	for i in range(positions.size()):
 		data.enemies.append({"p":data.center(positions[i]),"kind":Catalog.Enemy.BOSS,"hp":hp if data.boss_variant == 0 else hp*TURRETS,"room":1,
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
@@ -91,7 +101,8 @@ func build_layout(data) -> void:
 	if data.boss_variant == 3:
 		data.enemies[0].p = data.center(Vector2i(24,1))+Vector2(-240,0)
 		fortress.setup(data,data.enemies[0])
-	data.boss_max_hp = data.enemies[0].hp if data.boss_variant == 3 else hp * TURRETS
+	if data.boss_variant == 4: bastion.setup(data,data.enemies[0])
+	data.boss_max_hp = data.enemies[0].hp if data.boss_variant in [3,4] else hp * TURRETS
 	data.time_limit = 0.0
 	data.route_seconds = 0.0
 	data.player = data.spawn_point
@@ -134,12 +145,18 @@ func emit_salvo(game, salvo: Dictionary) -> void:
 	if game.boss_variant == 3:
 		if salvo.has("gun"): origin = fortress.gun_position(owner,salvo.gun)
 		game.enemy_attack_cue("siege_fire",origin)
+	if game.boss_variant == 4:
+		if salvo.has("gun"):
+			if owner.turrets[salvo.gun].hp <= 0: return
+			origin = bastion.gun_position(owner,salvo.gun)
+		game.enemy_attack_cue("halo_fire",origin)
 	if game.boss_variant == 2: game.enemy_attack_cue("halo_option" if salvo.has("origin") else "halo_fire",origin)
 	elif game.boss_variant == 1: game.enemy_attack_cue("hunter_burst",origin)
 	var aim: Vector2 = salvo.aim
 	if aim == Vector2.ZERO: aim = origin.direction_to(game.player+owner.get("player_velocity",Vector2.ZERO)*salvo.get("lead",0.0))
 	for offset in salvo.offsets:
-		game.emit_shot(origin,aim.rotated(offset),salvo.speed,1,true,1200)
+		var shot_speed: float = salvo.speed*(owner.get("bullet_scale",1.0) if game.boss_variant in [3,4] else 1.0)
+		game.emit_shot(origin,aim.rotated(offset),shot_speed,1,true,1200)
 		game.bullets[-1]["pressure"] = salvo.speed > 120.0
 		if salvo.get("guided",false):
 			game.bullets[-1].merge({"guided":true,"pressure":false,"homing_time":1.15,"turn_rate":1.25},true)
@@ -167,6 +184,7 @@ func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
 func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	match game.boss_variant:
 		3: return fortress.advance(self,game,e,delta,toward)
+		4: return bastion.advance(self,game,e,delta,toward)
 		0: return siege.advance(self,game,e,delta,toward)
 		1: return hunter.advance(self,game,e,delta,toward)
 	return halo.advance(self,game,e,delta,toward)
@@ -191,7 +209,7 @@ func summon(game, e: Dictionary) -> void:
 	hunter.summon(self,game,e)
 
 func add_laser(a: Vector2, b: Vector2, warning: float, duration: float, owner: Dictionary) -> void:
-	lasers.append({"a":a,"b":b,"warning":warning,"duration":duration,"owner":owner})
+	lasers.append({"a":a,"b":b,"warning":warning,"duration":duration,"peak_duration":duration,"owner":owner})
 
 func advance_lasers(game, delta: float) -> void:
 	var sounded_owners: Array = []

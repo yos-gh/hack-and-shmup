@@ -35,6 +35,12 @@ func run() -> void:
 			if not captured.has("scissor") and game.boss.lasers.any(func(beam): return beam.has("sweep") and beam.warning > 0.3):
 				captured["scissor"] = true
 				await capture(game,"tactics-%d-scissor" % depth)
+			if not captured.has("laser_active") and game.boss.lasers.any(func(beam): return beam.warning <= 0):
+				captured["laser_active"] = true
+				await capture(game,"tactics-%d-laser-active" % depth)
+			if not captured.has("laser_band") and game.boss.lasers.any(func(beam): return beam.warning <= 0 and beam.duration < beam.peak_duration-0.2):
+				captured["laser_band"] = true
+				await capture(game,"tactics-%d-laser-band" % depth)
 		game.set_depth_view(false)
 		await capture(game,"tactics-%d-2d" % depth)
 	game.free()

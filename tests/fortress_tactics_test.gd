@@ -40,7 +40,7 @@ func run() -> void:
 		check(modes.has("ram") and modes.has("hunt") and modes.has("cross_y"),"all depths use tactical movement")
 		check(peak < 500,"upper-depth projectile budget")
 		var angles: Array[float] = []
-		for i in range(40): angles.append(fposmod(fortress.radial_angle(i,40,e.expert),TAU))
+		for i in range(40): angles.append(fposmod(fortress.radial_angle(i,40,lerpf(54.0,36.0,e.low)-16.0*e.mid),TAU))
 		angles.sort()
 		var max_gap := 0.0
 		for i in range(40): max_gap = maxf(max_gap,fposmod(angles[(i+1)%40]-angles[i],TAU))

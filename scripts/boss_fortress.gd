@@ -11,11 +11,20 @@ var motion = preload("res://scripts/fortress_motion.gd").new()
 
 func setup(data, e: Dictionary) -> void:
 	var dps: float = Balance.primary_dps(data.power,data.fire_rate,data.physics_ticks)
-	# Moving armor reduces contact uptime; keep the intermittent-fire budget under a minute.
-	e.hp = dps*11.0
+	var low: float = clampf((data.floor_number-5)/20.0,0.0,1.0)
+	var mid: float = clampf((data.floor_number-25)/25.0,0.0,1.0)
+	var late: float = maxf(0.0,data.floor_number-50)
+	# DPS tracks the current build. After floor 50 the extra factor gives
+	# durability a modest edge over that same player's continuing growth.
+	e["low"] = low
+	e["mid"] = mid
+	e["speed_scale"] = lerpf(0.68,1.0,low)*(1.0+0.001*late)
+	e["attack_scale"] = lerpf(1.35,1.0,low)/(1.0+0.0015*late)
+	e["bullet_scale"] = lerpf(0.82,1.0,low)*(1.0+0.0008*late)
+	e.hp = dps*11.0*lerpf(0.65,1.0,low*low)*(1.0+0.004*late)
 	e["max_hp"] = e.hp
 	e["plates"] = []
-	for i in range(COUNT): e.plates.append({"hp":dps*0.65,"max_hp":dps*0.65,"timer":0.0})
+	for i in range(COUNT): e.plates.append({"hp":dps*0.65*lerpf(0.55,1.0,low*low)*(1.0+0.003*late),"max_hp":dps*0.65*lerpf(0.55,1.0,low*low)*(1.0+0.003*late),"timer":0.0})
 	e["step"] = 0
 	e["slam"] = []
 	e["home"] = data.center(Vector2i(24,1))
@@ -120,11 +129,11 @@ func gun_direction(game, e: Dictionary, gun: int) -> Vector2:
 func drive(game, e: Dictionary, delta: float, rage: bool) -> Vector2:
 	return motion.advance(game,e,delta,rage)
 
-func radial_angle(index: int, count: int, expert: bool) -> float:
+func radial_angle(index: int, count: int, gap_degrees: float) -> float:
 	var sector := index%4
 	var local_index := index/4
 	var local_count := (count-1-sector)/4+1
-	var half_lobe := (PI/2-deg_to_rad(20 if expert else 36))*0.5
+	var half_lobe := (PI/2-deg_to_rad(gap_degrees))*0.5
 	return sector*PI/2+lerpf(-half_lobe,half_lobe,float(local_index)/maxi(local_count-1,1))
 
 func queue_gun(boss, e: Dictionary, gun: int, delay: float, count: int, spread: float, speed: float, aim: Vector2, pattern: String) -> Dictionary:
@@ -136,8 +145,8 @@ func queue_gun(boss, e: Dictionary, gun: int, delay: float, count: int, spread: 
 func machine_gun(boss, game, e: Dictionary, rage: bool) -> void:
 	# A streaming burst re-aims each round. Keep moving to lead it off target.
 	var gun: int = [0,2,1,3][e.machine_cycle%4]
-	for i in range(10 if rage else 8):
-		var salvo := queue_gun(boss,e,gun,0.25+i*0.10,1,0,285,Vector2.ZERO,"machine")
+	for i in range((7+roundi(3*e.low)) if rage else (5+roundi(3*e.low))):
+		var salvo := queue_gun(boss,e,gun,0.25+i*0.10*e.attack_scale,1,0,285,Vector2.ZERO,"machine")
 		if e.expert and e.machine_cycle%2 == 1: salvo["lead"] = 0.22
 	if e.expert:
 		# Opposite turret arrives after the direct stream and leads the dodge.
@@ -145,7 +154,7 @@ func machine_gun(boss, game, e: Dictionary, rage: bool) -> void:
 			var intercept := queue_gun(boss,e,(gun+2)%4,0.48+i*0.12,1,0,320,Vector2.ZERO,"intercept")
 			intercept["lead"] = 0.34
 	e.machine_cycle += 1
-	e.machine_cd = 0.95 if rage else 1.15
+	e.machine_cd = (0.95 if rage else 1.15)*e.attack_scale
 
 func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 	var cycle: int = e.step/(EXPERT_PATTERNS.size() if e.expert else PATTERNS.size())
@@ -153,10 +162,10 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 		# Four lobes with 36-degree escape corridors, rotating between waves.
 		# Their angle is locked for each pair; it never follows the player.
 		var rotation: float = (cycle*0.37+(e.step%3)*0.19)
-		for wave in range(2):
+		for wave in range(2 if e.low >= 0.5 else 1):
 			var offsets := PackedFloat32Array()
-			var count := 40 if rage else 28
-			for i in range(count): offsets.append(radial_angle(i,count,e.expert)+rotation+wave*(0.20 if e.expert else 0.10))
+			var count := (30+roundi(10*e.low)) if rage else (20+roundi(8*e.low))
+			for i in range(count): offsets.append(radial_angle(i,count,lerpf(54.0,36.0,e.low)-16.0*e.mid)+rotation+wave*(0.20 if e.expert else 0.10))
 			boss.salvos.append({"owner":e,"delay":0.22+wave*0.36,"offsets":offsets,"speed":155.0+wave*35,"aim":Vector2.RIGHT,"pattern":"radial"})
 	elif name == "weave":
 		# Successive six-spoke volleys rotate; there is no stationary safe ray.
@@ -179,12 +188,12 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 			boss.lasers[-1].merge({"gun":gun,"heading":heading,"sweep":-side*0.65})
 	elif name == "fan":
 		# Opposite cannons alternate wide fans; later fans close the first gaps.
-		for wave in range(3 if rage else 2):
+		for wave in range((2+int(rage)) if e.low >= 0.5 else (1+int(rage))):
 			var gun: int = (e.step+wave*2)%4
 			var aim := gun_position(e,gun).direction_to(game.player).rotated((wave-0.5)*0.13)
-			queue_gun(boss,e,gun,0.22+wave*0.26,9 if rage else 7,0.15,215+wave*15,aim,"fan")
+			queue_gun(boss,e,gun,0.22+wave*0.26,(7+roundi(2*e.low)) if rage else (5+roundi(2*e.low)),0.15,215+wave*15,aim,"fan")
 	elif name == "missile":
-		for wave in range(3 if rage else 2):
+		for wave in range((3 if rage else 2) if e.low >= 0.5 else (2 if rage else 1)):
 			for gun in [1,3]:
 				var aim := gun_position(e,gun).direction_to(game.player).rotated(-0.5 if gun == 1 else 0.5)
 				var salvo := queue_gun(boss,e,gun,0.3+wave*0.3,1,0,165,aim,"missile")
@@ -194,14 +203,14 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 		for gun in ([0,2,3] if rage else [0,2]):
 			var origin := gun_position(e,gun)
 			var heading := origin.direction_to(game.player).rotated(-0.15 if gun == 0 else 0.15)
-			boss.add_laser(origin,game.attack_end(origin,heading,1800),0.9,0.55,e)
+			boss.add_laser(origin,game.attack_end(origin,heading,1800),0.9*e.attack_scale,0.55,e)
 			boss.lasers[-1].merge({"gun":gun,"heading":heading})
 	elif name == "slam":
 		# Hammer targets stay fixed while the tank drives on. Cover blocks impact.
-		e.slam.append({"p":game.player,"radius":68.0,"time":0.95,"warning":0.95,"fired":false})
+		e.slam.append({"p":game.player,"radius":lerpf(58.0,68.0,e.low),"time":0.95*e.attack_scale,"warning":0.95*e.attack_scale,"fired":false})
 		if rage:
 			var side: Vector2 = e.p.direction_to(game.player).orthogonal()*145
-			e.slam.append({"p":game.player+side,"radius":68.0,"time":1.25,"warning":1.25,"fired":false})
+			e.slam.append({"p":game.player+side,"radius":lerpf(58.0,68.0,e.low),"time":1.25*e.attack_scale,"warning":1.25*e.attack_scale,"fired":false})
 
 func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vector2:
 	for plate in e.plates:
@@ -226,7 +235,7 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 		pattern(boss,game,e,e.pattern,rage)
 		e.step += 1
 		# No recovery state. The next pattern starts before existing fire ends.
-		e.cd = (0.64 if rage else 0.82) if e.expert else (0.72 if rage else 0.95)
+		e.cd = lerpf(0.72 if rage else 0.95,0.64 if rage else 0.82,e.mid)*e.attack_scale
 	return drive(game,e,delta,rage)
 
 func draw(game) -> void:

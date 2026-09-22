@@ -265,6 +265,8 @@ func sync_other_bosses(game) -> void:
 			var facing: Vector2 = enemy.p.direction_to(game.player) if enemy.active else enemy.dir
 			if game.boss_variant == 3:
 				game.boss.fortress.draw_depth(self,game,enemy,parts)
+			elif game.boss_variant == 4:
+				game.boss.bastion.draw_depth(self,game,enemy,parts)
 			elif game.boss_variant == 0:
 				var flash: float = game.boss.shot_flash(game,enemy.p)
 				var ink: Color = game.boss.COLORS[0].lerp(Color("fff5ff"),flash*0.8)

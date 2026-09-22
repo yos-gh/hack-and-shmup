@@ -59,12 +59,13 @@ func draw(game, screen: Vector2) -> void:
 	draw_lasers(game)
 	draw_options(game)
 	if game.boss_floor and game.boss_variant == 3: game.boss.fortress.draw(game)
+	if game.boss_floor and game.boss_variant == 4: game.boss.bastion.draw(game)
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
 		MobVisuals.draw_warning(game,e)
 		var warning = game.attack_warning(e)
-		if e.kind == Catalog.Enemy.BOSS and (game.depth_enabled or game.boss_variant == 3): continue
+		if e.kind == Catalog.Enemy.BOSS and (game.depth_enabled or game.boss_variant in [3,4]): continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and Catalog.is_mob(e.kind):
@@ -105,6 +106,26 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),ink.lerp(Color.WHITE,warning))
 	for b in game.bullets:
 		if game.cells.get(game.tile(b.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(b.p)]): continue
+		if b.get("energy_orb",false):
+			var radius: float = b.orb_radius
+			var charge: bool = b.orb_phase == "charge"
+			var flash: float = clampf(b.orb_flash/0.15,0.0,1.0)
+			if not charge and b.v.length() > 0:
+				var tail: Vector2 = b.p-b.v.normalized()*minf(58.0,b.v.length()*0.2)
+				game.draw_line(tail,b.p,Color(0.72,0.4,1.0,0.25),radius*0.7,true)
+			game.draw_circle(b.p,radius+6,Color(0.57,0.26,0.82,0.14+flash*0.18))
+			game.draw_circle(b.p,radius,Color(0.6,0.31,0.91,0.37+flash*0.2))
+			game.draw_arc(b.p,radius,0,TAU,48,Color(0.9,0.67,1.0,0.8),3,true)
+			game.draw_arc(b.p,radius*0.66,0,TAU,40,Color(0.9,0.77,1.0,0.5),2,true)
+			game.draw_circle(b.p,radius*0.36,Color(0.94,0.83,1.0,0.8))
+			if charge:
+				var progress: float = clampf(b.orb_age/1.05,0.0,1.0)
+				game.draw_arc(b.p,radius+12,-PI/2,-PI/2+TAU*progress,48,Color(1.0,0.88,1.0,0.85),3,true)
+			else:
+				for spoke in range(6):
+					var axis: Vector2 = Vector2.from_angle(spoke*TAU/6+b.orb_age*1.5)
+					game.draw_line(b.p+axis*(radius+4),b.p+axis*(radius+13),Color(0.86,0.66,1.0,0.5),2,true)
+			continue
 		var bullet_ink = Color("ff788e") if b.get("pressure",false) else (Color("d996ed") if b.get("guided",false) else Color("ffb95e"))
 		if not b.hostile and b.get("scatter_visual",false):
 			var tail: Vector2 = game.attack_end(b.p,-b.v.normalized(),16)
@@ -233,6 +254,19 @@ func draw_options(game) -> void:
 func draw_lasers(game) -> void:
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
+		if game.boss_variant == 3:
+			var direction: Vector2 = beam.a.direction_to(beam.b)
+			if direction.is_zero_approx(): continue
+			var side := direction.orthogonal()*(8.0 if beam.warning > 0 else 7.0)
+			var opacity := 0.10 if beam.warning > 0 else 0.28
+			game.draw_colored_polygon(PackedVector2Array([beam.a-side,beam.b-side,beam.b+side,beam.a+side]),Color(1.0,0.38,0.35,opacity))
+			var edge := Color(1.0,0.57,0.48,0.18 if beam.warning > 0 else 0.38)
+			game.draw_line(beam.a-side,beam.b-side,edge,1.0,true)
+			game.draw_line(beam.a+side,beam.b+side,edge,1.0,true)
+			if beam.warning <= 0:
+				var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0)
+				if flash > 0: game.draw_line(beam.a,beam.b,Color(1.0,0.92,0.82,0.9*flash),3.0,true)
+			continue
 		if beam.warning > 0:
 			game.draw_line(beam.a,beam.b,Color(0.08,0.06,0.1,0.65),3,true)
 			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5,true)

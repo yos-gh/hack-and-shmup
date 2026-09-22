@@ -57,7 +57,7 @@ func run():
 	game.practice.open(game)
 	menus.sync()
 	buttons = menus.surface.get_children().filter(func(node): return node is Button)
-	check(buttons.size() == 8, "practice uses eight Control buttons")
+	check(buttons.size() == 9, "practice offers five bosses and four controls")
 	buttons[2].pressed.emit()
 	check(game.practice.variant == 2, "boss button updates selected variant")
 	menus.sync()
@@ -69,7 +69,7 @@ func run():
 	root.push_input(up)
 	check(game.practice.depth == 10, "focused control preserves practice arrow shortcut")
 	# Exercise the viewport route while a button owns focus, not just the handler.
-	for item in [[KEY_A,1,10],[KEY_D,2,10],[KEY_D,3,10],[KEY_D,0,10],[KEY_A,3,10],[KEY_A,2,10],[KEY_W,2,15],[KEY_S,2,10]]:
+	for item in [[KEY_A,1,10],[KEY_D,2,10],[KEY_D,3,10],[KEY_D,4,10],[KEY_D,0,10],[KEY_A,4,10],[KEY_A,3,10],[KEY_A,2,10],[KEY_W,2,15],[KEY_S,2,10]]:
 		var wasd := InputEventKey.new()
 		wasd.keycode = item[0]
 		wasd.pressed = true

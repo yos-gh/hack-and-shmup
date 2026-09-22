@@ -44,28 +44,28 @@ func enter(game, e: Dictionary, step: int) -> void:
 		"cross_y":
 			e.move_target = e.home+Vector2(clampf(e.p.x-e.home.x,-280,280),-180 if e.p.y > e.home.y else 180)
 			e.move_time = 3.5
-		"hunt": e.move_time = 2.8 if not e.expert else 3.2
+		"hunt": e.move_time = lerpf(2.8,3.2,e.mid)
 		"flank":
 			e.move_target = tactical_target(e,game.player+e.p.direction_to(game.player).orthogonal()*side*280)
 			e.move_time = 2.6
 		"ram_warning":
-			var aim: Vector2 = game.player+(e.player_velocity*0.28 if e.expert else Vector2.ZERO)
+			var aim: Vector2 = game.player+(e.player_velocity*0.28*e.mid)
 			e.ram_start = e.p
 			e.ram_direction = e.p.direction_to(aim)
 			if e.ram_direction.is_zero_approx(): e.ram_direction = Vector2.from_angle(e.heading)
 			e.ram_end = e.p
-			for distance in range(16,721 if e.expert else 609,16):
+			for distance in range(16,roundi(608+112*e.mid)+1,16):
 				var next: Vector2 = e.p+e.ram_direction*distance
 				if not clear_at(game,next): break
 				e.ram_end = next
 			if e.p.distance_to(e.ram_end) < 128:
 				enter(game,e,6)
 				return
-			e.move_time = maxf(1.0 if e.expert else 1.15,absf(angle_difference(e.heading,e.ram_direction.angle()))/TURN_RATE+0.12)
+			e.move_time = maxf(lerpf(1.15,1.0,e.mid)*e.attack_scale,absf(angle_difference(e.heading,e.ram_direction.angle()))/TURN_RATE+0.12)
 			# A moving laser cannot suddenly sweep sideways at charge speed.
 			for beam in game.boss.lasers:
 				if beam.owner == e: beam.duration = 0
-		"ram": e.move_time = e.p.distance_to(e.ram_end)/(410.0 if e.expert else 340.0)+0.03
+		"ram": e.move_time = e.p.distance_to(e.ram_end)/(lerpf(340.0,410.0,e.mid)*e.speed_scale)+0.03
 		"retreat":
 			e.move_target = tactical_target(e,e.home+(e.home-game.player).normalized()*230)
 			e.move_time = 3.0
@@ -83,7 +83,7 @@ func advance(game, e: Dictionary, delta: float, rage: bool) -> Vector2:
 		e.dir = Vector2.from_angle(e.heading)
 		return Vector2.ZERO
 	if e.move_mode == "ram":
-		motion = e.ram_direction*minf((410.0 if e.expert else 340.0)*delta,e.p.distance_to(e.ram_end))
+		motion = e.ram_direction*minf(lerpf(340.0,410.0,e.mid)*e.speed_scale*delta,e.p.distance_to(e.ram_end))
 		if e.p.distance_to(e.ram_end) < 2: enter(game,e,e.move_step+1)
 	else:
 		if e.move_mode == "hunt": e.move_target = tactical_target(e,game.player)
@@ -94,7 +94,7 @@ func advance(game, e: Dictionary, delta: float, rage: bool) -> Vector2:
 		var angle := offset.angle()
 		var turn: float = absf(angle_difference(e.heading,angle))
 		e.heading = rotate_toward(e.heading,angle,delta*TURN_RATE)
-		var speed: float = (165 if rage else 140)+(15 if e.expert else 0)
+		var speed: float = ((165.0 if rage else 140.0)+15.0*e.mid)*e.speed_scale
 		if e.move_mode == "hunt": speed += 20
 		# Slow into a turn, retaining the same smooth tracked-vehicle presentation.
 		speed *= lerpf(0.15,1.0,clampf(1-turn/1.6,0,1))
