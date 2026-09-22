@@ -34,35 +34,35 @@ window/stretch/mode="canvas_items"
 
 move_left={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"physical_keycode":65)]
+"events": [Object(InputEventKey,"physical_keycode":65), Object(InputEventJoypadMotion,"device":-1,"axis":0,"axis_value":-1.0), Object(InputEventJoypadButton,"device":-1,"button_index":13)]
 }
 move_right={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"physical_keycode":68)]
+"events": [Object(InputEventKey,"physical_keycode":68), Object(InputEventJoypadMotion,"device":-1,"axis":0,"axis_value":1.0), Object(InputEventJoypadButton,"device":-1,"button_index":14)]
 }
 move_up={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"physical_keycode":87)]
+"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventJoypadMotion,"device":-1,"axis":1,"axis_value":-1.0), Object(InputEventJoypadButton,"device":-1,"button_index":11)]
 }
 move_down={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"physical_keycode":83)]
+"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventJoypadMotion,"device":-1,"axis":1,"axis_value":1.0), Object(InputEventJoypadButton,"device":-1,"button_index":12)]
 }
 fire_primary={
 "deadzone": 0.2,
-"events": [Object(InputEventMouseButton,"button_index":1)]
+"events": [Object(InputEventMouseButton,"button_index":1), Object(InputEventJoypadButton,"device":-1,"button_index":0), Object(InputEventJoypadButton,"device":-1,"button_index":9)]
 }
 fire_secondary={
 "deadzone": 0.2,
-"events": [Object(InputEventMouseButton,"button_index":2)]
+"events": [Object(InputEventMouseButton,"button_index":2), Object(InputEventJoypadButton,"device":-1,"button_index":10)]
 }
 confirm={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"keycode":4194309), Object(InputEventKey,"keycode":32)]
+"events": [Object(InputEventKey,"keycode":4194309), Object(InputEventKey,"keycode":32), Object(InputEventJoypadButton,"device":-1,"button_index":0), Object(InputEventJoypadButton,"device":-1,"button_index":9)]
 }
 back={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"keycode":4194305)]
+"events": [Object(InputEventKey,"keycode":4194305), Object(InputEventJoypadButton,"device":-1,"button_index":1)]
 }
 cycle_audio={
 "deadzone": 0.2,
@@ -78,11 +78,11 @@ retry_attempt={
 }
 weapon_previous={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"keycode":81), Object(InputEventMouseButton,"button_index":5)]
+"events": [Object(InputEventKey,"keycode":81), Object(InputEventMouseButton,"button_index":5), Object(InputEventJoypadMotion,"device":-1,"axis":4,"axis_value":1.0)]
 }
 weapon_next={
 "deadzone": 0.2,
-"events": [Object(InputEventKey,"keycode":69), Object(InputEventMouseButton,"button_index":4)]
+"events": [Object(InputEventKey,"keycode":69), Object(InputEventMouseButton,"button_index":4), Object(InputEventJoypadMotion,"device":-1,"axis":5,"axis_value":1.0)]
 }
 compare_view={
 "deadzone": 0.2,

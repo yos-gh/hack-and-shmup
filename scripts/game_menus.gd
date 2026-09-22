@@ -24,9 +24,14 @@ func sync() -> void:
 	if state.is_empty() and signature == [""]: return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	var focus_index := focused.get_index() if focused != null and focused.get_parent() == surface and signature.size() > 1 and signature[1] == state else -1
-	var next: Array = [screen,state,game.audio_mode,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth]
+	var next: Array = [screen,state,game.audio_mode,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad]
 	if state.is_empty(): next = [""]
-	if next == signature: return
+	if next == signature:
+		if not state.is_empty() and game.controls.using_gamepad:
+			var focused_now: Control = get_viewport().gui_get_focus_owner()
+			if focused_now == null or not (focused_now is Button) or focused_now.get_parent() != surface:
+				_default_focus(state)
+		return
 	signature = next
 	for child in surface.get_children():
 		surface.remove_child(child)
@@ -43,6 +48,32 @@ func sync() -> void:
 	else: _battle_menu(screen,state == "pause")
 	if focus_index >= 0 and focus_index < surface.get_child_count():
 		surface.get_child(focus_index).grab_focus()
+	elif game.controls.using_gamepad:
+		_default_focus(state)
+
+func _buttons() -> Array:
+	return surface.get_children().filter(func(node): return node is Button)
+
+func _default_focus(state: String) -> void:
+	var buttons := _buttons()
+	if buttons.is_empty(): return
+	if state == "practice" and game.practice.variant < 3: buttons[game.practice.variant].grab_focus()
+	else: buttons[0].grab_focus()
+
+func _move_focus(direction: Vector2i) -> void:
+	var buttons := _buttons()
+	if buttons.is_empty(): return
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if focused == null or not buttons.has(focused):
+		_default_focus("practice" if game.practice.selecting else "")
+		return
+	var side := SIDE_LEFT if direction.x < 0 else (SIDE_RIGHT if direction.x > 0 else (SIDE_TOP if direction.y < 0 else SIDE_BOTTOM))
+	var next: Control = focused.find_valid_focus_neighbor(side)
+	if next != null and buttons.has(next): next.grab_focus()
+
+func _activate_focused() -> void:
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if focused is Button and focused.get_parent() == surface: focused.pressed.emit()
 
 func _label(rect: Rect2, text: String, size: int = 18, ink: Color = Color.WHITE) -> Label:
 	var label := Label.new()
@@ -86,12 +117,14 @@ func _title(screen: Vector2) -> void:
 	# The vector wordmark is drawn by MenuArt, with no font dependency.
 	_label(Rect2(24,y-58,screen.x-48,30),"ENDLESS DESCENT",18,Color("8194aa"))
 	_label(Rect2(24,y+0,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
-	_button(Rect2(screen.x*0.5-190,y+64,380,46),"START (Enter)",func():
+	_button(Rect2(screen.x*0.5-190,y+64,380,46),"START (A / LB)" if game.controls.using_gamepad else "START (Enter)",func():
 		if game.title_screen: game.start_run(); sync())
-	_button(Rect2(screen.x*0.5-190,y+122,380,42),"BOSS PRACTICE (B)",func():
+	_button(Rect2(screen.x*0.5-190,y+122,380,42),"BOSS PRACTICE" if game.controls.using_gamepad else "BOSS PRACTICE (B)",func():
 		if game.title_screen: game.practice.open(game); sync())
-	_label(Rect2(24,y+185,screen.x-48,45),"WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
-	_label(Rect2(24,y+240,screen.x-48,40),"M AUDIO / RECORD LASTS UNTIL YOU QUIT" + (" / ESC QUIT" if not OS.has_feature("web") else ""),14,Color("8194aa"))
+	_label(Rect2(24,y+185,screen.x-48,45),"LEFT STICK / DPAD MOVE / RIGHT STICK AIM" if game.controls.using_gamepad else "WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
+	var hint := "LEFT STICK / DPAD SELECT / A / LB CONFIRM" if game.controls.using_gamepad else "M AUDIO / RECORD LASTS UNTIL YOU QUIT"
+	if not OS.has_feature("web"): hint += " / B QUIT" if game.controls.using_gamepad else " / ESC QUIT"
+	_label(Rect2(24,y+240,screen.x-48,40),hint,14,Color("8194aa"))
 	_button(game.audio_button_rect(),["AUDIO: ALL","AUDIO: SE ONLY","AUDIO: OFF"][game.audio_mode],func(): game.cycle_audio(); sync())
 	var fullscreen := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN,DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
 	_button(game.fullscreen_button_rect(),"WINDOWED" if fullscreen else "FULLSCREEN",func(): game.toggle_fullscreen(); sync())
@@ -106,11 +139,11 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 				game.fire_armed = false
 				game.sound.set_paused(false)
 				sync())
-		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (Esc)",func():
+		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (B)" if game.controls.using_gamepad else "TITLE (Esc)",func():
 			if game.paused: game.return_to_title(); sync())
 	else:
 		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",24,Color("63f5ce"))
-		_label(Rect2(24,y-115,screen.x-48,35),"CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
+		_label(Rect2(24,y-115,screen.x-48,35),"LEFT STICK / DPAD: SELECT     A / LB: CONFIRM" if game.controls.using_gamepad else "CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
 		for i in range(3):
 			var rect: Rect2 = game.upgrade_card_rect(screen,i)
 			var definition = Catalog.UPGRADES[game.choices[i]]
@@ -148,9 +181,9 @@ func choose(index: int) -> void:
 func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
 	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
-	_label(Rect2(24,y-177,screen.x-48,45),"A / D: BOSS   W / S: FLOOR   ARROW KEYS ALSO WORK   TAB + ENTER",15,Color("8194aa"))
+	_label(Rect2(24,y-177,screen.x-48,45),"LEFT STICK / DPAD: SELECT   A / LB: CONFIRM   B: BACK" if game.controls.using_gamepad else "A / D: BOSS   W / S: FLOOR   ARROW KEYS ALSO WORK   TAB + ENTER",15,Color("8194aa"))
 	for i in range(7):
-		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (Esc)"][i-3]
+		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (B)" if game.controls.using_gamepad else "BACK (Esc)"][i-3]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())
 		if i < 3:
 			button.toggle_mode = true
@@ -160,6 +193,19 @@ func _practice(screen: Vector2) -> void:
 	_label(Rect2(24,y+72,screen.x-48,56),"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
 
 func _input(event: InputEvent) -> void:
+	# Observe once, before GUI consumption, including neutral/release events.
+	game.controls.observe_event(game,event)
+	var direction: Vector2i = game.controls.menu_direction(event)
+	if (event is InputEventJoypadButton or event is InputEventJoypadMotion) and (game.title_screen or game.paused or game.choosing or game.practice.selecting):
+		sync()
+		if direction != Vector2i.ZERO: _move_focus(direction)
+		elif game.controls.gamepad_accept(event): _activate_focused()
+		elif event.is_action_pressed("back"):
+			game.controls.handle_event(game,event)
+			sync()
+		# Even held/neutral events must not reach Godot's default ui_* bindings.
+		get_viewport().set_input_as_handled()
+		return
 	if not game.practice.selecting: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		for action in ["practice_left","practice_right","practice_up","practice_down"]:

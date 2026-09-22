@@ -20,7 +20,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot archive source commit' }
 Expand-Archive -LiteralPath $sourceZip -DestinationPath $sourcePath
 
 # The preview build must neither load nor distribute the telemetry SDK.
-Remove-Item -LiteralPath (Join-Path $sourcePath 'addons/sentry') -Recurse -Force
+$resolvedSource = (Resolve-Path -LiteralPath $sourcePath).Path
+$previewSentry = (Resolve-Path -LiteralPath (Join-Path $sourcePath 'addons/sentry')).Path
+if (-not $resolvedSource.StartsWith((Resolve-Path -LiteralPath $buildRoot).Path + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or -not $previewSentry.StartsWith($resolvedSource + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Preview cleanup path is outside the isolated source copy' }
+Remove-Item -LiteralPath $previewSentry -Recurse -Force
 Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/catalog.json') -Force
 Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/README.md') -Force
 $projectFile = Join-Path $sourcePath 'project.godot'

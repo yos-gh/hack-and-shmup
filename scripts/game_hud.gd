@@ -23,7 +23,7 @@ func draw(game, screen: Vector2) -> void:
 	var weapon_ink := Color("63f5ce") if ready else Color("ffb95e")
 	draw_weapon_icon(game, weapon.position+Vector2(15,20), game.sub_weapon, weapon_ink)
 	label_at(game, weapon.position+Vector2(42,23), Catalog.WEAPONS[game.sub_weapon].title, 24 if weapon.size.x >= 250 else 18, weapon_ink)
-	var secondary_key: String = "RMB"
+	var secondary_key: String = "RB" if game.controls.using_gamepad else "RMB"
 	label_at(game, weapon.position+Vector2(42,40), secondary_key + " / READY" if ready else "WAIT %.1fs" % game.sub_cd, 12, Color("8194aa"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x,3)),Color("263847"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x*cooldown_fraction(game),3)),weapon_ink)
@@ -40,9 +40,9 @@ func draw(game, screen: Vector2) -> void:
 		game.draw_rect(Rect2(0,76,bar_width * clampf(game.time_left / maxf(game.time_limit, 0.01),0,1),3), time_ink)
 	game.draw_rect(Rect2(0,screen.y - 40,screen.x,40), Color("090f18"))
 	game.draw_line(Vector2(0,screen.y-40),Vector2(screen.x,screen.y-40),Color("304956"),1)
-	var help := "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
+	var help := "LS / DPAD  MOVE     RS  AIM     A / LB  FIRE     RB  SUB WEAPON     LT / RT  SWITCH     B  PAUSE" if game.controls.using_gamepad else "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
 	label_at(game, Vector2(26,screen.y - 15), help, 13, Color("a4b3c6"))
-	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-15),"PRACTICE / R RETRY / B SELECT",12,Color("63f5ce"))
+	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-15),"PRACTICE" if game.controls.using_gamepad else "PRACTICE / R RETRY / B SELECT",12,Color("63f5ce"))
 	if game.banner > 0:
 		centered_title_label(game, screen,110,("BOSS DEFEATED / DESCEND" if game.stairs_unlocked else game.boss.NAMES[game.boss_variant]) if game.boss_floor else "FIND THE STAIRS. KEEP DESCENDING.",18,Color("63f5ce"))
 	if game.hit_flash > 0:
@@ -57,8 +57,9 @@ func draw(game, screen: Vector2) -> void:
 		var fade: float = (1-progress)*0.5
 		game.draw_line(Vector2(0,80+progress*25),Vector2(screen.x,80+progress*25),Color(0.39,0.96,0.81,fade),2,true)
 	if layout.map.size.x > 0: minimap.draw(game,layout.map)
-	var mouse = game.controls.pointer(game)
-	game.draw_arc(mouse, 8, 0, TAU, 16, Color("63f5ce"), 1)
+	if not game.controls.using_gamepad or game.replay_input.has("cursor"):
+		var mouse = game.controls.pointer(game)
+		game.draw_arc(mouse, 8, 0, TAU, 16, Color("63f5ce"), 1)
 
 func draw_title(game, screen: Vector2) -> void:
 	pass # Menu Controls own title and practice presentation.

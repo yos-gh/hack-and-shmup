@@ -146,6 +146,7 @@ var boss_variant := 0
 var practice = preload("res://scripts/boss_practice.gd").new()
 
 func _ready() -> void:
+	Input.joy_connection_changed.connect(controls.joy_connection_changed.bind(self))
 	sound = preload("res://scripts/sound.gd").new()
 	add_child(sound)
 	combat_events.enemy_hit.connect(sound.hear_hit)
