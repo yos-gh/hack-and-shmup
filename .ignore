@@ -1,0 +1,5 @@
+# Keep generated history out of routine searches, including explicit docs searches.
+/docs/backups/
+/docs/builds/
+/docs/validation/
+/docs/ci/

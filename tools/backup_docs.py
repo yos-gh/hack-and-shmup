@@ -3,11 +3,25 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import uuid
 import zipfile
 
-EXCLUDED = {'builds', 'validation', 'ci'}
+EXCLUDED = {'builds', 'validation', 'ci', 'backups'}
+
+def authored_files(source):
+    # Prune generated trees before walking: never traverse old backups/builds.
+    for folder, directories, files in os.walk(source, followlinks=False):
+        folder = Path(folder)
+        if folder == source:
+            directories[:] = [name for name in directories if name not in EXCLUDED]
+        for name in sorted(directories + files):
+            file = folder / name
+            if file.is_symlink() or source not in file.resolve().parents:
+                raise ValueError('Linked paths are not supported: ' + str(file))
+        for name in sorted(files):
+            yield folder / name
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
@@ -38,22 +52,16 @@ def verify(archive):
 def create(source, destination):
     source = Path(source).resolve()
     destination = Path(destination).resolve()
-    if destination == source or source in destination.parents:
-        raise ValueError('Backup destination must be outside docs')
+    if destination == source or (source in destination.parents and destination.relative_to(source).parts[0] != 'backups'):
+        raise ValueError('Backup destination inside docs must be under docs/backups')
     if not source.is_dir():
         raise ValueError('Docs directory missing')
     destination.mkdir(parents=True, exist_ok=True)
     path = destination / ('docs-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8] + '.zip')
     rows = []
     with zipfile.ZipFile(path, 'x', compression=zipfile.ZIP_DEFLATED) as package:
-        for file in sorted(source.rglob('*')):
+        for file in sorted(authored_files(source)):
             relative = file.relative_to(source)
-            if relative.parts[0] in EXCLUDED:
-                continue
-            if file.is_symlink() or source not in file.resolve().parents:
-                raise ValueError('Linked paths are not supported: ' + str(file))
-            if not file.is_file():
-                continue
             data = file.read_bytes()
             name = 'docs/' + relative.as_posix()
             package.writestr(name, data)
@@ -72,11 +80,9 @@ def main():
     args = parser.parse_args()
     if args.verify:
         print(f'PASS: {len(verify(args.verify)["files"])} backup files verified')
-    elif args.output_dir:
-        archive, count = create(args.source, args.output_dir)
-        print(f'PASS: {count} files backed up and verified: {archive}')
     else:
-        parser.error('Specify --output-dir or --verify')
+        archive, count = create(args.source, args.output_dir or args.source / 'backups')
+        print(f'PASS: {count} files backed up and verified: {archive}')
 
 if __name__ == '__main__':
     main()

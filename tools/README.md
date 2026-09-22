@@ -47,7 +47,7 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## Publication workflow
 
-The Pages workflow is manual (`workflow_dispatch`). Develop on short `codex/` branches. Review and merge playable changes, then explicitly run **Publish game to Pages** for a reviewed ref with matching `web/` artifacts. This workflow still uploads checked-in files; it does not build them.
+The Pages workflow runs on pushes to `main` and also supports `workflow_dispatch`. Review playable changes and export matching `web/` artifacts before pushing. The workflow uploads checked-in files; it does not build them.
 
 Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prepare rollback, restore `web/` from that tag into a new branch, review the diff, merge and explicitly deploy. No history rewrite is required. Tags, merges, pushes and publication are separate operations; publication must be requested explicitly.
 
@@ -97,7 +97,7 @@ Run python tools/audit_assets.py --regenerate-audio to verify the catalog and re
 
 ## Authored docs backup
 
-Run python tools/backup_docs.py --output-dir <directory-outside-docs> to create a unique ZIP and SHA-256 sidecar. It covers authored docs and captures/references, excluding generated builds/validation/ci. Run --verify <zip> to check every member against the embedded manifest. python tools/test_backup_docs.py checks round-trip bytes, exclusions, non-overwrite behavior and invalid destinations/extra members. A same-PC ZIP is not off-device storage; no automatic schedule is created.
+Run `python tools/backup_docs.py` to create a unique ZIP and SHA-256 sidecar in `docs/backups/`. It covers authored docs and captures/references, excluding `builds`, `validation`, `ci`, and `backups` before traversing them, so backups never include earlier backups. `--output-dir` can select a subdirectory of `docs/backups/` or an external directory. Run `--verify <zip>` to check every member against the embedded manifest. `python tools/test_backup_docs.py` checks round-trip bytes, exclusions, repeated internal backups, default output, and invalid destinations/extra members. A same-PC ZIP is not off-device storage; no automatic schedule is created.
 
 Release builds containing tools/export_notices.gd generate THIRD_PARTY_NOTICES.txt with the running engine's embedded notices and the bundled Sentry license. The manifest marks notices_generated and includes its hash; verify_build.py requires that file when declared. Asset auditing normalizes CRLF to LF for textual sources while preserving binary audio hashes.
 
