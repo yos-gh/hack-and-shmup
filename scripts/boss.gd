@@ -2,6 +2,7 @@ extends RefCounted
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
 
+var fortress = preload("res://scripts/boss_fortress.gd").new()
 var siege = preload("res://scripts/boss_siege.gd").new()
 var hunter = preload("res://scripts/boss_hunter.gd").new()
 var halo = preload("res://scripts/boss_halo.gd").new()
@@ -23,8 +24,8 @@ func radial_angle(index: int, count: int) -> float:
 const VOLLEY_COUNTS := [13, 8, 5, 3, 2, 1]
 const MAX_VOLLEY_COUNTS := [22,16,12,9,6,4]
 const SHOT_INTERVALS := [0.7, 0.95, 1.2, 1.5, 1.8, 2.1]
-const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE"]
-const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b")]
+const NAMES := ["SIEGE ARRAY", "VECTOR HUNTER", "HALO ENGINE", "IRON CITADEL"]
+const COLORS := [Color("d996ed"), Color("78dbea"), Color("ffc46b"), Color("ff9470")]
 var lasers: Array[Dictionary] = []
 var pending_summons: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
@@ -61,11 +62,16 @@ func rate_scale(game) -> float:
 
 func build_layout(data) -> void:
 	data.rooms.assign([Rect2i(-12,-4,9,9), Rect2i(0,-10,28,22)])
+	if data.boss_variant == 3: data.rooms[1] = Rect2i(0,-17,48,36)
 	data.room_shapes.assign([0,0])
 	for i in range(2):
 		var room: Rect2i = data.rooms[i]
 		for y in range(room.position.y,room.end.y):
 			for x in range(room.position.x,room.end.x): data.cells[Vector2i(x,y)] = i
+	if data.boss_variant == 3:
+		for pillar in [Vector2i(7,-11),Vector2i(7,11),Vector2i(39,-11),Vector2i(39,11)]:
+			for y in range(2):
+				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
 	data.connect_rooms(0,1)
 	data.room_links.append(Vector2i(0,1))
 	data.goal_room = 1
@@ -82,7 +88,10 @@ func build_layout(data) -> void:
 			"active":false,"searching":false,"notice":0.65,"turn_speed":2.4,
 			"cd":0.8+i*0.22,"charge":0.0,"stun":0.0,"dir":Vector2.LEFT,
 			"push":Vector2.ZERO,"shots":i % 2,"summon_cd":1.0,"pressure_cd":1.1,"orbit_side":1.0,"laser_cd":2.0})
-	data.boss_max_hp = hp * TURRETS
+	if data.boss_variant == 3:
+		data.enemies[0].p = data.center(Vector2i(24,1))+Vector2(-240,0)
+		fortress.setup(data,data.enemies[0])
+	data.boss_max_hp = data.enemies[0].hp if data.boss_variant == 3 else hp * TURRETS
 	data.time_limit = 0.0
 	data.route_seconds = 0.0
 	data.player = data.spawn_point
@@ -122,13 +131,21 @@ func emit_salvo(game, salvo: Dictionary) -> void:
 	var owner: Dictionary = salvo.owner
 	if game.boss_variant == 0: present_siege_shot(game,owner)
 	var origin: Vector2 = salvo.get("origin",owner.p)
+	if game.boss_variant == 3:
+		if salvo.has("gun"): origin = fortress.gun_position(owner,salvo.gun)
+		game.enemy_attack_cue("siege_fire",origin)
 	if game.boss_variant == 2: game.enemy_attack_cue("halo_option" if salvo.has("origin") else "halo_fire",origin)
 	elif game.boss_variant == 1: game.enemy_attack_cue("hunter_burst",origin)
 	var aim: Vector2 = salvo.aim
-	if aim == Vector2.ZERO: aim = origin.direction_to(game.player)
+	if aim == Vector2.ZERO: aim = origin.direction_to(game.player+owner.get("player_velocity",Vector2.ZERO)*salvo.get("lead",0.0))
 	for offset in salvo.offsets:
 		game.emit_shot(origin,aim.rotated(offset),salvo.speed,1,true,1200)
 		game.bullets[-1]["pressure"] = salvo.speed > 120.0
+		if salvo.get("guided",false):
+			game.bullets[-1].merge({"guided":true,"pressure":false,"homing_time":1.15,"turn_rate":1.25},true)
+		if salvo.has("pattern"):
+			game.bullets[-1]["pattern"] = salvo.pattern
+			if salvo.pattern == "radial": game.bullets[-1].pressure = false
 
 func warning(e: Dictionary) -> float:
 	var value := clampf(1.0-e.cd/0.6,0.0,1.0)
@@ -149,6 +166,7 @@ func hunter_velocity(game, e: Dictionary, toward: Vector2) -> Vector2:
 
 func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vector2:
 	match game.boss_variant:
+		3: return fortress.advance(self,game,e,delta,toward)
 		0: return siege.advance(self,game,e,delta,toward)
 		1: return hunter.advance(self,game,e,delta,toward)
 	return halo.advance(self,game,e,delta,toward)
@@ -179,9 +197,13 @@ func advance_lasers(game, delta: float) -> void:
 	var sounded_owners: Array = []
 	for beam in lasers:
 		if beam.owner.hp <= 0: beam.duration = 0; continue
+		if beam.has("gun"):
+			if beam.warning <= 0 and beam.has("sweep"): beam.heading = beam.heading.rotated(beam.sweep*minf(delta,beam.duration))
+			beam.a = fortress.gun_position(beam.owner,beam.gun)
+			beam.b = game.attack_end(beam.a,beam.heading,1800)
 		if beam.warning > 0:
 			beam.warning = maxf(0.0,beam.warning-delta)
-			if beam.warning == 0 and game.boss_variant == 1 and not sounded_owners.has(beam.owner):
+			if beam.warning == 0 and game.boss_variant in [1,3] and not sounded_owners.has(beam.owner):
 				game.enemy_attack_cue("hunter_fire",beam.a)
 				sounded_owners.append(beam.owner)
 			continue

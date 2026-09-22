@@ -58,12 +58,13 @@ func draw(game, screen: Vector2) -> void:
 	if game.stairs_unlocked and game.discovered.has(game.goal_room): game.presentation.draw_stairs(game)
 	draw_lasers(game)
 	draw_options(game)
+	if game.boss_floor and game.boss_variant == 3: game.boss.fortress.draw(game)
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
 		MobVisuals.draw_warning(game,e)
 		var warning = game.attack_warning(e)
-		if game.depth_enabled and e.kind == Catalog.Enemy.BOSS: continue
+		if e.kind == Catalog.Enemy.BOSS and (game.depth_enabled or game.boss_variant == 3): continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and Catalog.is_mob(e.kind):

@@ -21,7 +21,7 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 	data.physics_ticks = settings.physics_ticks
 	data.boss_floor = settings.depth % 5 == 0
 	if data.boss_floor:
-		data.boss_variant = data.rng.randi_range(0,2) if settings.boss_choice < 0 else clampi(settings.boss_choice,0,2)
+		data.boss_variant = (3 if settings.depth % 25 == 0 else data.rng.randi_range(0,2)) if settings.boss_choice < 0 else clampi(settings.boss_choice,0,3)
 		Boss.new().build_layout(data)
 		return data
 	# Scatter larger rooms without overlap, then connect a spanning tree and loops.

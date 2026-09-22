@@ -4,7 +4,7 @@ extends RefCounted
 const Catalog = preload("res://scripts/combat_catalog.gd")
 const BOSS_DAMAGE_SECONDS := 12.0
 # VECTOR loses player attack time to movement and summon interception.
-const BOSS_HP_FACTORS := [1.0, 0.90, 1.0]
+const BOSS_HP_FACTORS := [1.0, 0.90, 1.0, 1.0]
 const SCATTER_REFERENCE_HITS := 6
 
 static func reference_power(depth: int) -> float:

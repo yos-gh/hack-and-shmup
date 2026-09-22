@@ -263,7 +263,9 @@ func sync_other_bosses(game) -> void:
 			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
 			var warning: float = game.attack_warning(enemy)
 			var facing: Vector2 = enemy.p.direction_to(game.player) if enemy.active else enemy.dir
-			if game.boss_variant == 0:
+			if game.boss_variant == 3:
+				game.boss.fortress.draw_depth(self,game,enemy,parts)
+			elif game.boss_variant == 0:
 				var flash: float = game.boss.shot_flash(game,enemy.p)
 				var ink: Color = game.boss.COLORS[0].lerp(Color("fff5ff"),flash*0.8)
 				# Stationary diamond footing, independent of the swivelling turret.
