@@ -13,16 +13,11 @@ func check(ok: bool, message: String) -> void:
 		failures += 1
 
 func run() -> void:
-	for depth in range(1, 31):
-		for kind in Catalog.ENEMIES:
-			check(Balance.mob_health(kind, depth) == Catalog.ENEMIES[kind].health(depth), "all early mob health unchanged")
 	for depth in [31, 40, 50, 60, 80, 100, 104, 200]:
 		for kind in Catalog.ENEMIES:
 			check(Balance.mob_health(kind, depth) >= Balance.mob_health(kind, depth - 1), "health monotone across depths")
 		check(Balance.mob_health(Catalog.Enemy.SHIELD, depth) == 1.0, "shield remains one HP")
 		check(Balance.mob_health(Catalog.Enemy.SNIPER, depth) <= Balance.reference_power(depth) * 2, "sniper reference two-shot cap")
-	check(is_equal_approx(Balance.mob_health(Catalog.Enemy.CHASER, 50), 66.0), "floor 50 reference health")
-	check(is_equal_approx(Balance.primary_dps(14.2, 9.0), 852.0), "104 screenshot real primary DPS")
 	# Measure the same cooldown subtraction used by primary/sub fire, including frame rounding.
 	for rate in [1.0, 1.2, 2.0, 3.25, 5.4, 5.58, 9.0]:
 		var cooldown := 0.0

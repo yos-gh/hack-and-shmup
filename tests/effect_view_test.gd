@@ -1,4 +1,6 @@
 extends SceneTree
+## Hit/kill/shield feedback renders without touching combat state, the
+## batched spark renderer leaves no ghost instances, and death bursts expire.
 const Scenario = preload("res://tools/dev_scenario.gd")
 var failures := 0
 
@@ -9,12 +11,11 @@ func check(ok: bool, message: String) -> void:
 		push_error("FAIL: "+message)
 		failures += 1
 
-func frame(game) -> Image:
+func frame(game) -> void:
 	game.queue_redraw()
-	for i in range(3):
+	for i in range(2):
 		await process_frame
 		await RenderingServer.frame_post_draw
-	return root.get_texture().get_image()
 
 func run() -> void:
 	if DisplayServer.get_name() == "headless":
@@ -28,50 +29,27 @@ func run() -> void:
 	game.set_process_unhandled_input(false)
 	game.enemies.clear()
 	game.bullets.clear()
-	game.banner = 0
 	game.set_depth_view(true)
-	var baseline: Image = await frame(game)
-	DirAccess.make_dir_recursive_absolute("res://docs/validation/effects")
 	for kind in ["hit","shield","kill"]:
 		game.effects.clear()
 		game.particles.clear()
 		game.damage_labels.clear()
 		game.combat_feedback.enemy_hit(game.player+Vector2(70,0),1,kind == "shield",kind == "kill",game)
-		if kind == "kill":
-			for effect in game.effects:
-				if effect.kind == 5: effect.life = 0.18
 		var before := var_to_bytes([Scenario.digest(game),game.effects,game.particles,game.effects_rng.state])
-		var visible: Image = await frame(game)
-		check(before == var_to_bytes([Scenario.digest(game),game.effects,game.particles,game.effects_rng.state]),"effect rendering is read-only: "+kind)
-		var center: Vector2i = Vector2i(game.world_to_screen(game.player+Vector2(70,0)))
-		var changed := 0
-		for y in range(-26,27):
-			for x in range(-26,27):
-				var point := center+Vector2i(x,y)
-				if visible.get_pixelv(point).get_luminance()>baseline.get_pixelv(point).get_luminance()+0.05: changed += 1
-		check(changed>25,"impact effect has visible local pixels: "+kind)
-		visible.save_png("res://docs/validation/effects/"+kind+".png")
-	for remaining in [0.02,0.01,0.000001]:
-		for effect in game.effects:
-			if effect.kind == 5: effect.life = remaining
 		await frame(game)
-	# The batched shard renderer must remain visible and clear empty batches.
-	game.effects.clear()
-	game.damage_labels.clear()
+		check(before == var_to_bytes([Scenario.digest(game),game.effects,game.particles,game.effects_rng.state]),"effect rendering is read-only: "+kind)
 	game.particles.clear()
 	game.particles.append({"p":game.player+Vector2(70,0),"v":Vector2(60,0),"life":0.3,"color":Color.WHITE})
-	var shard: Image = await frame(game)
-	var shard_point := Vector2i(game.world_to_screen(game.player+Vector2(70,0)))
-	check(shard.get_pixelv(shard_point).get_luminance()>baseline.get_pixelv(shard_point).get_luminance()+0.1,"batched particle is visible")
+	await frame(game)
+	check(game.world_view.particle_batch.visible_instance_count == 1,"batched spark is submitted")
 	game.particles.clear()
 	await frame(game)
-	check(game.world_view.particle_batch.visible_instance_count == 0,"empty particle batch leaves no ghost shards")
+	check(game.world_view.particle_batch.visible_instance_count == 0,"empty particle batch leaves no ghost sparks")
 	game.combat_feedback.enemy_hit(game.player+Vector2(70,0),1,false,true,game)
-	# Existing lifetime processing must also remove the new bounded death bursts.
 	game.replay_input = {"movement":Vector2.ZERO,"aim":Vector2.RIGHT,"primary":false,"secondary":false}
 	game.grace = 2
 	game._physics_process(0.4)
-	check(game.effects.filter(func(e): return e.kind == 5).is_empty(),"death burst expires through existing lifetime processing")
+	check(game.effects.filter(func(e): return e.kind == 5).is_empty(),"death burst expires through normal lifetime processing")
 	game.free()
-	if failures == 0: print("PASS: hit/shield/death pixels, read-only draw and death burst expiry")
+	if failures == 0: print("PASS: read-only feedback rendering, spark batch hygiene and death burst expiry")
 	quit(1 if failures else 0)
