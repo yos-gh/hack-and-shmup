@@ -2,6 +2,7 @@ extends RefCounted
 
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const BossFx = preload("res://scripts/boss_fx.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
 var seraph_projectiles = preload("res://scripts/seraph_projectiles.gd").new()
@@ -9,6 +10,23 @@ var radial_cache: Dictionary = {}
 var radial_floor := -1
 var radial_discovery := -1
 var radial_reach := -1.0
+var glow_texture: Texture2D = soft_glow()
+
+static func soft_glow() -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0,0.25,1.0])
+	gradient.colors = PackedColorArray([Color(1,1,1,1),Color(1,1,1,0.35),Color(1,1,1,0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5,0.5)
+	texture.fill_to = Vector2(0.5,0.0)
+	texture.width = 64
+	texture.height = 64
+	return texture
+
+func glow(game, p: Vector2, radius: float, color: Color) -> void:
+	game.draw_texture_rect(glow_texture,Rect2(p-Vector2.ONE*radius,Vector2.ONE*radius*2),false,color)
 
 func shock_outline(game, origin: Vector2, radius: float) -> PackedVector2Array:
 	var discovery: int = game.discovered.hash()
@@ -97,6 +115,7 @@ func draw(game, screen: Vector2) -> void:
 			var radius: float = b.orb_radius
 			var charge: bool = b.orb_phase == "charge"
 			var flash: float = clampf(b.orb_flash/0.15,0.0,1.0)
+			glow(game,b.p,radius*2.1,Color(0.62,0.3,1.0,0.32+flash*0.3))
 			if not charge and b.v.length() > 0:
 				var tail: Vector2 = b.p-b.v.normalized()*minf(58.0,b.v.length()*0.2)
 				game.draw_line(tail,b.p,Color(0.72,0.4,1.0,0.25),radius*0.7,true)
@@ -115,21 +134,31 @@ func draw(game, screen: Vector2) -> void:
 			continue
 		var bullet_ink = Color("ff788e") if b.get("pressure",false) else (Color("d996ed") if b.get("guided",false) else Color("ffb95e"))
 		if not b.hostile and b.get("scatter_visual",false):
-			var tail: Vector2 = game.attack_end(b.p,-b.v.normalized(),16)
-			game.draw_line(tail,b.p,Color(0.45,1,0.86,0.45),4)
-			game.draw_line(tail.lerp(b.p,0.5),b.p,Color("e2fff5"),2)
+			var tail: Vector2 = game.attack_end(b.p,-b.v.normalized(),22)
+			game.draw_line(tail,b.p,Color(0.45,1,0.86,0.22),6,true)
+			game.draw_line(tail.lerp(b.p,0.3),b.p,Color(0.55,1,0.88,0.7),2.5,true)
+			game.draw_line(tail.lerp(b.p,0.7),b.p,Color("f2fffb"),1.5,true)
 		else:
-			var tail: Vector2 = b.p-b.v.normalized()*12
+			var heading: Vector2 = b.v.normalized()
 			if b.hostile:
+				var tail: Vector2 = b.p-heading*12
+				if b.get("guided",false):
+					# Guided seekers leave a fading exhaust plume.
+					for k in range(3):
+						game.draw_line(b.p-heading*(10+k*9),b.p-heading*(19+k*9),Color(bullet_ink,0.32-k*0.09),5.0-k,true)
+				# Hostile shots keep a dark keyline, then a warm danger halo and hot core.
+				glow(game,b.p,11,Color(bullet_ink,0.30))
 				game.draw_line(tail,b.p,Color("151520"),6,true)
 				game.draw_line(tail,b.p,bullet_ink,4,true)
-				game.draw_line(b.p-b.v.normalized()*4,b.p,Color("fff0d5"),1.5,true)
+				game.draw_line(b.p-heading*5,b.p,Color("fff6e6"),2,true)
 				if shape == "seeker":
-					var fin: Vector2 = b.v.normalized().orthogonal()*5
-					game.draw_polyline(PackedVector2Array([tail+fin,b.p-b.v.normalized()*5,tail-fin]),bullet_ink,2,true)
+					var fin: Vector2 = heading.orthogonal()*5
+					game.draw_polyline(PackedVector2Array([tail+fin,b.p-heading*5,tail-fin]),bullet_ink,2,true)
 			else:
-				game.draw_line(tail,b.p,Color(0.35,1,0.82,0.22),4,true)
-				game.draw_line(tail,b.p,Color("d5fff2"),1.5,true)
+				var tail: Vector2 = b.p-heading*18
+				game.draw_line(tail,b.p,Color(0.35,1,0.82,0.18),5,true)
+				game.draw_line(tail.lerp(b.p,0.35),b.p,Color(0.5,1,0.86,0.6),2.2,true)
+				game.draw_line(b.p-heading*6,b.p,Color("f4fffb"),1.6,true)
 	var preview_aim: Vector2 = game.controls.aim(game)
 	var preview_alpha = 0.18 if game.sub_cd <= 0 else 0.06
 	if game.sub_weapon == 0:
@@ -139,7 +168,7 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, fan, Color(1,0.75,0.4,preview_alpha * 0.4))
 		game.draw_polyline(fan,Color(1,0.75,0.4,preview_alpha * 2),1)
 	elif game.sub_weapon == 2:
-		draw_lance(game,game.LanceTrace.lanes(game,game.player,preview_aim),preview_alpha,0)
+		draw_lance_guide(game,game.LanceTrace.lanes(game,game.player,preview_aim),game.sub_cd <= 0,game.hud.cooldown_fraction(game))
 	if game.sub_weapon == 1:
 		var outline = PackedVector2Array()
 		outline = shock_outline(game,game.player,game.SHOCK_RADIUS)
@@ -149,13 +178,17 @@ func draw(game, screen: Vector2) -> void:
 		if effect.kind == 5:
 			if effect.life < 0.02: continue
 			var progress: float = clampf(1-effect.life/0.30,0,1)
-			var ink := Color(1,0.42,0.55,(1-progress)*0.8)
+			var ink := Color(1,0.42,0.55,(1-progress)*0.9)
+			var flash: float = maxf(0,1-progress*3.0)
+			if flash > 0: glow(game,effect.p,14+progress*24,Color(1,0.75,0.8,flash*0.45))
+			glow(game,effect.p,26+progress*22,Color(1,0.3,0.45,(1-progress)*0.2))
 			for i in range(6):
-				var axis := Vector2.from_angle(i*TAU/6)
-				var center: Vector2 = effect.p+axis*(8+progress*22)
+				var axis := Vector2.from_angle(i*TAU/6+progress*0.6)
+				var center: Vector2 = effect.p+axis*(8+progress*30)
 				var side := axis.orthogonal()*(3*(1-progress))
-				game.draw_polyline(PackedVector2Array([center-axis*3-side,center+side,center+axis*5+side]),ink,1.6,true)
-			game.draw_arc(effect.p,8+progress*12,0,TAU,24,Color(1,0.8,0.85,(1-progress)*(1-progress)*0.5),1,true)
+				game.draw_polyline(PackedVector2Array([center-axis*3-side,center+side,center+axis*5+side]),ink,2.0,true)
+			game.draw_arc(effect.p,8+progress*26,0,TAU,32,Color(1,0.85,0.9,(1-progress)*(1-progress)*0.8),2.0,true)
+			game.draw_arc(effect.p,6+progress*16,0,TAU,24,Color(1,0.45,0.6,(1-progress)*0.5),1.2,true)
 		elif effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
 			var radius := 9+(1-fade)*6
@@ -166,6 +199,7 @@ func draw(game, screen: Vector2) -> void:
 					game.draw_polyline(points,ink,2,true)
 			else:
 				var ink := Color(1.0,0.9,0.76,fade)
+				glow(game,effect.p,14,Color(1,0.85,0.6,fade*0.55))
 				game.draw_circle(effect.p,3*fade,Color(1,0.98,0.9,fade*0.8))
 				for i in range(4):
 					var ray := Vector2.from_angle(PI/4+i*PI/2)
@@ -178,22 +212,33 @@ func draw(game, screen: Vector2) -> void:
 			reach_outline = shock_outline(game,effect.p,game.SHOCK_RADIUS)
 			# Damage is immediate: show the clipped full reach from the first frame.
 			var arrival := maxf(0,1.0-progress/0.45)
-			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.045))
+			var remaining: float = effect.life/0.4
+			draw_radial_fill(game, effect.p, reach_outline, Color(0.3,1,0.85,arrival*0.07))
+			if arrival > 0: glow(game,effect.p,game.SHOCK_RADIUS*0.6,Color(0.5,1,0.9,arrival*0.35))
 			game.draw_polyline(reach_outline,Color(0.4,1,0.9,arrival*0.65),1.5)
-			game.draw_polyline(outline,Color(0.3,1,0.85,effect.life/0.4*0.22),11,true)
-			game.draw_polyline(outline,Color(0.7,1,0.93,effect.life/0.4),2,true)
+			game.draw_polyline(outline,Color(0.2,0.9,1.0,remaining*0.10),26,true)
+			game.draw_polyline(outline,Color(0.3,1,0.85,remaining*0.25),11,true)
+			game.draw_polyline(outline,Color(0.85,1,0.96,remaining),2.5,true)
 		elif effect.kind == 1:
 			var fade: float = minf(1.0,effect.life/0.09)
 			var core: float = clampf((effect.life-0.16)/0.12,0,1)
-			draw_lance(game,effect.rays,0.28*fade,core)
+			draw_lance_fire(game,effect.rays,fade,core)
 	draw_particles(game)
 	for entry in game.damage_labels:
 		var number = damage_number(entry.damage)
 		var alpha = minf(1.0, entry.life / 0.2)
-		game.label_at(entry.p + Vector2(1,1), number, 17, Color(0.02,0.03,0.05,alpha))
-		game.label_at(entry.p, number, 17, Color(1.0,0.95,0.75,alpha))
+		# Fresh numbers pop slightly larger, then settle.
+		var size := 17 if entry.life < 0.55 else 20
+		game.label_at(entry.p + Vector2(1,2), number, size, Color(0.02,0.03,0.05,alpha*0.9))
+		game.label_at(entry.p, number, size, Color(1.0,0.95,0.75,alpha).lerp(Color.WHITE,clampf((entry.life-0.5)*6,0,1)))
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
+		var breath: float = 0.5+0.5*sin(game.presentation.clock*5.0)
+		glow(game,game.player,34+breath*4,Color(0.3,1,0.85,0.20+breath*0.06))
 		if not game.depth_enabled: game.draw_circle(game.player, 12, Color("63f5ce"))
+		var spin: float = game.presentation.clock*1.4
+		for i in range(3):
+			var start: float = spin+i*TAU/3
+			game.draw_arc(game.player,17,start,start+0.75,10,Color(0.39,0.96,0.81,0.6),1.5,true)
 		game.draw_circle(game.player, game.PLAYER_HIT_RADIUS, Color("13252f"))
 	var aim: Vector2 = game.controls.aim(game)
 	if not game.depth_enabled:
@@ -216,15 +261,95 @@ func draw(game, screen: Vector2) -> void:
 	if not game.boss_floor and game.time_left <= 5.0:
 		game.draw_arc(game.player,29,-PI/2,-PI/2+TAU*clampf(game.time_left/5,0.001,1),48,Color(1,0.28,0.34,0.8),3)
 
-func draw_lance(game, rays: Array, alpha: float, core: float) -> void:
-	for i in range(rays.size()):
-		var ray: Dictionary = rays[i]
+const LANCE_INK := Color(0.55,0.84,1.0)
+const TAPER_SAMPLES := [0.0,5.0,10.0,17.0,26.0]
+
+# Tapered outline of one lane: left edge forward, right edge back.
+func lane_polygon(game, ray: Dictionary, direction: Vector2, scale: float = 1.0) -> PackedVector2Array:
+	var length: float = ray.p.distance_to(ray.end)
+	var side := direction.orthogonal()
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	var samples: Array = TAPER_SAMPLES.filter(func(d): return d < length)
+	samples.append(length)
+	for d in samples:
+		var center: Vector2 = game.LanceTrace.lane_point(ray,direction,d)
+		var half: float = ray.width*0.5*game.LanceTrace.taper(d)*scale
+		left.append(center-side*half)
+		right.append(center+side*half)
+	right.reverse()
+	left.append_array(right)
+	return left
+
+func lance_direction(rays: Array) -> Vector2:
+	for ray in rays:
+		if ray.p.distance_squared_to(ray.end) > 0.01: return ray.p.direction_to(ray.end)
+	return Vector2.ZERO
+
+# Outer silhouette plus a stepped cap where lanes stop at different walls.
+func lance_outline(game, rays: Array, direction: Vector2, ink: Color, width: float) -> void:
+	var side := direction.orthogonal()
+	for index in [0,rays.size()-1]:
+		var ray: Dictionary = rays[index]
+		var length: float = ray.p.distance_to(ray.end)
+		if length < 0.1: continue
+		var sign_value := -1.0 if index == 0 else 1.0
+		var edge := PackedVector2Array()
+		var samples: Array = TAPER_SAMPLES.filter(func(d): return d < length)
+		samples.append(length)
+		for d in samples:
+			edge.append(game.LanceTrace.lane_point(ray,direction,d)+side*sign_value*ray.width*0.5*game.LanceTrace.taper(d))
+		game.draw_polyline(edge,ink,width,true)
+	var previous := Vector2.INF
+	for ray in rays:
 		if ray.p.distance_squared_to(ray.end) < 0.01: continue
-		var side: Vector2 = ray.p.direction_to(ray.end).orthogonal()*ray.width*0.5
-		game.draw_colored_polygon(PackedVector2Array([ray.p-side,ray.end-side,ray.end+side,ray.p+side]),Color(0.62,0.86,1,alpha))
-		game.draw_line(ray.end-side,ray.end+side,Color(0.78,0.94,1,minf(1,alpha*2)),1)
-		if absf(i-(rays.size()-1)*0.5) <= 1 and core > 0:
-			game.draw_line(ray.p,ray.end,Color(0.88,0.98,1,0.9*core),ray.width)
+		var half: Vector2 = side*ray.width*0.5
+		game.draw_line(ray.end-half,ray.end+half,ink,width)
+		if previous != Vector2.INF and previous.distance_to(ray.end-half) > 1.5:
+			game.draw_line(previous,ray.end-half,ink,width)
+		previous = ray.end+half
+
+func draw_lance_guide(game, rays: Array, ready: bool, fraction: float) -> void:
+	var direction := lance_direction(rays)
+	if direction == Vector2.ZERO: return
+	for ray in rays:
+		if ray.p.distance_squared_to(ray.end) < 0.01: continue
+		game.draw_colored_polygon(lane_polygon(game,ray,direction),Color(LANCE_INK,0.07 if ready else 0.025))
+	lance_outline(game,rays,direction,Color(LANCE_INK,0.6 if ready else 0.16),1.2)
+	var middle: Dictionary = rays[int(rays.size()*0.5)]
+	var length: float = middle.p.distance_to(middle.end)
+	var origin: Vector2 = middle.origin
+	if ready:
+		# Marching dashes flow outward along the armed beam.
+		var phase: float = fmod(game.presentation.clock*140.0,26.0)
+		var d := 14.0+phase
+		while d < length:
+			game.draw_line(origin+direction*d,origin+direction*minf(d+11.0,length),Color(0.78,0.93,1.0,0.55),1.5,true)
+			d += 26.0
+	else:
+		# Recharge fills the lane from the muzzle outward.
+		game.draw_line(origin+direction*14,origin+direction*maxf(14,length*fraction),Color(LANCE_INK,0.32),2,true)
+
+func draw_lance_fire(game, rays: Array, fade: float, core: float) -> void:
+	var direction := lance_direction(rays)
+	if direction == Vector2.ZERO: return
+	for ray in rays:
+		if ray.p.distance_squared_to(ray.end) < 0.01: continue
+		game.draw_colored_polygon(lane_polygon(game,ray,direction),Color(0.62,0.86,1,0.34*fade))
+	lance_outline(game,rays,direction,Color(0.82,0.96,1,0.9*fade),1.6)
+	if core <= 0: return
+	# The hot core follows the central lanes and the same muzzle taper.
+	var middle: Dictionary = rays[int(rays.size()*0.5)]
+	var total: float = game.LANCE_WIDTH
+	var shaft := {"p":middle.origin,"origin":middle.origin,"end":middle.end,"width":total}
+	game.draw_colored_polygon(lane_polygon(game,shaft,direction,1.9),Color(0.4,0.75,1,0.22*core))
+	game.draw_colored_polygon(lane_polygon(game,shaft,direction,0.62),Color(0.85,0.97,1,0.85*core))
+	game.draw_colored_polygon(lane_polygon(game,shaft,direction,0.22),Color(1,1,1,core))
+	glow(game,middle.origin+direction*10,total*1.4+10,Color(0.7,0.92,1,core*0.7))
+	glow(game,middle.end,total*2.0+10,Color(0.7,0.92,1,core*0.8))
+	for i in range(4):
+		var spark := Vector2.from_angle(direction.angle()+PI+(i-1.5)*0.55)
+		game.draw_line(middle.end+spark*4,middle.end+spark*(10+total*0.8*core),Color(0.9,0.97,1,core),1.5,true)
 
 func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color: Color) -> void:
 	for i in range(outline.size() - 1):
@@ -232,22 +357,15 @@ func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color:
 			game.draw_colored_polygon(PackedVector2Array([origin, outline[i], outline[i + 1]]), color)
 
 func draw_lasers(game) -> void:
+	var clock: float = game.presentation.clock
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
-		var direction: Vector2 = beam.a.direction_to(beam.b)
-		if direction.is_zero_approx(): continue
-		var side: Vector2 = direction.orthogonal()*float(beam.get("width",14.0))*0.5
-		var opacity := 0.10 if beam.warning > 0 else 0.28
-		var hue := Color("f7dab0") if game.boss_variant == 2 else Color("ff6259")
-		game.draw_colored_polygon(PackedVector2Array([beam.a-side,beam.b-side,beam.b+side,beam.a+side]),Color(hue,opacity))
-		var edge := Color(hue,0.18 if beam.warning > 0 else 0.38)
-		game.draw_line(beam.a-side,beam.b-side,edge,1.0,true)
-		game.draw_line(beam.a+side,beam.b+side,edge,1.0,true)
-		if beam.warning <= 0:
-			if game.boss_variant == 2:
-				game.draw_line(beam.a,beam.b,Color(1.0,0.91,0.76,0.32),8,true)
-			var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0)
-			if flash > 0: game.draw_line(beam.a,beam.b,Color(0.95,1.0,0.94,0.9*flash),3.0,true)
+		var seraph: bool = game.boss_variant == 2
+		var hue := Color("ffd9a8") if seraph else Color("ff5a52")
+		var charging := -1.0
+		if beam.warning > 0: charging = 1.0-beam.warning/(1.15 if seraph else 0.95)
+		var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0) if beam.warning <= 0 else 0.0
+		BossFx.beam(game,beam.a,beam.b,float(beam.get("width",14.0)),hue,charging,flash,clock)
 
 func draw_particles(game) -> void:
 	if particle_batch == null:
@@ -267,8 +385,9 @@ func draw_particles(game) -> void:
 		var p: Dictionary = game.particles[i]
 		var fade: float = clampf(p.life/0.35,0,1)
 		var axis: Vector2 = p.v.normalized()
-		particle_batch.set_instance_transform_2d(i,Transform2D(axis*(2+fade*3),axis.orthogonal()*1.5,p.p))
-		particle_batch.set_instance_color(i,Color(p.color,fade))
+		# Speed-stretched sparks, white-hot at birth, cooling to their ink.
+		particle_batch.set_instance_transform_2d(i,Transform2D(axis*(2.5+fade*6.5),axis.orthogonal()*(0.9+fade*0.9),p.p))
+		particle_batch.set_instance_color(i,Color(p.color.lerp(Color.WHITE,fade*fade*0.55),minf(1,fade*1.4)))
 	if count > 0:
 		game.draw_multimesh(particle_batch,null)
 		particles_warmed = true

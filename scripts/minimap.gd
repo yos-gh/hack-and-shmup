@@ -99,9 +99,20 @@ func locate(game, point: Vector2, rect: Rect2) -> Vector2:
 
 func draw(game, panel: Rect2) -> void:
 	prepare(game)
-	game.draw_rect(panel,Color("101c2870"))
-	game.draw_line(panel.position,panel.position+Vector2(panel.size.x,0),Color("3a5968"),1)
-	game.hud.label_at(game,panel.position+Vector2(7,12),"PASSAGE" if active_room < 0 else "ROOM %02d" % (active_room+1),10,Color("a9c3ce"))
+	var Hud = game.hud
+	var plate: PackedVector2Array = Hud.chamfer(panel,10)
+	game.draw_colored_polygon(plate,Color(0.03,0.07,0.1,0.82))
+	game.draw_polyline(Hud.closed(plate),Color(0.3,0.62,0.66,0.45),1,true)
+	# Corner brackets frame the scanner.
+	var ink := Color(0.39,0.96,0.81,0.8)
+	for corner in [[Vector2(panel.end.x,panel.position.y),Vector2(-1,1)],[Vector2(panel.position.x,panel.end.y),Vector2(1,-1)]]:
+		var at: Vector2 = corner[0]
+		var sign_value: Vector2 = corner[1]
+		game.draw_line(at,at+Vector2(sign_value.x*14,0),ink,2)
+		game.draw_line(at,at+Vector2(0,sign_value.y*14),ink,2)
+	var sweep: float = fmod(game.presentation.clock*0.6,1.0)
+	game.draw_line(Vector2(panel.position.x+6,panel.position.y+18+sweep*(panel.size.y-24)),Vector2(panel.end.x-6,panel.position.y+18+sweep*(panel.size.y-24)),Color(0.39,0.96,0.81,0.12),2)
+	game.hud.label_at(game,panel.position+Vector2(12,13),"PASSAGE" if active_room < 0 else "ROOM %02d" % (active_room+1),10,Color("bfe8e4"))
 	var rect := projection(panel)
 	var envelope := PackedVector2Array()
 	for p in overview: envelope.append(rect.position+(p-Vector2(bounds.position))*rect.size/Vector2(bounds.size))
@@ -111,6 +122,7 @@ func draw(game, panel: Rect2) -> void:
 	game.draw_circle(goal,4,Color("101c28"))
 	preload("res://scripts/visual_icons.gd").draw_icon(game,"descend",goal,3,Color("ffb95e") if game.stairs_unlocked else Color("8b7965"))
 	var player := locate(game,game.player,rect)
+	game.world_view.glow(game,player,12,Color(0.39,0.96,0.81,0.5))
 	game.draw_circle(player,4.5,Color("090f18"))
 	game.draw_arc(player,4,0,TAU,20,Color("63f5ce"),1.3,true)
 	game.draw_circle(player,2,Color.WHITE)

@@ -24,6 +24,8 @@ var floor_entries: Dictionary = {}
 var recording_floor := false
 var floor_updates: Dictionary = {}
 var shown_rooms: Dictionary = {}
+var floor_material: ShaderMaterial
+var ripple_uniform := PackedVector4Array()
 
 func _ready() -> void:
 	viewport.own_world_3d = true
@@ -95,9 +97,9 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		iris.shader = preload("res://scripts/triangular_iris.gdshader") if key == "sniper" else preload("res://scripts/sniper_iris.gdshader")
 		instance.material_override = iris
 	if key == "floor":
-		var glass_floor := ShaderMaterial.new()
-		glass_floor.shader = preload("res://scripts/background_floor.gdshader")
-		instance.material_override = glass_floor
+		floor_material = ShaderMaterial.new()
+		floor_material.shader = preload("res://scripts/background_floor.gdshader")
+		instance.material_override = floor_material
 	if key in ["wall_v","wall_h"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	if key.begins_with("bg_"):
 		var glass := ShaderMaterial.new()
@@ -124,7 +126,8 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if not key.begins_with("bg_") and key not in ["floor","contact","wall_mask","wall_v","wall_h"]: instance.multimesh.instance_count = 128
 	stage.add_child(instance)
 	batches[key] = instance.multimesh
-	if key in ["actor_core","boss_core"]:
+	# Boss crystals use the faceted glass + wire look; only mob cores stay flat.
+	if key == "actor_core":
 		var core_material := StandardMaterial3D.new()
 		core_material.vertex_color_use_as_albedo = true
 		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -240,6 +243,11 @@ func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	var direction: Vector2 = target-enemy.p
 	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
 
+# Lighter wire for large secondary structure; primary silhouettes keep 1.0.
+static func weight(item: Dictionary, line: float) -> Dictionary:
+	item["line"] = line
+	return item
+
 func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector3, color: Color, height: float) -> Dictionary:
 	return chaser_entry(enemy.p+offset.rotated(facing.angle()),facing,size,color,height)
 
@@ -283,7 +291,7 @@ func _upload_mesh(mesh: MultiMesh, entries: Array) -> void:
 	for i in range(entries.size()):
 		mesh.set_instance_transform(i, entries[i].transform)
 		mesh.set_instance_color(i, entries[i].color)
-		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, 0.0, 0))
+		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, entries[i].get("line",0.0), 0))
 
 func set_active(value: bool) -> void:
 	active = value
@@ -312,6 +320,7 @@ func sync(game) -> void:
 		for child in stage.get_children():
 			if child is MultiMeshInstance3D and child.multimesh in [batches.bg_shell,batches.bg_core,batches.bg_strut,batches.bg_lower,batches.wall_v,batches.wall_h]:
 				child.material_override.set_shader_parameter("depth_slant",Vector2(0.45,-0.30) if pitch == 0 else Vector2.ZERO)
+	sync_floor_motion(game)
 	var discovery: int = hash(game.discovered)
 	if cached_floor != game.floor_revision:
 		rebuild_floor(game)
@@ -373,6 +382,14 @@ func sync(game) -> void:
 	game.queue_redraw()
 	max_sync_ms = maxf(max_sync_ms, (Time.get_ticks_usec()-started)/1000.0)
 
+func sync_floor_motion(game) -> void:
+	var fx = game.presentation
+	ripple_uniform.resize(8)
+	for i in range(8): ripple_uniform[i] = fx.ripples[i] if i < fx.ripples.size() else Vector4.ZERO
+	floor_material.set_shader_parameter("clock",fx.clock)
+	floor_material.set_shader_parameter("ripples",ripple_uniform)
+	floor_material.set_shader_parameter("ripple_count",fx.ripples.size())
+
 func refresh_discovery(game) -> void:
 	var started := Time.get_ticks_usec()
 	for owner in floor_updates:
@@ -403,6 +420,7 @@ func rebuild_floor(game) -> void:
 	var palette := Background.palette(game)
 	var outer: Color = palette[0]
 	var floor_ink := Background.with_lightness(Color("101923").lerp(outer,0.04),0.19)
+	floor_material.set_shader_parameter("grid_color",Background.with_lightness(outer.lerp(Color("63f5ce"),0.35),0.70))
 	for cell in game.cells:
 		var known: bool = game.cells[cell] == -1 or game.discovered.has(game.cells[cell])
 		var p: Vector2 = game.center(cell)
@@ -422,7 +440,7 @@ func rebuild_floor(game) -> void:
 			contacts.append(Background.tracked(entry(p+Vector2(direction)*15, contact_size, Color("101b28") if known else Color("0a111b"), -0.8),[game.cells[cell]],Color("101b28"),Color("0a111b")))
 			var tangent := Vector2(-direction.y,direction.x)*16
 			var target: Array = vertical_walls if direction.x != 0 else horizontal_walls
-			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lightened(0.13)))
+			target.append(Background.line_entry(project_point(wall_center-tangent),project_point(wall_center+tangent),outer.lerp(Color("9ffff0"),0.35).lightened(0.25)))
 	Background.build(self,game,pillars,palette)
 	upload("floor", floors)
 	upload("contact", contacts)

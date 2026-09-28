@@ -8,6 +8,8 @@ const CORE := 48.0
 const PATTERNS := ["radial","fan","laser","missile","fan","slam","radial","laser","fan","missile","slam","radial"]
 const EXPERT_PATTERNS := ["radial","crossfire","laser","missile","weave","slam","fan","scissor","radial","crossfire","missile","weave","slam","laser"]
 var motion = preload("res://scripts/fortress_motion.gd").new()
+const BossFx = preload("res://scripts/boss_fx.gd")
+const SHIELD_INK := Color("ffb07a")
 
 func setup(data, e: Dictionary) -> void:
 	var dps: float = Balance.primary_dps(data.power,data.fire_rate,data.physics_ticks)
@@ -104,7 +106,7 @@ func lance(game, e: Dictionary, rays: Array, direction: Vector2, damage: float) 
 		var finish: float = minf(ray.p.distance_to(ray.end),along+RADIUS+16)
 		var distance := start
 		while distance <= finish:
-			var point: Vector2 = ray.p+direction*distance
+			var point: Vector2 = game.LanceTrace.lane_point(ray,direction,distance)
 			var offset: Vector2 = point-e.p
 			if absf(offset.length()-RADIUS) <= 12:
 				var i := posmod(roundi(offset.angle()/TAU*COUNT),COUNT)
@@ -255,50 +257,62 @@ func draw(game) -> void:
 				game.draw_line(point,point+gun_direction(game,e,gun).rotated(-e.heading)*45,ink,10,true)
 			game.draw_circle(Vector2.ZERO,CORE,ink)
 			game.draw_set_transform_matrix(game.world_transform())
-		for i in range(COUNT):
-			var plate: Dictionary = e.plates[i]
-			var a := (i-0.47)*TAU/COUNT
-			var b := (i+0.47)*TAU/COUNT
-			if plate.hp > 0:
-				var panel := PackedVector2Array([e.p+Vector2.from_angle(a)*108,e.p+Vector2.from_angle(b)*108,e.p+Vector2.from_angle(b)*84,e.p+Vector2.from_angle(a)*84])
-				game.draw_colored_polygon(panel,Color("23474d").lerp(ink.darkened(0.5),1-plate.hp/plate.max_hp))
-				panel.append(panel[0])
-				game.draw_polyline(panel,Color("63f5ce").lerp(ink,1-plate.hp/plate.max_hp),2,true)
-			else:
-				game.draw_arc(e.p,RADIUS,a,b,8,Color(0.4,0.9,0.85,0.15+0.3*(1-plate.timer/REBUILD)),2,true)
+		var clock: float = game.presentation.clock
+		var rage: bool = e.hp <= e.max_hp*0.5
+		BossFx.shield_ring(game,e,COUNT,SHIELD_INK,REBUILD)
+		BossFx.energy_core(game,e.p,CORE*0.5,ink,clock,rage)
 		for gun in range(4):
 			var origin := gun_position(e,gun)
+			var progress := -1.0
 			for salvo in game.boss.salvos:
 				if salvo.owner == e and salvo.get("gun",-1) == gun and salvo.delay <= 0.6:
-					game.draw_arc(origin,27,0,TAU,20,ink,2+3*(1-salvo.delay/0.6),true)
+					progress = maxf(progress,1.0-salvo.delay/0.6)
+			if progress >= 0: BossFx.charge(game,origin,progress,ink)
 		for beam in game.boss.lasers:
 			if beam.owner != e or not beam.has("sweep") or beam.warning <= 0: continue
+			# Sweep direction: a chevron trail along the arc the beam will travel.
 			var angle: float = beam.heading.angle()
 			var end_angle: float = angle+beam.sweep*0.8
-			game.draw_arc(beam.a,90,angle,end_angle,18,ink,2,true)
-			var tip: Vector2 = beam.a+Vector2.from_angle(end_angle)*90
-			var tangent := Vector2.from_angle(end_angle).orthogonal()*signf(beam.sweep)
-			game.draw_polyline(PackedVector2Array([tip-tangent*12+tangent.orthogonal()*6,tip,tip-tangent*12-tangent.orthogonal()*6]),ink,2,true)
+			game.draw_arc(beam.a,90,angle,end_angle,18,Color(ink,0.7),1.6,true)
+			for k in range(3):
+				var t: float = fmod(clock*1.5+k/3.0,1.0)
+				var at: float = lerpf(angle,end_angle,t)
+				var tip: Vector2 = beam.a+Vector2.from_angle(at)*90
+				var tangent := Vector2.from_angle(at).orthogonal()*signf(beam.sweep)
+				game.draw_polyline(PackedVector2Array([tip-tangent*9+tangent.orthogonal()*6,tip,tip-tangent*9-tangent.orthogonal()*6]),Color(ink,0.9*sin(t*PI)),2,true)
 		for slam in e.slam:
-			game.draw_line(e.p,slam.p,ink.darkened(0.5),5,true)
-			game.draw_circle(slam.p,slam.radius,Color(1,0.3,0.2,0.16 if not slam.fired else 0.5))
-			game.draw_arc(slam.p,slam.radius,0,TAU,48,ink,3,true)
-			if not slam.fired: game.draw_arc(slam.p,slam.radius*clampf(1-slam.time/slam.warning,0,1),0,TAU,48,Color.WHITE,2,true)
-			var hammer: Vector2 = slam.p+Vector2(0,-maxf(0,slam.time)*65)
-			game.draw_rect(Rect2(hammer-Vector2(24,18),Vector2(48,36)),ink.darkened(0.45))
-			game.draw_rect(Rect2(hammer-Vector2(24,18),Vector2(48,36)),ink,false,3)
+			if slam.fired:
+				BossFx.impact(game,slam.p,slam.radius,-slam.time,ink)
+				continue
+			var progress: float = clampf(1-slam.time/slam.warning,0,1)
+			BossFx.dashed(game,e.p,slam.p,Color(ink,0.3),clock)
+			BossFx.target_mark(game,slam.p,slam.radius,progress,ink,clock)
+			# The hammer falls from above; its shadow tightens as it lands.
+			var height: float = maxf(0,slam.time)*65
+			var hammer: Vector2 = slam.p+Vector2(0,-height)
+			game.draw_circle(slam.p,lerpf(34,20,progress),Color(0,0,0,0.3))
+			for k in range(3):
+				var x: float = (k-1)*14.0
+				game.draw_line(hammer+Vector2(x,-24),hammer+Vector2(x,-24-18-height*0.25),Color(ink,0.35),1.2,true)
+			var head := PackedVector2Array([hammer+Vector2(-26,-12),hammer+Vector2(-18,-20),hammer+Vector2(18,-20),hammer+Vector2(26,-12),hammer+Vector2(26,12),hammer+Vector2(18,20),hammer+Vector2(-18,20),hammer+Vector2(-26,12)])
+			game.draw_colored_polygon(head,Color(ink.darkened(0.65),0.9))
+			head.append(head[0])
+			game.draw_polyline(head,ink,2,true)
+			game.draw_line(hammer+Vector2(-18,6),hammer+Vector2(18,6),Color(ink,0.6),1.2,true)
+			BossFx.glow(game,hammer+Vector2(0,20),22+progress*14,Color(ink,0.25+progress*0.4))
 
 func draw_depth(view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("ff9470") if e.hp > e.max_hp*0.5 else Color("ff496a")
-	parts.boss_base.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(132,112,12),Color("304454"),3))
+	var facing_hull := Vector2.from_angle(e.heading)
+	parts.boss_base.append(view.weight(view.boss_part(e,facing_hull,Vector2.ZERO,Vector3(132,112,12),Color("304454"),3),0.9))
 	for side in [-1,1]:
-		parts.boss_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(0,side*128),Vector3(151,20,17),Color("607987"),8))
+		parts.boss_armor.append(view.weight(view.boss_part(e,facing_hull,Vector2(0,side*128),Vector3(151,20,17),Color("607987"),8),0.75))
 		for tread in range(9):
-			parts.boss_barrel.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(-144+fposmod(tread*32+e.tread,288),side*128),Vector3(9,23,3),Color("273745"),26))
+			parts.boss_barrel.append(view.weight(view.boss_part(e,facing_hull,Vector2(-144+fposmod(tread*32+e.tread,288),side*128),Vector3(9,23,3),Color("3a5163"),26),0.45))
 	for gun in range(4):
 		var offset := Vector2.from_angle(gun*PI/2+PI/4)*140
 		var facing := gun_direction(game,e,gun)
-		parts.boss_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),offset,Vector3(24,24,14),ink.darkened(0.4),18))
+		parts.boss_armor.append(view.weight(view.boss_part(e,facing_hull,offset,Vector3(24,24,14),ink.darkened(0.4),18),0.9))
 		# boss_part rotates offsets, so compute cannon world-space independently.
 		parts.boss_barrel.append(view.chaser_entry(gun_position(e,gun)+facing*22,facing,Vector3(30,6,6),ink,28))
-	parts.boss_core.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(34,34,14),ink,18))
+	parts.boss_core.append(view.boss_part(e,facing_hull,Vector2.ZERO,Vector3(34,34,14),ink,18))

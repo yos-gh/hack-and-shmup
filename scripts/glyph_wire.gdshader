@@ -17,13 +17,16 @@ void vertex() {
 	vec2 delta = (b.xy/b.w-a.xy/a.w)*VIEWPORT_SIZE;
 	vec2 side = vec2(-delta.y,delta.x)/max(length(delta),0.001);
 	vec4 clip = mix(a,b,UV.x);
-	clip.xy += side*UV.y*(opening_mode == 2 ? 1.4 : 2.4)/VIEWPORT_SIZE*clip.w;
+	// Custom blue channel scales the stroke; zero keeps the default weight.
+	float weight = INSTANCE_CUSTOM.b > 0.0 ? INSTANCE_CUSTOM.b : 1.0;
+	clip.xy += side*UV.y*(opening_mode == 2 ? 1.4 : 2.4)*weight/VIEWPORT_SIZE*clip.w;
 	clip.z -= 0.00001*clip.w;
 	POSITION = clip;
 	edge_distance = UV.y*1.4;
 	charge = INSTANCE_CUSTOM.r;
 }
 void fragment() {
-	ALBEDO = mix(COLOR.rgb,vec3(0.91,1.0,0.98),0.22+charge*0.45);
+	// Saturated neon stroke; warnings still whiten toward the attack flash.
+	ALBEDO = mix(COLOR.rgb*1.15,vec3(0.91,1.0,0.98),0.08+charge*0.55);
 	ALPHA = COLOR.a*clamp(1.2-abs(edge_distance),0.0,1.0);
 }

@@ -262,34 +262,40 @@ func draw(game) -> void:
 					game.draw_arc(pos,23,0,TAU,24,role_ink,3,true)
 					for dot in range(3): game.draw_circle(pos+Vector2.from_angle(dot*TAU/3+e.age)*12,3,role_ink)
 			elif e.turrets[i].hp <= 0: game.draw_arc(pos,23,0,TAU,24,Color(role_ink,0.22),2,true)
-		for i in range(COUNT):
-			var plate: Dictionary = e.plates[i]
-			var a: float = (i-0.47)*TAU/COUNT
-			var b: float = (i+0.47)*TAU/COUNT
-			if plate.hp > 0:
-				var panel := PackedVector2Array([e.p+Vector2.from_angle(a)*108,e.p+Vector2.from_angle(b)*108,e.p+Vector2.from_angle(b)*84,e.p+Vector2.from_angle(a)*84])
-				game.draw_colored_polygon(panel,Color("483452").lerp(ink.darkened(0.4),1-plate.hp/plate.max_hp))
-				panel.append(panel[0])
-				game.draw_polyline(panel,Color("d6aafa"),2,true)
-			else: game.draw_arc(e.p,RADIUS,a,b,8,Color(0.8,0.6,1.0,0.35),2,true)
+		var clock: float = game.presentation.clock
+		var rage: bool = e.hp <= e.max_hp*0.5
+		BossFx.shield_ring(game,e,COUNT,Color("d9a8ff"),REBUILD)
+		BossFx.energy_core(game,e.p,30,ink,clock,rage)
+		for i in range(e.turrets.size()):
+			if e.turrets[i].hp <= 0: continue
+			var progress := -1.0
+			for queued in game.boss.salvos:
+				if queued.owner == e and queued.get("gun",-1) == i and queued.delay <= 0.5:
+					progress = maxf(progress,1.0-queued.delay/0.5)
+			var role_ink: Color = [Color("ffaacb"),Color("ffd18a"),Color("9fc7ff")][e.turrets[i].role]
+			if progress >= 0: BossFx.charge(game,gun_position(e,i),progress,role_ink,24)
+		for side in [-1,1]:
+			var port: Vector2 = wall_point(e,-28,side*MISSILE_PORT_Y)
+			var launching: bool = e.slam.any(func(m): return not m.fired and absf(m.source.y-port.y) < 1.0 and m.time > m.warning-0.3)
+			if launching: BossFx.glow(game,port,40,Color(ink,0.7))
 		for missile in e.slam:
 			if missile.fired:
-				var impact: float = clampf(-missile.time/0.22,0.0,1.0)
-				game.draw_circle(missile.p,missile.radius,Color(0.85,0.5,1.0,0.55*(1-impact)))
-				game.draw_arc(missile.p,lerpf(missile.radius*0.75,missile.radius*1.25,impact),0,TAU,40,Color(1.0,0.9,1.0,1-impact),5,true)
-			else:
-				var warning_color := Color(0.75,0.55,0.95,0.42)
-				game.draw_circle(missile.p,missile.radius,Color(0.65,0.38,0.9,0.08))
-				game.draw_arc(missile.p,missile.radius,0,TAU,40,warning_color,1.5,true)
-				game.draw_arc(missile.p,missile.radius*clampf(1-missile.time/missile.warning,0,1),0,TAU,40,Color(0.9,0.75,1.0,0.5),1.5,true)
-				var progress: float = clampf(1.0-missile.time/missile.warning,0.0,1.0)
-				if progress < 0.28 or progress >= 0.58:
-					var projectile: Vector2 = missile_visual_position(missile)
-					var direction := Vector2.UP if progress < 0.28 else Vector2.DOWN
-					game.draw_line(projectile-direction*24,projectile,Color(0.87,0.63,1.0,0.35),4,true)
-					game.draw_circle(projectile,11,Color("4f365e"))
-					game.draw_circle(projectile,7,Color("c48add"))
-					game.draw_circle(projectile+direction*3,3,Color("fff0ff"))
+				BossFx.impact(game,missile.p,missile.radius,-missile.time,Color("e8a8fa"))
+				continue
+			var progress: float = clampf(1.0-missile.time/missile.warning,0.0,1.0)
+			BossFx.target_mark(game,missile.p,missile.radius,progress,Color("d59cff"),clock)
+			if progress < 0.28 or progress >= 0.58:
+				var projectile: Vector2 = missile_visual_position(missile)
+				var direction := Vector2.UP if progress < 0.28 else Vector2.DOWN
+				# Exhaust plume, glowing warhead and fins.
+				for k in range(4):
+					game.draw_line(projectile-direction*(8+k*12),projectile-direction*(20+k*12),Color(0.87,0.63,1.0,0.45-k*0.1),7.0-k*1.5,true)
+				BossFx.glow(game,projectile,26,Color(0.85,0.55,1.0,0.6))
+				var body := PackedVector2Array([projectile+direction*12,projectile+direction.orthogonal()*6,projectile-direction*8+direction.orthogonal()*8,projectile-direction*5,projectile-direction*8-direction.orthogonal()*8,projectile-direction.orthogonal()*6])
+				game.draw_colored_polygon(body,Color("4f365e"))
+				body.append(body[0])
+				game.draw_polyline(body,Color("e8b8ff"),1.6,true)
+				game.draw_circle(projectile+direction*4,2.5,Color("fff0ff"))
 
 func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("e0a5fa") if e.hp > e.max_hp*0.5 else Color("ff718c")
@@ -297,17 +303,17 @@ func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 		for y in range(-660,660,60):
 			var a := wall_point(e,side,y)
 			var b := wall_point(e,side,y+60)
-			parts.boss_barrel.append(view.chaser_entry((a+b)*0.5,a.direction_to(b),Vector3(a.distance_to(b)*0.5+2,10,20),Color("596477"),30))
+			parts.boss_barrel.append(view.weight(view.chaser_entry((a+b)*0.5,a.direction_to(b),Vector3(a.distance_to(b)*0.5+2,10,20),Color("596477"),30),0.55))
 	for row in range(13):
 		var level: float = -600+row*100
 		var segment: Vector2 = wall_point(e,130,level)
 		var facing := Vector2(1,440.0*level/(620*620)).normalized()
-		parts.boss_base.append(view.chaser_entry(segment,facing,Vector3(110,54,24),Color("344052"),16))
-		parts.boss_armor.append(view.chaser_entry(wall_point(e,25,level),facing,Vector3(16,27,20),ink.darkened(0.45),32))
+		parts.boss_base.append(view.weight(view.chaser_entry(segment,facing,Vector3(110,54,24),Color("344052"),16),0.5))
+		parts.boss_armor.append(view.weight(view.chaser_entry(wall_point(e,25,level),facing,Vector3(16,27,20),ink.darkened(0.45),32),0.75))
 	parts.boss_armor.append(view.chaser_entry(e.p+Vector2(18,0),Vector2.RIGHT,Vector3(55,65,20),ink.darkened(0.48),29))
 	for side in [-1,1]:
 		var port: Vector2 = wall_point(e,-28,side*MISSILE_PORT_Y)
-		parts.boss_base.append(view.chaser_entry(port+Vector2(28,0),Vector2.RIGHT,Vector3(38,26,20),Color("354155"),22))
+		parts.boss_base.append(view.weight(view.chaser_entry(port+Vector2(28,0),Vector2.RIGHT,Vector3(38,26,20),Color("354155"),22),0.7))
 		parts.boss_armor.append(view.chaser_entry(port,Vector2.LEFT,Vector3(17,19,13),ink.darkened(0.42),30))
 	for i in range(e.turrets.size()):
 		var pos: Vector2 = gun_position(e,i)
@@ -319,11 +325,11 @@ func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 			var from_point: Vector2 = joints[segment]
 			var to_point: Vector2 = joints[segment+1]
 			var axis: Vector2 = from_point.direction_to(to_point)
-			parts.boss_barrel.append(view.chaser_entry((from_point+to_point)*0.5,axis,Vector3(from_point.distance_to(to_point)*0.5,7,7),Color("5e6c80"),24))
-		parts.boss_armor.append(view.chaser_entry(joints[1],Vector2.RIGHT,Vector3(11,11,10),color.darkened(0.35),31))
+			parts.boss_barrel.append(view.weight(view.chaser_entry((from_point+to_point)*0.5,axis,Vector3(from_point.distance_to(to_point)*0.5,7,7),Color("5e6c80"),24),0.6))
+		parts.boss_armor.append(view.weight(view.chaser_entry(joints[1],Vector2.RIGHT,Vector3(11,11,10),color.darkened(0.35),31),0.7))
 		var direction: Vector2 = pos.direction_to(_game.player)
 		# Recessed pedestal, raised beveled head and a visible forward fascia.
-		parts.boss_base.append(view.chaser_entry(pos,Vector2.RIGHT,Vector3(26,25,13),Color("536276"),18))
+		parts.boss_base.append(view.weight(view.chaser_entry(pos,Vector2.RIGHT,Vector3(26,25,13),Color("536276"),18),0.7))
 		if e.turrets[i].hp > 0:
 			parts.boss_armor.append(view.chaser_entry(pos,direction,Vector3(23 if role == 0 else 19,24 if role == 0 else 19,28),color,30))
 			parts.boss_armor.append(view.chaser_entry(pos+direction*18,direction,Vector3(5,21 if role == 0 else 16,16),color.lightened(0.12),35))
@@ -331,6 +337,6 @@ func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 				var axis := direction.rotated((barrel-1)*0.20 if role == 0 else 0.0)
 				var spacing: float = (barrel-(0.5 if role == 2 else 1.0))*(13 if role == 2 else 8)
 				var center: Vector2 = pos+axis*(30 if role == 1 else 24)+direction.orthogonal()*spacing
-				parts.boss_barrel.append(view.chaser_entry(center,axis,Vector3(23 if role == 1 else 17,4 if role == 2 else 3,6),color,43))
+				parts.boss_barrel.append(view.weight(view.chaser_entry(center,axis,Vector3(23 if role == 1 else 17,4 if role == 2 else 3,6),color,43),0.8))
 				parts.boss_core.append(view.chaser_entry(center+axis*(23 if role == 1 else 17),axis,Vector3(2.5,3,3),role_ink,45))
 	parts.boss_core.append(view.chaser_entry(e.p,Vector2.RIGHT,Vector3(45,45,18),ink,34))

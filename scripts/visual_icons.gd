@@ -1,7 +1,7 @@
 extends RefCounted
 const WEAPONS = ["scatter","shock","lance"]
 const UPGRADES = ["damage","rate","move","hybrid","skirmisher","juggernaut","expansion","capacitor"]
-static func draw_wordmark(canvas: CanvasItem, center: Vector2, width: float) -> void:
+static func draw_wordmark(canvas: CanvasItem, center: Vector2, width: float, age: float = 0.0) -> void:
 	var glyphs := {
 		"H":[[Vector2(0,0),Vector2(0,1)],[Vector2(1,0),Vector2(1,1)],[Vector2(0,0.5),Vector2(1,0.5)]],
 		"A":[[Vector2(0,1),Vector2(0,0.2),Vector2(0.2,0),Vector2(0.8,0),Vector2(1,0.2),Vector2(1,1)],[Vector2(0,0.55),Vector2(1,0.55)]],
@@ -14,12 +14,26 @@ static func draw_wordmark(canvas: CanvasItem, center: Vector2, width: float) -> 
 		"P":[[Vector2(0,1),Vector2(0,0),Vector2(0.8,0),Vector2(1,0.2),Vector2(1,0.5),Vector2(0,0.5)]]}
 	var unit := width/14.2
 	var index := 0
+	# Rare horizontal split flicker, plus a highlight sweeping across the letters.
+	var split := 2.0+(3.0 if fmod(age,4.3) < 0.08 else 0.0)
+	var sweep := fmod(age*0.35,1.6)-0.3
 	for letter in "HACK/SHMUP":
+		var letter_x := float(index)/9.0
+		var shine := clampf(1.0-absf(letter_x-sweep)*5.0,0,1)
 		for stroke in glyphs[letter]:
 			var points := PackedVector2Array()
 			for p in stroke: points.append(center+Vector2(-width*0.5+index*unit*1.45+p.x*unit,(p.y-0.5)*unit*1.6))
-			canvas.draw_polyline(points,Color(0.22,0.8,0.68,0.12),7,true)
-			canvas.draw_polyline(points,Color("b7ffe9") if letter!="/" else Color("63f5ce"),2.4,true)
+			canvas.draw_polyline(points,Color(0.22,0.8,0.68,0.10),12,true)
+			canvas.draw_polyline(points,Color(0.22,0.8,0.68,0.16),6,true)
+			var red := PackedVector2Array()
+			var blue := PackedVector2Array()
+			for p in points:
+				red.append(p+Vector2(-split,0))
+				blue.append(p+Vector2(split,0))
+			canvas.draw_polyline(red,Color(1,0.2,0.5,0.35),2.2,true)
+			canvas.draw_polyline(blue,Color(0.2,0.7,1,0.35),2.2,true)
+			var ink := Color("b7ffe9") if letter!="/" else Color("ffb95e")
+			canvas.draw_polyline(points,ink.lerp(Color.WHITE,shine*0.8),2.6+shine,true)
 		index += 1
 static func draw_icon(canvas: CanvasItem, kind: String, center: Vector2, radius: float, ink: Color) -> void:
 	var paths: Array = []
@@ -44,4 +58,4 @@ static func draw_icon(canvas: CanvasItem, kind: String, center: Vector2, radius:
 	for path in paths:
 		var points := PackedVector2Array()
 		for p in path: points.append(center+p*radius)
-		canvas.draw_polyline(points,ink,1.6,true)
+		canvas.draw_polyline(points,ink,1.8,true)

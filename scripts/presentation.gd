@@ -15,13 +15,23 @@ func _init() -> void:
 var muzzle := 0.0
 var muzzle_direction := Vector2.RIGHT
 var trail_clock := 0.0
+## Screen-space shock (chromatic fringe) and floor-grid ripples; bounded, decorative.
+const RIPPLE_SLOTS := 8
+var impact := 0.0
+var ripples: Array[Vector4] = []
 func bind_to(game) -> void:
 	game.combat_events.actor_fired.connect(func(p,_cue): pulse("fire",p,Color("ffd79a"),0.16,10))
 	game.combat_events.actor_alerted.connect(func(p,d): pulse("alert",p,Color("ff9f9e"),0.22,12,d))
 	game.combat_events.weapon_fired.connect(func(p,d,w):
 		muzzle = 0.09 if w == -1 else 0.16
 		muzzle_direction = d
+		if w == 1:
+			ripple(p,1.0)
+			kick(0.35)
+		elif w >= 0: ripple(p+d*40,0.45)
 		if w >= 0: pulse("weapon",p,Color("63f5ce"),0.18,24,d))
+	game.combat_events.enemy_hit.connect(func(p,_damage,_blocked,killed): if killed: ripple(p,0.35))
+	game.combat_events.player_died.connect(func(_reason): kick(0.8))
 	game.combat_events.charge_changed.connect(func(p,d,started): pulse("charge" if started else "stop",p,Color("c3a0ff"),0.2,24,d))
 	game.combat_events.room_entered.connect(func(room,p):
 		pulse("room",p,Color("63f5ce"),0.35,0)
@@ -32,6 +42,8 @@ func bind_to(game) -> void:
 	game.combat_events.stairs_opened.connect(func(p): pulse("unlock",p,Color("63f5ce"),0.6,40))
 	game.combat_events.scene_changed.connect(func(_scene): transition = 0.3)
 	game.combat_events.boss_destroyed.connect(func(p,c):
+		ripple(p,3.0)
+		kick(1.0)
 		pulse("boss",p,c,1.4,260)
 		BossDestruction.prepare(game,pulses[-1]))
 func reset() -> void:
@@ -39,9 +51,22 @@ func reset() -> void:
 	trail_pool.append_array(trails)
 	pulses.clear()
 	trails.clear()
+	ripples.clear()
 	muzzle = 0
 	trail_clock = 0
 	transition = 0
+# x/y world position, z start clock, w strength. A full ring overwrites the oldest.
+func ripple(p: Vector2, strength: float) -> void:
+	var item := Vector4(p.x,p.y,clock,strength)
+	if ripples.size() < RIPPLE_SLOTS:
+		ripples.append(item)
+		return
+	var oldest := 0
+	for i in range(ripples.size()):
+		if ripples[i].z < ripples[oldest].z: oldest = i
+	ripples[oldest] = item
+func kick(amount: float) -> void:
+	impact = maxf(impact,amount)
 func pulse(kind: String, p: Vector2, color: Color, life: float, radius: float, direction: Vector2 = Vector2.RIGHT) -> void:
 	var item: Dictionary = pulses.pop_front() if pulse_pool.is_empty() else pulse_pool.pop_back()
 	item.clear()
@@ -49,6 +74,9 @@ func pulse(kind: String, p: Vector2, color: Color, life: float, radius: float, d
 	pulses.append(item)
 func advance(_game, delta: float) -> void:
 	clock += delta
+	impact = maxf(0,impact-delta*2.2)
+	for i in range(ripples.size()-1,-1,-1):
+		if clock-ripples[i].z > 1.6: ripples.remove_at(i)
 	muzzle = maxf(0,muzzle-delta)
 	transition = maxf(0,transition-delta)
 	for i in range(pulses.size()-1,-1,-1):
@@ -76,11 +104,13 @@ func add_trail(p: Vector2, direction: Vector2, color: Color, radius: float, life
 func draw_world(game) -> void:
 	for t in trails:
 		if not game.attack_open(t.p): continue
-		var alpha: float = t.life/0.15*0.35
+		var alpha: float = t.life/0.15*0.5
 		var side: Vector2 = t.direction.orthogonal()*t.radius
-		var end: Vector2 = game.attack_end(t.p,-t.direction,18)
-		game.draw_line(t.p+side*0.5,end+side*0.2,Color(t.color,alpha),2,true)
-		game.draw_line(t.p-side*0.5,end-side*0.2,Color(t.color,alpha),2,true)
+		var end: Vector2 = game.attack_end(t.p,-t.direction,22)
+		game.draw_line(t.p+side*0.5,end+side*0.2,Color(t.color,alpha*0.3),5,true)
+		game.draw_line(t.p-side*0.5,end-side*0.2,Color(t.color,alpha*0.3),5,true)
+		game.draw_line(t.p+side*0.5,end+side*0.2,Color(t.color,alpha),1.6,true)
+		game.draw_line(t.p-side*0.5,end-side*0.2,Color(t.color,alpha),1.6,true)
 	for p in pulses:
 		if not game.attack_open(p.p): continue
 		var progress: float = 1-p.life/p.duration
@@ -106,6 +136,13 @@ func draw_world(game) -> void:
 func draw_stairs(game) -> void:
 	var point: Vector2 = game.stairs
 	var phase := fmod(clock*0.7,1.0)
+	var beat := 0.5+0.5*sin(clock*3.2)
+	game.world_view.glow(game,point,70+beat*10,Color(0.3,1,0.8,0.22+beat*0.08))
+	# Rotating beacon cross: the exit reads from across the room.
+	for i in range(4):
+		var axis := Vector2.from_angle(clock*0.9+i*PI/2)
+		game.draw_line(point+axis*30,point+axis*(46+beat*8),Color(0.55,1,0.85,0.55),2,true)
+	game.draw_arc(point,34+beat*3,clock*0.9,clock*0.9+TAU,48,Color(0.39,1,0.81,0.25),1.2,true)
 	for i in range(4):
 		var depth := float(i)+phase
 		var radius := 22-depth*2

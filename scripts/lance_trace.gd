@@ -34,6 +34,19 @@ static func endpoint(game, origin: Vector2, direction: Vector2) -> Vector2:
 			return origin+direction*maxf(0,distance-0.001)
 	return origin
 
+# The beam leaves the hull slightly narrowed and reaches full width almost at
+# once: lateral offsets and lane widths scale by this factor near the muzzle.
+const TAPER_START := 0.5
+const TAPER_LENGTH := 26.0
+
+static func taper(distance: float) -> float:
+	var k := clampf(distance/TAPER_LENGTH,0.0,1.0)
+	return 1.0-(1.0-TAPER_START)*pow(1.0-k,2.0)
+
+# Lane centre at a distance along the beam, measured from the lane start.
+static func lane_point(ray: Dictionary, direction: Vector2, distance: float) -> Vector2:
+	return ray.origin+(ray.p-ray.origin)*taper(distance)+direction*distance
+
 static func lanes(game, origin: Vector2, aim: Vector2) -> Array:
 	var result: Array = []
 	var direction := aim.normalized()
@@ -44,7 +57,7 @@ static func lanes(game, origin: Vector2, aim: Vector2) -> Array:
 		var start: Vector2 = origin+side*((i+0.5)*width-game.LANCE_WIDTH*0.5)
 		# The muzzle cannot originate across a wall beside the player.
 		var end: Vector2 = endpoint(game,start,direction) if game.attack_reaches(origin,start) else start
-		result.append({"p":start,"end":end,"width":width})
+		result.append({"p":start,"end":end,"width":width,"origin":origin})
 	return result
 
 static func hits(game, enemy: Dictionary, rays: Array, direction: Vector2) -> bool:
@@ -52,6 +65,6 @@ static func hits(game, enemy: Dictionary, rays: Array, direction: Vector2) -> bo
 	for ray in rays:
 		var distance: float = (enemy.p-ray.p).dot(direction)
 		if distance < 0 or distance > ray.p.distance_to(ray.end): continue
-		var point: Vector2 = ray.p+direction*distance
-		if point.distance_to(enemy.p) <= game.enemy_bullet_radius(enemy)-1.5+ray.width*0.5 and game.attack_reaches(point,enemy.p): return true
+		var point: Vector2 = lane_point(ray,direction,distance)
+		if point.distance_to(enemy.p) <= game.enemy_bullet_radius(enemy)-1.5+ray.width*0.5*taper(distance) and game.attack_reaches(point,enemy.p): return true
 	return false

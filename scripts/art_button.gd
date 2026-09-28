@@ -15,3 +15,10 @@ func _draw() -> void:
 		draw_line(p,p+Vector2(0,length*sign_value),ink,2,true)
 	var x := fmod(age*100,maxf(1,size.x))
 	draw_line(Vector2(x,1),Vector2(minf(size.x,x+22),1),Color(ink,hover_amount*0.45),2,true)
+	# Selection chevrons slide in beside command buttons.
+	if size.y <= 60 and not text.is_empty():
+		var slide := (1.0-hover_amount)*10.0+sin(age*6.0)*1.5
+		var mid := size.y*0.5
+		for i in range(2):
+			var tip := Vector2(-8-slide-i*7,mid)
+			draw_polyline(PackedVector2Array([tip+Vector2(-5,-6),tip,tip+Vector2(-5,6)]),Color(ink,ink.a*(1.0-i*0.45)),2,true)

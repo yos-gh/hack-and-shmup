@@ -97,9 +97,12 @@ func _plate(rect: Rect2) -> void:
 	plate.size = rect.size
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("101c27")
-	style.border_color = Color("304956")
+	style.bg_color = Color(0.04,0.08,0.12,0.9)
 	style.set_border_width_all(1)
+	style.border_width_top = 2
+	style.border_color = Color(0.25,0.55,0.58)
+	style.corner_radius_bottom_right = 10
+	style.anti_aliasing = true
 	plate.add_theme_stylebox_override("panel",style)
 	surface.add_child(plate)
 
@@ -115,7 +118,7 @@ func _button(rect: Rect2, text: String, callback: Callable) -> Button:
 func _title(screen: Vector2) -> void:
 	var y := screen.y*0.5
 	# The vector wordmark is drawn by MenuArt, with no font dependency.
-	_label(Rect2(24,y-58,screen.x-48,30),"ENDLESS DESCENT",18,Color("8194aa"))
+	_label(Rect2(24,y-58,screen.x-48,30),"E N D L E S S    D E S C E N T",16,Color("7fd9c6"))
 	_label(Rect2(24,y+0,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
 	_button(Rect2(screen.x*0.5-190,y+64,380,46),"START (A / LB)" if game.controls.using_gamepad else "START (Enter)",func():
 		if game.title_screen: game.start_run(); sync())
@@ -135,7 +138,7 @@ func _settings() -> void:
 func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 	var y: float = game.menu_origin_y(screen,is_pause)
 	if is_pause:
-		_label(Rect2(24,y-65,screen.x-48,40),"PAUSED",28)
+		_label(Rect2(24,y-65,screen.x-48,40),"// PAUSED //",30,Color("dffff3"))
 		_button(Rect2(screen.x*0.5-170,y-10,340,44),"RESUME",func():
 			if game.paused:
 				game.paused = false
@@ -145,12 +148,13 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (B)" if game.controls.using_gamepad else "TITLE (Esc)",func():
 			if game.paused: game.return_to_title(); sync())
 	else:
-		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",24,Color("63f5ce"))
+		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",28,Color("63f5ce"))
 		_label(Rect2(24,y-115,screen.x-48,35),"LEFT STICK / DPAD: SELECT     A / LB: CONFIRM" if game.controls.using_gamepad else "CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
 		for i in range(3):
 			var rect: Rect2 = game.upgrade_card_rect(screen,i)
 			var definition = Catalog.UPGRADES[game.choices[i]]
 			var button := _button(rect,"",func(): choose(i))
+			button.theme_type_variation = "CardButton"
 			button.tooltip_text = definition.title + ": " + definition.description
 			cards.append(button)
 			var icon = preload("res://scripts/menu_art.gd").new()
@@ -160,7 +164,7 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 			surface.add_child(icon)
 			_label(Rect2(rect.position+Vector2(78,8),Vector2(rect.size.x-90,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
 			_label(Rect2(rect.position+Vector2(78,34),Vector2(rect.size.x-90,40)),definition.title,20,Color("63f5ce"))
-			_label(Rect2(rect.position+Vector2(78,82),Vector2(rect.size.x-90,48)),definition.description.split(" ")[0],34,Color("dffff3"))
+			_label(Rect2(rect.position+Vector2(78,82),Vector2(rect.size.x-90,48)),definition.description.split(" ")[0],38,Color("ffffff"))
 			_label(Rect2(rect.position+Vector2(16,130),Vector2(rect.size.x-32,54)),definition.description.substr(definition.description.find(" ")+1),12,Color("a4b3c6"))
 	var stats: Array = game.player_stats()
 	for i in range(stats.size()):

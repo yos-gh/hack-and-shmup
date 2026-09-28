@@ -127,9 +127,17 @@ func draw(game, e: Dictionary) -> void:
 	var ink := Color("ff496a")
 	var start: Vector2 = e.ram_start-e.ram_direction*215
 	var end: Vector2 = e.ram_end+e.ram_direction*215
-	game.draw_colored_polygon(PackedVector2Array([start-side,end-side,end+side,start+side]),Color(1,0.2,0.3,0.08))
-	for sign_value in [-1,1]: game.draw_line(start+side*sign_value,end+side*sign_value,ink,2,true)
+	var clock: float = game.presentation.clock
+	var blink: float = 0.75+0.25*sin(clock*18.0)
+	game.draw_colored_polygon(PackedVector2Array([start-side,end-side,end+side,start+side]),Color(1,0.2,0.3,0.07*blink+0.03))
+	for sign_value in [-1,1]:
+		game.draw_line(start+side*sign_value,end+side*sign_value,Color(ink,0.25),7,true)
+		game.draw_line(start+side*sign_value,end+side*sign_value,Color(ink,blink),2,true)
+	# Chevrons stream along the charge lane in the direction of travel.
 	var length: float = e.ram_start.distance_to(e.ram_end)
-	for distance in range(100,int(length),90):
+	var distance: float = 100.0+fmod(clock*260.0,90.0)
+	while distance < length:
 		var point: Vector2 = e.ram_start+e.ram_direction*distance
-		game.draw_polyline(PackedVector2Array([point-e.ram_direction*18-side.normalized()*16,point,point-e.ram_direction*18+side.normalized()*16]),ink,3,true)
+		var fade: float = clampf(minf(distance-100.0,length-distance)/60.0,0,1)
+		game.draw_polyline(PackedVector2Array([point-e.ram_direction*18-side.normalized()*16,point,point-e.ram_direction*18+side.normalized()*16]),Color(ink,fade),3,true)
+		distance += 90.0
