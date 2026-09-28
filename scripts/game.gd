@@ -149,6 +149,7 @@ func _ready() -> void:
 	sound = preload("res://scripts/sound.gd").new()
 	add_child(sound)
 	combat_events.enemy_hit.connect(sound.hear_hit)
+	combat_events.boss_destroyed.connect(sound.hear_boss_destroyed)
 	menus = preload("res://scripts/game_menus.gd").new()
 	add_child(menus)
 	menus.setup(self)

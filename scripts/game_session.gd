@@ -11,6 +11,7 @@ var pending_respawn := false
 var fire_armed := false
 
 func restart_attempt(game) -> void:
+	game.sound.stop_boss_destruction()
 	game.presentation.reset()
 	game.boss.reset()
 	game.mobs.reset()
@@ -57,6 +58,7 @@ func start_run(game) -> void:
 
 
 func return_to_title(game) -> void:
+	game.sound.stop_boss_destruction()
 	game.boss.reset()
 	game.mobs.reset()
 	game.sound.enemy_audio.reset()

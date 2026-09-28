@@ -87,7 +87,51 @@ func run() -> void:
 	audio.reset()
 	game.boss.bastion.launch_missile(game,e,false)
 	check(audio.pending.has("boss_mark"),"missile landing marker has an advance cue")
+	# Real lethal hits must reach the reserved voice even during saturated fire.
+	for variant in range(3):
+		game.practice.variant = variant
+		game.practice.start(game)
+		e = game.enemies[0]
+		for voice in sound.voices: voice.stop()
+		for i in range(16): sound.play_sfx("shot")
+		game.hurt_enemy(e,e.hp+1,Vector2.RIGHT,0,true)
+		check(sound.voices[0].stream == sound.clips.boss_destroy and sound.voices[0].playing,"each boss kill owns the protected explosion voice")
+		check(not sound.boss_beam.playing and audio.pending.is_empty(),"explosion clears boss attack audio")
+		sound.play_sfx("shot")
+		check(sound.voices[0].stream == sound.clips.boss_destroy,"gunfire cannot replace explosion")
+		await create_timer(0.06).timeout
+		var playback: float = sound.voices[0].get_playback_position()
+		game.hurt_enemy(e,1,Vector2.RIGHT,0,true)
+		check(sound.voices[0].get_playback_position() >= playback,"dead boss cannot restart explosion")
+		game.restart_attempt()
+		check(not sound.voices[0].playing,"retry clears explosion tail")
+	sound.play_sfx("boss_destroy")
+	check(sound.clips.boss_destroy.get_length() > sound.clips.kill.get_length(),"boss explosion has a longer tail than mob kill")
+	capture.clear_buffer()
+	await create_timer(0.25).timeout
+	samples = capture.get_buffer(capture.get_frames_available())
+	energy = 0.0
+	var peak := 0.0
+	for sample in samples:
+		energy += sample.length_squared()
+		peak = maxf(peak,maxf(absf(sample.x),absf(sample.y)))
+	check(energy > 0.001 and peak < 0.99,"SE-only explosion reaches stereo mixer without clipping")
+	sound.set_paused(true)
+	check(sound.voices[0].stream_paused,"pause suspends explosion")
+	sound.set_paused(false)
+	check(not sound.voices[0].stream_paused,"resume restores explosion")
+	sound.set_audio_mode(2)
+	sound.play_sfx("boss_destroy")
+	check(not sound.voices[0].playing,"OFF stops and suppresses explosion")
+	sound.set_audio_mode(1)
+	sound.play_sfx("boss_destroy")
+	sound.play_sfx("death")
+	check(sound.voices[0].stream == sound.clips.death,"death retains higher priority")
+	sound.voices[0].stop()
+	sound.play_sfx("boss_destroy")
+	game.return_to_title()
+	check(not sound.voices[0].playing,"title clears explosion tail")
 	AudioServer.remove_bus_effect(0,AudioServer.get_bus_effect_count(0)-1)
 	game.free()
-	if failures == 0: print("PASS: boss telegraphs, real sustained mixer output and pause/mute/retry/death lifecycle")
+	if failures == 0: print("PASS: boss telegraphs, three boss explosions, real mixer output and pause/mute/retry/death lifecycle")
 	quit(1 if failures else 0)

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const BossDestruction = preload("res://scripts/boss_destruction.gd")
 ## Presentation clock and bounded value snapshots. Never consumes gameplay RNG.
 var clock := 0.0
 var transition := 0.0
@@ -30,7 +31,9 @@ func bind_to(game) -> void:
 		pulses[-1]["boundary"] = boundary)
 	game.combat_events.stairs_opened.connect(func(p): pulse("unlock",p,Color("63f5ce"),0.6,40))
 	game.combat_events.scene_changed.connect(func(_scene): transition = 0.3)
-	game.combat_events.boss_destroyed.connect(func(p,c): pulse("boss",p,c,0.6,64))
+	game.combat_events.boss_destroyed.connect(func(p,c):
+		pulse("boss",p,c,1.4,260)
+		BossDestruction.prepare(game,pulses[-1]))
 func reset() -> void:
 	pulse_pool.append_array(pulses)
 	trail_pool.append_array(trails)
@@ -87,11 +90,7 @@ func draw_world(game) -> void:
 			for tip in p.boundary: outline.append(p.p.lerp(tip,progress))
 			game.draw_polyline(outline,Color(ink,ink.a*0.35),2,true)
 		elif p.kind == "boss":
-			for i in range(12):
-				var axis := Vector2.from_angle(i*TAU/12)
-				var center: Vector2 = game.attack_end(p.p,axis,12+progress*p.radius)
-				game.draw_line(center-axis.orthogonal()*5,center+axis.orthogonal()*5,ink,2,true)
-			game.draw_arc(p.p,4+(1-progress)*12,0,TAU,24,ink,2,true)
+			BossDestruction.draw(game,p)
 		elif p.kind == "fire":
 			for i in range(3):
 				var direction := Vector2.from_angle(i*TAU/3+progress)

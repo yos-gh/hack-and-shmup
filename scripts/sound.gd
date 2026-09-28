@@ -16,7 +16,7 @@ var effects_bus_name := ""
 var boss_beam := AudioStreamPlayer2D.new()
 var boss_beam_active := false
 var boss_beam_level := -60.0
-const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
+const CRITICAL_PRIORITIES := {"boss_destroy": 1, "clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
@@ -30,6 +30,7 @@ func _ready() -> void:
 	AudioServer.add_bus_effect(bus_index, limiter)
 	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","seraph_charge","seraph_beam","boss_orb_charge","boss_mark","boss_release"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
+	clips["boss_destroy"] = load("res://assets/audio/boss_destroy.wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
 	var loop: AudioStreamWAV = load("res://assets/audio/descent.wav").duplicate()
@@ -90,6 +91,12 @@ func hear_hit(_position: Vector2, _damage: float, blocked: bool, killed: bool) -
 	if blocked or killed or hit_gap > 0 or paused_state: return
 	hit_gap = 0.055
 	play_sfx("hit")
+
+func hear_boss_destroyed(_position: Vector2, _color: Color) -> void:
+	play_sfx("boss_destroy")
+
+func stop_boss_destruction() -> void:
+	if voices[0].stream == clips.boss_destroy: voices[0].stop()
 
 func _exit_tree() -> void:
 	var bus_index := AudioServer.get_bus_index(effects_bus_name)

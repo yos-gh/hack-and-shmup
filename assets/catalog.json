@@ -85,6 +85,18 @@
   ],
   "assets": [
     {
+      "path": "assets/audio/boss_destroy.wav",
+      "bytes": 316844,
+      "sha256": "9fc51dc98bdbd8f904a8291f3f957f5dbb7e8f17668e3a60ea2e4dfad54c9d68",
+      "kind": "generated_audio",
+      "source": "tools/generate_boss_destruction.py",
+      "source_sha256": "c5514f071f20d458a682f2439b85bae0d7901db3678a0ed147c59bcd13f8d17e",
+      "channels": 2,
+      "sample_bytes": 2,
+      "sample_rate": 48000,
+      "frames": 79200
+    },
+    {
       "path": "assets/audio/boss_mark.wav",
       "bytes": 138284,
       "sha256": "8ef62545bdb8a3aa923d0e6f4e46a0e8b40ca127cb2082a07e65948ebf839b9b",
