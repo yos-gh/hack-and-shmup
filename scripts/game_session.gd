@@ -15,6 +15,7 @@ func restart_attempt(game) -> void:
 	game.boss.reset()
 	game.mobs.reset()
 	game.sound.enemy_audio.reset()
+	game.sound.stop_boss_beam()
 	game.stairs_unlocked = not game.boss_floor
 	floor_snapshot.restore(game)
 	game.enemy_buckets.clear()
@@ -59,6 +60,7 @@ func return_to_title(game) -> void:
 	game.boss.reset()
 	game.mobs.reset()
 	game.sound.enemy_audio.reset()
+	game.sound.stop_boss_beam()
 	game.bullets.clear()
 	game.particles.clear()
 	game.effects.clear()
@@ -80,5 +82,6 @@ func die(game, reason: String = "HIT") -> void:
 	game.deaths += 1
 	game.death_reason = reason
 	game.pending_respawn = true
+	game.sound.stop_boss_beam()
 	game.combat_events.player_died.emit(reason)
 	game.queue_redraw()

@@ -5,8 +5,15 @@ const TURRET_REBUILD := 7.0
 const ARM_OFFSETS := [Vector2(-105,-570),Vector2(-125,-350),Vector2(-90,-170),Vector2(-105,170),Vector2(-125,350),Vector2(-90,570),Vector2(-125,-455),Vector2(-125,455)]
 const MISSILE_PORT_Y := 245.0
 
+static func wall_curve(y: float) -> float:
+	# The entire curtain wall bows forward at its ends, including its sockets.
+	return -220.0*pow(clampf(absf(y)/620.0,0.0,1.1),2)
+
+func wall_point(e: Dictionary, x: float, y: float) -> Vector2:
+	return e.p+Vector2(x+wall_curve(y),y)
+
 func missile_port(e: Dictionary, target: Vector2) -> Vector2:
-	return e.p+Vector2(-28,-MISSILE_PORT_Y if target.y < e.p.y else MISSILE_PORT_Y)
+	return wall_point(e,-28,-MISSILE_PORT_Y if target.y < e.p.y else MISSILE_PORT_Y)
 
 func missile_visual_position(missile: Dictionary) -> Vector2:
 	var progress: float = clampf(1.0-missile.time/missile.warning,0.0,1.0)
@@ -51,13 +58,13 @@ func touches(e: Dictionary, player: Vector2, radius: float) -> bool:
 func gun_position(e: Dictionary, gun: int) -> Vector2:
 	var offset: Vector2 = ARM_OFFSETS[gun]
 	var phase: float = e.age*(0.95+gun*0.11)+gun*1.7
-	return e.p+offset+Vector2(sin(phase)*18,cos(phase*0.83)*24)
+	return wall_point(e,offset.x,offset.y)+Vector2(sin(phase)*18,cos(phase*0.83)*24)
 
 func arm_joints(e: Dictionary, gun: int) -> PackedVector2Array:
 	var offset: Vector2 = ARM_OFFSETS[gun]
 	var phase: float = e.age*(0.95+gun*0.11)+gun*1.7
-	var socket: Vector2 = e.p+Vector2(32,offset.y)
-	var elbow: Vector2 = e.p+Vector2(-43+sin(phase*0.7)*17,offset.y+cos(phase*0.83)*37)
+	var socket: Vector2 = wall_point(e,32,offset.y)
+	var elbow: Vector2 = wall_point(e,-43+sin(phase*0.7)*17,offset.y)+Vector2(0,cos(phase*0.83)*37)
 	return PackedVector2Array([socket,elbow,gun_position(e,gun)])
 
 func active_guns(e: Dictionary, role: int = -1) -> Array[int]:
@@ -133,7 +140,7 @@ func launch_orb(game, e: Dictionary) -> void:
 	game.bullets.append({"p":e.p,"v":Vector2.ZERO,"damage":1.0,"hostile":true,"life":8.0,
 		"energy_orb":true,"orb_phase":"charge","orb_age":0.0,"orb_radius":18.0,
 		"orb_flash":0.0,"orb_speed_scale":e.bullet_scale,"pressure":false})
-	game.enemy_attack_cue("halo_fire",e.p)
+	game.enemy_attack_cue("boss_orb_charge",e.p,false)
 
 func orb_absorbs_area(game, center: Vector2, radius: float) -> bool:
 	for bullet in game.bullets:
@@ -154,6 +161,7 @@ func orb_absorbs_lance(game, rays: Array) -> bool:
 
 func launch_missile(game, e: Dictionary, rage: bool) -> void:
 	var target: Vector2 = game.player
+	game.enemy_attack_cue("boss_mark",target,false)
 	for side in range(1+int(rage)+roundi(e.mid)):
 		var offset: Vector2 = Vector2(0,(side-(int(rage)+roundi(e.mid))*0.5)*145)
 		var point: Vector2 = target+offset
@@ -177,7 +185,7 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 		missile.time -= delta
 		if missile.time <= 0 and not missile.fired:
 			missile.fired = true
-			game.enemy_attack_cue("siege_fire",missile.p)
+			game.enemy_attack_cue("boss_release",missile.p)
 			game.burst(missile.p,Color("e8a8fa"),15)
 			# Falling ordnance ignores horizontal cover so a pillar is not permanent safety.
 			if game.player.distance_to(missile.p) < missile.radius+game.PLAYER_HIT_RADIUS: game.die()
@@ -203,22 +211,24 @@ func draw(game) -> void:
 		if not e.has("turrets") or e.hp <= 0 or not game.attack_open(e.p): continue
 		var ink := Color("e0a5fa") if e.hp > e.max_hp*0.5 else Color("ff718c")
 		if not game.depth_enabled:
-			var wall := Rect2(e.p+Vector2(20,-680),Vector2(230,1360))
-			game.draw_rect(wall,Color("293244"))
-			game.draw_rect(wall,ink.darkened(0.48),false,4)
-			game.draw_line(e.p+Vector2(20,-680),e.p+Vector2(20,680),ink.darkened(0.12),6,true)
+			var wall := PackedVector2Array()
+			for y in range(-680,681,40): wall.append(wall_point(e,20,y))
+			for y in range(680,-681,-40): wall.append(wall_point(e,250,y))
+			game.draw_colored_polygon(wall,Color("293244",0.65))
+			wall.append(wall[0])
+			game.draw_polyline(wall,ink.darkened(0.3),3,true)
 			for row in range(13):
 				var level: float = -600+row*100
-				var socket: Vector2 = e.p+Vector2(44,level)
+				var socket: Vector2 = wall_point(e,44,level)
 				game.draw_rect(Rect2(socket-Vector2(22,15),Vector2(44,30)),Color("101827"))
 				game.draw_rect(Rect2(socket-Vector2(22,15),Vector2(44,30)),ink.darkened(0.42),false,2)
-				game.draw_line(e.p+Vector2(80,level+50),e.p+Vector2(230,level+50),Color("536276"),2,true)
+				game.draw_line(wall_point(e,80,level+50),wall_point(e,230,level+50),Color("536276"),2,true)
 			game.draw_rect(Rect2(e.p+Vector2(-8,-65),Vector2(116,130)),Color("172534"))
 			game.draw_rect(Rect2(e.p+Vector2(-8,-65),Vector2(116,130)),ink.darkened(0.15),false,3)
 			game.draw_circle(e.p,CORE,ink.darkened(0.45))
 			game.draw_circle(e.p,CORE*0.68,ink)
 			for side in [-1,1]:
-				var port: Vector2 = e.p+Vector2(-28,side*MISSILE_PORT_Y)
+				var port: Vector2 = wall_point(e,-28,side*MISSILE_PORT_Y)
 				var launching: bool = e.slam.any(func(m): return not m.fired and absf(m.source.y-port.y) < 1.0 and m.time > m.warning-0.18)
 				game.draw_rect(Rect2(port+Vector2(0,-22),Vector2(62,44)),Color("263246"))
 				game.draw_rect(Rect2(port+Vector2(0,-22),Vector2(62,44)),ink.darkened(0.5),false,2)
@@ -236,7 +246,9 @@ func draw(game) -> void:
 				for joint in range(2):
 					game.draw_circle(joints[joint],9,Color("273547"))
 					game.draw_arc(joints[joint],9,0,TAU,18,role_ink.darkened(0.2),2,true)
-			if e.turrets[i].hp > 0:
+			# In 3D the tiered housing and barrels must remain visible; an opaque
+			# top-down emblem used to paint over the actual solid geometry.
+			if e.turrets[i].hp > 0 and not game.depth_enabled:
 				if role == 0:
 					game.draw_colored_polygon(PackedVector2Array([pos+Vector2(-24,-19),pos+Vector2(19,-25),pos+Vector2(28,0),pos+Vector2(19,25),pos+Vector2(-24,19)]),Color("293244"))
 					game.draw_arc(pos,25,-PI*0.7,PI*0.7,22,role_ink,3,true)
@@ -249,7 +261,7 @@ func draw(game) -> void:
 					game.draw_circle(pos,23,Color("293244"))
 					game.draw_arc(pos,23,0,TAU,24,role_ink,3,true)
 					for dot in range(3): game.draw_circle(pos+Vector2.from_angle(dot*TAU/3+e.age)*12,3,role_ink)
-			else: game.draw_arc(pos,23,0,TAU,24,Color(role_ink,0.22),2,true)
+			elif e.turrets[i].hp <= 0: game.draw_arc(pos,23,0,TAU,24,Color(role_ink,0.22),2,true)
 		for i in range(COUNT):
 			var plate: Dictionary = e.plates[i]
 			var a: float = (i-0.47)*TAU/COUNT
@@ -282,17 +294,21 @@ func draw(game) -> void:
 func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("e0a5fa") if e.hp > e.max_hp*0.5 else Color("ff718c")
 	for side in [35,225]:
-		parts.siege_armor.append(view.chaser_entry(e.p+Vector2(side,0),Vector2.RIGHT,Vector3(12,660,17),Color("596477"),30))
+		for y in range(-660,660,60):
+			var a := wall_point(e,side,y)
+			var b := wall_point(e,side,y+60)
+			parts.boss_barrel.append(view.chaser_entry((a+b)*0.5,a.direction_to(b),Vector3(a.distance_to(b)*0.5+2,10,20),Color("596477"),30))
 	for row in range(13):
 		var level: float = -600+row*100
-		var segment: Vector2 = e.p+Vector2(130,level)
-		parts.siege_base.append(view.chaser_entry(segment,Vector2.RIGHT,Vector3(110,51,24),Color("344052"),16))
-		parts.siege_armor.append(view.chaser_entry(e.p+Vector2(25,level),Vector2.RIGHT,Vector3(16,27,15),ink.darkened(0.45),32))
-	parts.siege_armor.append(view.chaser_entry(e.p+Vector2(18,0),Vector2.RIGHT,Vector3(55,65,20),ink.darkened(0.48),29))
+		var segment: Vector2 = wall_point(e,130,level)
+		var facing := Vector2(1,440.0*level/(620*620)).normalized()
+		parts.boss_base.append(view.chaser_entry(segment,facing,Vector3(110,54,24),Color("344052"),16))
+		parts.boss_armor.append(view.chaser_entry(wall_point(e,25,level),facing,Vector3(16,27,20),ink.darkened(0.45),32))
+	parts.boss_armor.append(view.chaser_entry(e.p+Vector2(18,0),Vector2.RIGHT,Vector3(55,65,20),ink.darkened(0.48),29))
 	for side in [-1,1]:
-		var port: Vector2 = e.p+Vector2(-28,side*MISSILE_PORT_Y)
-		parts.siege_base.append(view.chaser_entry(port+Vector2(28,0),Vector2.RIGHT,Vector3(38,26,20),Color("354155"),22))
-		parts.siege_armor.append(view.chaser_entry(port,Vector2.LEFT,Vector3(17,19,13),ink.darkened(0.42),30))
+		var port: Vector2 = wall_point(e,-28,side*MISSILE_PORT_Y)
+		parts.boss_base.append(view.chaser_entry(port+Vector2(28,0),Vector2.RIGHT,Vector3(38,26,20),Color("354155"),22))
+		parts.boss_armor.append(view.chaser_entry(port,Vector2.LEFT,Vector3(17,19,13),ink.darkened(0.42),30))
 	for i in range(e.turrets.size()):
 		var pos: Vector2 = gun_position(e,i)
 		var joints: PackedVector2Array = arm_joints(e,i)
@@ -303,11 +319,18 @@ func draw_depth(view, _game, e: Dictionary, parts: Dictionary) -> void:
 			var from_point: Vector2 = joints[segment]
 			var to_point: Vector2 = joints[segment+1]
 			var axis: Vector2 = from_point.direction_to(to_point)
-			parts.siege_barrel.append(view.chaser_entry((from_point+to_point)*0.5,axis,Vector3(from_point.distance_to(to_point)*0.5,7,7),Color("5e6c80"),24))
-		parts.siege_armor.append(view.chaser_entry(joints[1],Vector2.RIGHT,Vector3(11,11,10),color.darkened(0.35),31))
-		parts.siege_armor.append(view.chaser_entry(pos,Vector2.RIGHT,Vector3(25 if role == 0 else 20,24 if role == 0 else 18,15),color,27))
+			parts.boss_barrel.append(view.chaser_entry((from_point+to_point)*0.5,axis,Vector3(from_point.distance_to(to_point)*0.5,7,7),Color("5e6c80"),24))
+		parts.boss_armor.append(view.chaser_entry(joints[1],Vector2.RIGHT,Vector3(11,11,10),color.darkened(0.35),31))
+		var direction: Vector2 = pos.direction_to(_game.player)
+		# Recessed pedestal, raised beveled head and a visible forward fascia.
+		parts.boss_base.append(view.chaser_entry(pos,Vector2.RIGHT,Vector3(26,25,13),Color("536276"),18))
 		if e.turrets[i].hp > 0:
-			var direction: Vector2 = pos.direction_to(_game.player)
-			for barrel in range(3 if role != 2 else 1):
-				parts.siege_barrel.append(view.chaser_entry(pos+direction*27+direction.orthogonal()*(barrel-1)*7,direction,Vector3(24,3,4),color,35))
-	parts.siege_core.append(view.chaser_entry(e.p,Vector2.RIGHT,Vector3(45,45,18),ink,34))
+			parts.boss_armor.append(view.chaser_entry(pos,direction,Vector3(23 if role == 0 else 19,24 if role == 0 else 19,28),color,30))
+			parts.boss_armor.append(view.chaser_entry(pos+direction*18,direction,Vector3(5,21 if role == 0 else 16,16),color.lightened(0.12),35))
+			for barrel in range(3 if role != 2 else 2):
+				var axis := direction.rotated((barrel-1)*0.20 if role == 0 else 0.0)
+				var spacing: float = (barrel-(0.5 if role == 2 else 1.0))*(13 if role == 2 else 8)
+				var center: Vector2 = pos+axis*(30 if role == 1 else 24)+direction.orthogonal()*spacing
+				parts.boss_barrel.append(view.chaser_entry(center,axis,Vector3(23 if role == 1 else 17,4 if role == 2 else 3,6),color,43))
+				parts.boss_core.append(view.chaser_entry(center+axis*(23 if role == 1 else 17),axis,Vector3(2.5,3,3),role_ink,45))
+	parts.boss_core.append(view.chaser_entry(e.p,Vector2.RIGHT,Vector3(45,45,18),ink,34))

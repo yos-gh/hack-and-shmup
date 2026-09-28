@@ -1,5 +1,6 @@
 """Exercise inventory drift and isolated regeneration using disposable copies."""
 from pathlib import Path
+import json
 import shutil
 import subprocess
 import sys
@@ -19,8 +20,15 @@ class AssetAuditTests(unittest.TestCase):
         shutil.copy2(ROOT / 'addons/sentry/web/sentry-bundle.js', self.root / 'addons/sentry/web/sentry-bundle.js')
         (self.root / 'tools').mkdir()
         (self.root / 'scripts').mkdir()
-        for name in ['audit_assets.py', 'generate_audio.py', 'generate_warning.py']:
+        for name in ['audit_assets.py', 'generate_audio.py', 'generate_warning.py', 'generate_boss_audio.py']:
             shutil.copy2(ROOT / 'tools' / name, self.root / 'tools' / name)
+        # Production provenance is also hashed by the inventory. Copy its
+        # source files into the isolated fixture, not only legacy generators.
+        production = json.loads((ROOT / 'assets/audio/production_sources.json').read_text(encoding='utf-8'))
+        for relative in {entry['source'] for entry in production.values()}:
+            target = self.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
         for shader in (ROOT / 'scripts').glob('*.gdshader'):
             shutil.copy2(shader, self.root / 'scripts' / shader.name)
 

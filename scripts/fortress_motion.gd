@@ -3,6 +3,8 @@ extends RefCounted
 const MODES := ["cross_x","hunt","cross_y","flank","ram_warning","ram","retreat"]
 const CLEARANCE := 220.0
 const TURN_RATE := 1.8
+const LASER_TURN_RATE := 0.45
+const LASER_MOVE_SPEED := 60.0
 
 func setup(e: Dictionary) -> void:
 	e["move_step"] = 0
@@ -62,6 +64,7 @@ func enter(game, e: Dictionary, step: int) -> void:
 				enter(game,e,6)
 				return
 			e.move_time = maxf(lerpf(1.15,1.0,e.mid)*e.attack_scale,absf(angle_difference(e.heading,e.ram_direction.angle()))/TURN_RATE+0.12)
+			game.enemy_attack_cue("boss_mark",e.p,false)
 			# A moving laser cannot suddenly sweep sideways at charge speed.
 			for beam in game.boss.lasers:
 				if beam.owner == e: beam.duration = 0
@@ -93,9 +96,21 @@ func advance(game, e: Dictionary, delta: float, rage: bool) -> Vector2:
 			return Vector2.ZERO
 		var angle := offset.angle()
 		var turn: float = absf(angle_difference(e.heading,angle))
-		e.heading = rotate_toward(e.heading,angle,delta*TURN_RATE)
+		# The beam's world heading is stable, but rotating its off-center mount
+		# still translates the entire ray. Brace the chassis through the warning
+		# and firing phases so this cannot combine with a fast scissor sweep.
+		var warning := false
+		var firing := false
+		for beam in game.boss.lasers:
+			if beam.owner != e or beam.duration <= 0: continue
+			if beam.warning > 0: warning = true
+			else: firing = true
+		var turn_rate: float = LASER_TURN_RATE if firing else (0.9 if warning else TURN_RATE)
+		e.heading = rotate_toward(e.heading,angle,delta*turn_rate)
 		var speed: float = ((165.0 if rage else 140.0)+15.0*e.mid)*e.speed_scale
 		if e.move_mode == "hunt": speed += 20
+		if firing: speed = minf(speed,LASER_MOVE_SPEED)
+		elif warning: speed = minf(speed,95.0)
 		# Slow into a turn, retaining the same smooth tracked-vehicle presentation.
 		speed *= lerpf(0.15,1.0,clampf(1-turn/1.6,0,1))
 		motion = Vector2.from_angle(e.heading)*minf(speed*delta,offset.length())

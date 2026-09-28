@@ -4,6 +4,7 @@ const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Catalog = preload("res://scripts/combat_catalog.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
+var seraph_projectiles = preload("res://scripts/seraph_projectiles.gd").new()
 var radial_cache: Dictionary = {}
 var radial_floor := -1
 var radial_discovery := -1
@@ -57,15 +58,15 @@ func draw(game, screen: Vector2) -> void:
 	game.presentation.draw_world(game)
 	if game.stairs_unlocked and game.discovered.has(game.goal_room): game.presentation.draw_stairs(game)
 	draw_lasers(game)
-	draw_options(game)
-	if game.boss_floor and game.boss_variant == 3: game.boss.fortress.draw(game)
-	if game.boss_floor and game.boss_variant == 4: game.boss.bastion.draw(game)
+	if game.boss_floor and game.boss_variant == 0: game.boss.fortress.draw(game)
+	if game.boss_floor and game.boss_variant == 1: game.boss.bastion.draw(game)
+	if game.boss_floor and game.boss_variant == 2: game.boss.seraph.draw(game)
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
 		MobVisuals.draw_warning(game,e)
 		var warning = game.attack_warning(e)
-		if e.kind == Catalog.Enemy.BOSS and (game.depth_enabled or game.boss_variant in [3,4]): continue
+		if e.kind == Catalog.Enemy.BOSS: continue
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and Catalog.is_mob(e.kind):
@@ -87,24 +88,10 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		elif e.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]:
 			MobVisuals.draw_body(game,e)
-		else:
-			var ink: Color = game.boss.COLORS[game.boss_variant]
-			ink = ink.lerp(Color("fff5ff"),game.boss.shot_flash(game,e.p)*0.8)
-			var geometry = preload("res://scripts/boss_geometry.gd")
-			var scale: float = geometry.model_scale(game.boss_variant)
-			if game.boss_variant == 0:
-				var radius: float = geometry.SIEGE_EXTENT*scale
-				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-radius,0),p+Vector2(0,-radius),p+Vector2(radius,0),p+Vector2(0,radius)]),ink.darkened(0.55))
-			elif game.boss_variant == 1:
-				var angle: float = e.dir.angle()
-				var body: Vector2 = geometry.HUNTER_EXTENT*scale
-				game.draw_colored_polygon(PackedVector2Array([p+Vector2(-body.x,-body.y).rotated(angle),p+Vector2(body.x,0).rotated(angle),p+Vector2(-body.x,body.y).rotated(angle)]),ink.darkened(0.35))
-			else:
-				game.draw_circle(p,24*scale,ink.darkened(0.55))
-				game.draw_arc(p,geometry.HALO_RADIUS*scale,0,TAU,32,ink,2*scale)
-			var extent: float = lerpf(12.0,7.0,warning)*scale
-			game.draw_rect(Rect2(p-Vector2.ONE*extent,Vector2.ONE*extent*2),ink.lerp(Color.WHITE,warning))
+	seraph_projectiles.draw(game,view)
 	for b in game.bullets:
+		var shape: String = Catalog.projectile_shape(b)
+		if shape == "pearl": continue
 		if game.cells.get(game.tile(b.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(b.p)]): continue
 		if b.get("energy_orb",false):
 			var radius: float = b.orb_radius
@@ -137,6 +124,9 @@ func draw(game, screen: Vector2) -> void:
 				game.draw_line(tail,b.p,Color("151520"),6,true)
 				game.draw_line(tail,b.p,bullet_ink,4,true)
 				game.draw_line(b.p-b.v.normalized()*4,b.p,Color("fff0d5"),1.5,true)
+				if shape == "seeker":
+					var fin: Vector2 = b.v.normalized().orthogonal()*5
+					game.draw_polyline(PackedVector2Array([tail+fin,b.p-b.v.normalized()*5,tail-fin]),bullet_ink,2,true)
 			else:
 				game.draw_line(tail,b.p,Color(0.35,1,0.82,0.22),4,true)
 				game.draw_line(tail,b.p,Color("d5fff2"),1.5,true)
@@ -241,39 +231,23 @@ func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color:
 		if absf((outline[i] - origin).cross(outline[i + 1] - origin)) > 0.01:
 			game.draw_colored_polygon(PackedVector2Array([origin, outline[i], outline[i + 1]]), color)
 
-func draw_options(game) -> void:
-	if game.depth_enabled and game.boss_variant == 2: return
-	for option in game.boss.options:
-		var charge: float = game.boss.option_warning(option)
-		var ink := Color("ffc46b").lerp(Color("fff5e2"),maxf(charge,game.boss.shot_flash(game,option.p)))
-		game.draw_circle(option.p,11,Color("263847"))
-		game.draw_arc(option.p,11,0,TAU,16,ink,1.5)
-		var half := 5.0-charge*2.0
-		game.draw_rect(Rect2(option.p-Vector2.ONE*half,Vector2.ONE*half*2),ink)
-
 func draw_lasers(game) -> void:
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
-		if game.boss_variant == 3:
-			var direction: Vector2 = beam.a.direction_to(beam.b)
-			if direction.is_zero_approx(): continue
-			var side := direction.orthogonal()*(8.0 if beam.warning > 0 else 7.0)
-			var opacity := 0.10 if beam.warning > 0 else 0.28
-			game.draw_colored_polygon(PackedVector2Array([beam.a-side,beam.b-side,beam.b+side,beam.a+side]),Color(1.0,0.38,0.35,opacity))
-			var edge := Color(1.0,0.57,0.48,0.18 if beam.warning > 0 else 0.38)
-			game.draw_line(beam.a-side,beam.b-side,edge,1.0,true)
-			game.draw_line(beam.a+side,beam.b+side,edge,1.0,true)
-			if beam.warning <= 0:
-				var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0)
-				if flash > 0: game.draw_line(beam.a,beam.b,Color(1.0,0.92,0.82,0.9*flash),3.0,true)
-			continue
-		if beam.warning > 0:
-			game.draw_line(beam.a,beam.b,Color(0.08,0.06,0.1,0.65),3,true)
-			game.draw_line(beam.a,beam.b,Color(1,0.45,0.35,0.65),1.5,true)
-		else:
-			game.draw_line(beam.a,beam.b,Color(1,0.35,0.25,0.35),12)
-			game.draw_line(beam.a,beam.b,Color("ff8c68"),7,true)
-			game.draw_line(beam.a,beam.b,Color("fff3dc"),3,true)
+		var direction: Vector2 = beam.a.direction_to(beam.b)
+		if direction.is_zero_approx(): continue
+		var side: Vector2 = direction.orthogonal()*float(beam.get("width",14.0))*0.5
+		var opacity := 0.10 if beam.warning > 0 else 0.28
+		var hue := Color("f7dab0") if game.boss_variant == 2 else Color("ff6259")
+		game.draw_colored_polygon(PackedVector2Array([beam.a-side,beam.b-side,beam.b+side,beam.a+side]),Color(hue,opacity))
+		var edge := Color(hue,0.18 if beam.warning > 0 else 0.38)
+		game.draw_line(beam.a-side,beam.b-side,edge,1.0,true)
+		game.draw_line(beam.a+side,beam.b+side,edge,1.0,true)
+		if beam.warning <= 0:
+			if game.boss_variant == 2:
+				game.draw_line(beam.a,beam.b,Color(1.0,0.91,0.76,0.32),8,true)
+			var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0)
+			if flash > 0: game.draw_line(beam.a,beam.b,Color(0.95,1.0,0.94,0.9*flash),3.0,true)
 
 func draw_particles(game) -> void:
 	if particle_batch == null:

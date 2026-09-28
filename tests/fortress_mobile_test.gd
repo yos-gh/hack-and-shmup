@@ -10,7 +10,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.depth_view.set_process(false)
-	game.practice.variant = 3
+	game.practice.variant = 0
 	game.practice.depth = 25
 	game.practice.start(game)
 	game.discovered[1] = true
@@ -45,7 +45,7 @@ func run() -> void:
 				# Newly born bullets have not travelled yet this frame.
 				if is_equal_approx(bullet.life,1200.0/bullet.v.length()): emitted = true
 			if bullet.get("guided",false):
-				check(bullet.homing_time <= 1.15 and bullet.turn_rate == 1.25,"bounded homing")
+				check(bullet.homing_time <= 2.4 and bullet.turn_rate == 1.6,"bounded extended homing")
 		if frame > 90:
 			gap = 0 if emitted else gap+1.0/60.0
 			longest_gap = maxf(longest_gap,gap)
@@ -68,15 +68,6 @@ func run() -> void:
 	game.boss.emit_salvo(game,salvo)
 	check(game.bullets[-1].p.distance_to(fortress.gun_position(e,1)) < 0.001,"delayed muzzle follows translation and rotation")
 	check(game.bullets[-1].v.normalized().dot(game.bullets[-1].p.direction_to(game.player)) > 0.999,"machinegun re-aims each round")
-	# Radial lobes preserve four readable gaps regardless of density.
-	for count in [28,40]:
-		var angles: Array[float] = []
-		for i in range(count): angles.append(fposmod(game.boss.radial_angle(i,count),TAU))
-		angles.sort()
-		var gaps := 0
-		for i in range(count):
-			if fposmod(angles[(i+1)%count]-angles[i],TAU) > 0.6: gaps += 1
-		check(gaps == 4,"radial has four escape corridors")
 	game.restart_attempt()
 	e = game.enemies[0]
 	check(e.p == start and e.move_step == 0 and e.move_mode == "cross_x" and e.machine_cycle == 0,"retry restores movement and independent guns")

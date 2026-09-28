@@ -13,7 +13,7 @@ func run() -> void:
 	var fortress = game.boss.fortress
 	var gap_sizes := []
 	for depth in [25,50]:
-		game.practice.variant = 3
+		game.practice.variant = 0
 		game.practice.depth = depth
 		game.practice.start(game)
 		game.discovered[1] = true
@@ -82,7 +82,8 @@ func run() -> void:
 			check(beam.heading == initial_heading,"scissor direction holds during warning")
 			beam.warning = 0
 			game.boss.advance_lasers(game,0.2)
-			check(absf(beam.heading.angle_to(initial_heading)) > 0.1,"active scissor sweeps")
+			var sweep_angle: float = absf(beam.heading.angle_to(initial_heading))
+			check(sweep_angle > 0.04 and sweep_angle < 0.07,"active scissor retains a slower readable sweep")
 	check(gap_sizes[1] < gap_sizes[0]*0.65 and gap_sizes[1] > deg_to_rad(18),"50 narrows escape gaps while retaining traversable lanes")
 	game.free()
 	if failures == 0: print("PASS: tactical movement, telegraphed ram, terrain safety and structural 25/50 difficulty difference")

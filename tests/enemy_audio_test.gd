@@ -33,7 +33,7 @@ func run() -> void:
  audio.reset()
  for key in audio.PRIORITY: audio.request(game,key,game.player+Vector2(-100,0))
  audio._process(0.1)
- check(audio.voices[0].playing and audio.voices[0].stream == game.sound.clips.hunter_lock,"laser advance warning owns reserved voice")
+ check(audio.voices[0].playing and audio.voices[0].stream == game.sound.clips.seraph_charge,"highest-priority laser warning owns reserved voice")
  check(audio.voices.slice(1).filter(func(v): return v.playing).size()==4,"general attack mix bounded to four voices")
  check(is_equal_approx(audio.voices[1].volume_db,audio.levels[1]-6),"laser warning ducks ordinary enemy attacks")
  check(audio.voices[0].position.x<game.get_viewport_rect().size.x/2,"left attack placed left of listener")
@@ -54,19 +54,13 @@ func run() -> void:
  game.restart_attempt()
  check(audio.pending.is_empty() and audio.cooldown.is_empty(),"retry clears queued and rate-limit state")
  game.sound.voices[0].stop()
- for phase in range(3):
-  load("res://tools/dev_scenario.gd").configure(game,"halo45",19045,1)
-  var owner: Dictionary = game.enemies[0]
-  owner.active = true
-  owner.shots = phase
-  game.camera_pos = owner.p
-  game.player = owner.p+Vector2(140,0)
-  audio.reset()
-  game.boss.fire_halo(game,owner,Vector2.RIGHT)
-  check(audio.pending.has("halo_fire") and audio.pending.size()==1,"each HALO pattern emits one opening-wave cue")
-  audio.reset()
-  game.boss.emit_salvo(game,{"owner":owner,"origin":owner.p+Vector2(0,100),"aim":Vector2.RIGHT,"offsets":[-0.1,0.0,0.1],"speed":110.0})
-  check(audio.pending.has("halo_option") and audio.pending.size()==1,"satellite salvo emits one cue, not one per bullet")
+ load("res://tools/dev_scenario.gd").configure(game,"bastion15",19045,1)
+ var owner: Dictionary = game.enemies[0]
+ game.camera_pos = owner.p
+ game.player = owner.p+Vector2(-140,0)
+ audio.reset()
+ game.boss.emit_salvo(game,{"owner":owner,"origin":owner.p+Vector2(-100,0),"aim":Vector2.LEFT,"offsets":[-0.1,0.0,0.1],"speed":110.0})
+ check(audio.pending.has("halo_fire") and audio.pending.size()==1,"Bastion salvo emits one cue, not one per bullet")
  # Verify real stereo mixer output, not only the pending play flag.
  game.sound.music.stop()
  for voice in game.sound.voices: voice.stop()
@@ -95,5 +89,5 @@ func run() -> void:
  check(powers[0].x>powers[0].y and powers[1].y>powers[1].x,"actual pan favors correct side")
  AudioServer.remove_bus_effect(0,AudioServer.get_bus_effect_count(0)-1)
  game.free()
- if failures == 0: print("PASS: enemy cue aggregation, visibility, priorities, stereo placement, levels, pause/mute/reset and HALO waves")
+ if failures == 0: print("PASS: enemy cue aggregation, visibility, priorities, stereo placement, levels, pause/mute/reset and boss volleys")
  quit(1 if failures else 0)

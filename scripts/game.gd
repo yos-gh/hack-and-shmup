@@ -1,7 +1,6 @@
 extends Node2D
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
-const BossGeometry = preload("res://scripts/boss_geometry.gd")
 const SHIELD_TURN_SCALE := 0.5
 
 const LanceTrace = preload("res://scripts/lance_trace.gd")
@@ -203,10 +202,12 @@ func enemy_health(kind: int, depth: int) -> float:
 
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.get("arrival",0.0) > 0: return false
-	if e.kind == Catalog.Enemy.BOSS and boss_variant == 3:
+	if e.kind == Catalog.Enemy.BOSS and boss_variant == 0:
 		return boss.fortress.touches(e,player,PLAYER_HIT_RADIUS)
-	if e.kind == Catalog.Enemy.BOSS and boss_variant == 4:
+	if e.kind == Catalog.Enemy.BOSS and boss_variant == 1:
 		return boss.bastion.touches(e,player,PLAYER_HIT_RADIUS)
+	if e.kind == Catalog.Enemy.BOSS and boss_variant == 2:
+		return boss.seraph.touches(e,player,PLAYER_HIT_RADIUS)
 	if e.kind == Catalog.Enemy.SNIPER: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
 	var half_size := 12.0 if e.kind == Catalog.Enemy.SHIELD else 10.0
 	var nearest: Vector2 = player.clamp(e.p-Vector2.ONE*half_size,e.p+Vector2.ONE*half_size)
@@ -276,8 +277,8 @@ func fire_sub(aim: Vector2) -> void:
 		1:
 			for e in enemies:
 				if e.has("plates"):
-					if boss_variant == 4 and boss.bastion.orb_absorbs_area(self,player,SHOCK_RADIUS): continue
-					(boss.bastion if boss_variant == 4 else boss.fortress).shock(self,e,power*definition.damage)
+					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,SHOCK_RADIUS): continue
+					(boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).shock(self,e,power*definition.damage)
 					continue
 				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
 				if e.p.distance_to(player) <= SHOCK_RADIUS + body_radius and attack_reaches(player, e.p):
@@ -290,8 +291,8 @@ func fire_sub(aim: Vector2) -> void:
 			var rays := LanceTrace.lanes(self,player,direction)
 			for e in enemies:
 				if e.has("plates"):
-					if boss_variant == 4 and boss.bastion.orb_absorbs_lance(self,rays): continue
-					(boss.bastion if boss_variant == 4 else boss.fortress).lance(self,e,rays,direction,power*definition.damage)
+					if boss_variant == 1 and boss.bastion.orb_absorbs_lance(self,rays): continue
+					(boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).lance(self,e,rays,direction,power*definition.damage)
 					continue
 				if LanceTrace.hits(self,e,rays,direction):
 					hurt_enemy(e,power*definition.damage,direction,definition.knockback)
@@ -317,7 +318,7 @@ func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
 
 func enemy_bullet_radius(e: Dictionary) -> float:
-	return BossGeometry.hit_radius(boss_variant) if e.get("kind",0) == Catalog.Enemy.BOSS else BULLET_HIT_RADIUS
+	return boss.controller(boss_variant).CORE if e.get("kind",0) == Catalog.Enemy.BOSS else BULLET_HIT_RADIUS
 
 func rebuild_enemy_buckets() -> void:
 	enemy_buckets.clear()
@@ -397,7 +398,7 @@ func burst(p: Vector2, color: Color, count: int = 8) -> void:
 
 func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: float = 180.0, armor_checked: bool = false) -> void:
 	if e.hp <= 0: return
-	if e.kind == Catalog.Enemy.BOSS and boss_variant in [3,4] and not armor_checked and (boss.bastion if boss_variant == 4 else boss.fortress).block_damage(self,e,damage,direction): return
+	if e.kind == Catalog.Enemy.BOSS and not armor_checked and (boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).block_damage(self,e,damage,direction): return
 	if e.kind != Catalog.Enemy.BOSS: e.push += direction * knockback
 	if e.kind == Catalog.Enemy.SHIELD and direction.dot(e.dir) < -0.35:
 		combat_events.enemy_hit.emit(e.p,0.0,true,false)
@@ -501,8 +502,6 @@ func _physics_process(delta: float) -> void:
 	for i in range(1, rooms.size()):
 		if discovered.has(i) or (simulation_tick + i) % IDLE_UPDATE_PHASES == 0:
 			patrol_elapsed[i] = 0.0
-	enemies.append_array(boss.pending_summons)
-	boss.pending_summons.clear()
 	rebuild_enemy_buckets()
 	for b in bullets:
 		b.life -= delta
@@ -513,6 +512,7 @@ func _physics_process(delta: float) -> void:
 				var expansion: float = clampf(b.orb_age/1.05,0.0,1.0)
 				b.orb_radius = lerpf(18.0,50.0,expansion*expansion*(3.0-2.0*expansion))
 				if b.orb_age >= 1.05:
+					enemy_attack_cue("boss_release",b.p)
 					b.orb_phase = "flight"
 					b.orb_age = 0.0
 					b.v = b.p.direction_to(player)*125.0*b.orb_speed_scale
@@ -537,7 +537,7 @@ func _physics_process(delta: float) -> void:
 					b.life = 0
 					break
 			else:
-				if boss_variant == 4:
+				if boss_variant == 1:
 					var absorbed := false
 					for orb in bullets:
 						if not orb.get("energy_orb",false) or orb.life <= 0: continue
@@ -547,7 +547,7 @@ func _physics_process(delta: float) -> void:
 						absorbed = true
 						break
 					if absorbed: break
-				if boss_variant in [3,4] and boss_floor and (boss.bastion if boss_variant == 4 else boss.fortress).intercept_bullet(self,b):
+				if boss_floor and (boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).intercept_bullet(self,b):
 					b.life = 0
 					break
 				var target := bullet_target(b.p)
@@ -564,6 +564,7 @@ func _physics_process(delta: float) -> void:
 		combat_events.stairs_opened.emit(stairs)
 		enemies.clear()
 		boss.reset()
+		sound.stop_boss_beam()
 		bullets = bullets.filter(func(b: Dictionary) -> bool: return not b.hostile)
 		banner = 3.0
 	if boss_floor:

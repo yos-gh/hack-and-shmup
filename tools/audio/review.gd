@@ -28,7 +28,7 @@ func run() -> void:
 	for frame in range(frames):
 		if frame % 720 == 0:
 			var section := frame / 720
-			Scenario.configure(game, "hunter15" if section == 3 else "normal19", 19045, section % 3)
+			Scenario.configure(game, "bastion15" if section == 3 else "normal19", 19045, section % 3)
 		Scenario.input_frame(game, frame)
 		# Demonstrate an actual death/retry without stopping the music.
 		if frame == 1260:

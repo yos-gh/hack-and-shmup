@@ -57,7 +57,15 @@ func run():
 	game.practice.open(game)
 	menus.sync()
 	buttons = menus.surface.get_children().filter(func(node): return node is Button)
-	check(buttons.size() == 9, "practice offers five bosses and four controls")
+	check(buttons.size() == 9, "practice offers three bosses, four actions and two settings")
+	check(buttons[7].text.begins_with("AUDIO:") and buttons[8].text in ["FULLSCREEN","WINDOWED"],"practice exposes both session settings")
+	buttons[7].grab_focus()
+	buttons[7].pressed.emit()
+	check(game.practice.selecting and game.audio_mode == 0,"practice sound setting changes without launching a fight")
+	check(root.gui_get_focus_owner().text == "AUDIO: ALL","practice setting retains focus after refresh")
+	buttons = menus._buttons()
+	for i in range(buttons.size()):
+		check(buttons[i].focus_next == buttons[i].get_path_to(buttons[(i+1)%buttons.size()]),"Tab reaches every practice control including settings")
 	buttons[2].pressed.emit()
 	check(game.practice.variant == 2, "boss button updates selected variant")
 	menus.sync()
@@ -69,7 +77,7 @@ func run():
 	root.push_input(up)
 	check(game.practice.depth == 10, "focused control preserves practice arrow shortcut")
 	# Exercise the viewport route while a button owns focus, not just the handler.
-	for item in [[KEY_A,1,10],[KEY_D,2,10],[KEY_D,3,10],[KEY_D,4,10],[KEY_D,0,10],[KEY_A,4,10],[KEY_A,3,10],[KEY_A,2,10],[KEY_W,2,15],[KEY_S,2,10]]:
+	for item in [[KEY_A,1,10],[KEY_D,2,10],[KEY_D,0,10],[KEY_A,2,10],[KEY_W,2,15],[KEY_S,2,10]]:
 		var wasd := InputEventKey.new()
 		wasd.keycode = item[0]
 		wasd.pressed = true

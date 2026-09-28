@@ -13,6 +13,9 @@ var critical_priority := 0
 var hit_gap := 0.0
 var burst_gaps: Dictionary = {}
 var effects_bus_name := ""
+var boss_beam := AudioStreamPlayer2D.new()
+var boss_beam_active := false
+var boss_beam_level := -60.0
 const CRITICAL_PRIORITIES := {"clear": 2, "death": 3, "timeout": 3}
 
 func _ready() -> void:
@@ -25,7 +28,7 @@ func _ready() -> void:
 	limiter.ceiling_db = -2.5
 	limiter.pre_gain_db = -2.0
 	AudioServer.add_bus_effect(bus_index, limiter)
-	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","halo_option","hunter_burst"]:
+	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","seraph_charge","seraph_beam","boss_orb_charge","boss_mark","boss_release"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
@@ -44,11 +47,44 @@ func _ready() -> void:
 		voices.append(voice)
 	add_child(enemy_audio)
 	for voice in enemy_audio.voices: voice.bus = effects_bus_name
+	# A dedicated, bounded voice follows beam state, never the general shot pool.
+	var beam_loop: AudioStreamWAV = clips.seraph_beam.duplicate()
+	beam_loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	beam_loop.loop_begin = 0
+	beam_loop.loop_end = beam_loop.data.size()/4 # Stereo 16-bit PCM frames.
+	boss_beam.stream = beam_loop
+	boss_beam.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	boss_beam.bus = effects_bus_name
+	boss_beam.max_distance = 2000
+	boss_beam.attenuation = 0
+	boss_beam.panning_strength = 0.25
+	add_child(boss_beam)
 	_refresh_music_level()
 
 func _process(delta: float) -> void:
 	hit_gap = maxf(0, hit_gap - delta)
 	for key in burst_gaps: burst_gaps[key] = maxf(0, burst_gaps[key] - delta)
+	if paused_state: return
+	var target: float = -16.0 if boss_beam_active else -60.0
+	if boss_beam_active and enemy_audio.voices[0].playing: target -= 6
+	boss_beam_level = move_toward(boss_beam_level,target,180*delta)
+	boss_beam.volume_db = boss_beam_level
+	if not boss_beam_active and boss_beam_level <= -60: boss_beam.stop()
+
+func set_boss_beam(game, active: bool, point: Vector2 = Vector2.ZERO) -> void:
+	boss_beam_active = active and audio_mode != 2 and not game.pending_respawn and not game.title_screen
+	if not boss_beam_active: return
+	boss_beam.position = game.world_to_screen(point)
+	if not headless and not boss_beam.playing:
+		boss_beam.volume_db = -60
+		boss_beam_level = -60
+		boss_beam.play()
+		boss_beam.stream_paused = paused_state
+
+func stop_boss_beam() -> void:
+	boss_beam_active = false
+	boss_beam_level = -60
+	boss_beam.stop()
 
 func hear_hit(_position: Vector2, _damage: float, blocked: bool, killed: bool) -> void:
 	if blocked or killed or hit_gap > 0 or paused_state: return
@@ -68,6 +104,7 @@ func play_sfx(key: String) -> void:
 		var priority: int = CRITICAL_PRIORITIES[key]
 		if voices[0].playing and priority < critical_priority: return
 		critical_priority = priority
+		stop_boss_beam()
 		enemy_audio.reset()
 		for voice in voices: voice.stop()
 		_set_voice_level(0, -5)
@@ -107,6 +144,7 @@ func set_paused(value: bool) -> void:
 	enemy_audio.set_paused(value)
 	music.stream_paused = value
 	for voice in voices: voice.stream_paused = value
+	boss_beam.stream_paused = value
 
 func set_audio_mode(value: int) -> void:
 	audio_mode = posmod(value,3)
@@ -114,6 +152,7 @@ func set_audio_mode(value: int) -> void:
 	if enemy_audio.muted: enemy_audio.reset()
 	_refresh_music_level()
 	if audio_mode == 2:
+		stop_boss_beam()
 		for voice in voices: voice.stop()
 
 func _refresh_music_level() -> void:

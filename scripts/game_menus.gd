@@ -57,7 +57,7 @@ func _buttons() -> Array:
 func _default_focus(state: String) -> void:
 	var buttons := _buttons()
 	if buttons.is_empty(): return
-	if state == "practice": buttons[7 if game.practice.variant == 3 else (8 if game.practice.variant == 4 else game.practice.variant)].grab_focus()
+	if state == "practice": buttons[game.practice.variant].grab_focus()
 	else: buttons[0].grab_focus()
 
 func _move_focus(direction: Vector2i) -> void:
@@ -125,6 +125,9 @@ func _title(screen: Vector2) -> void:
 	var hint := "LEFT STICK / DPAD SELECT / A / LB CONFIRM" if game.controls.using_gamepad else "M AUDIO / RECORD LASTS UNTIL YOU QUIT"
 	if not OS.has_feature("web"): hint += " / B QUIT" if game.controls.using_gamepad else " / ESC QUIT"
 	_label(Rect2(24,y+240,screen.x-48,40),hint,14,Color("8194aa"))
+	_settings()
+
+func _settings() -> void:
 	_button(game.audio_button_rect(),["AUDIO: ALL","AUDIO: SE ONLY","AUDIO: OFF"][game.audio_mode],func(): game.cycle_audio(); sync())
 	var fullscreen := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN,DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
 	_button(game.fullscreen_button_rect(),"WINDOWED" if fullscreen else "FULLSCREEN",func(): game.toggle_fullscreen(); sync())
@@ -182,21 +185,22 @@ func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
 	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
 	_label(Rect2(24,y-177,screen.x-48,45),"LEFT STICK / DPAD: SELECT   A / LB: CONFIRM   B: BACK" if game.controls.using_gamepad else "A / D: BOSS   W / S: FLOOR   ARROW KEYS ALSO WORK   TAB + ENTER",15,Color("8194aa"))
-	for i in range(9):
-		var caption: String = game.boss.NAMES[3] if i == 7 else game.boss.NAMES[4] if i == 8 else game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (B)" if game.controls.using_gamepad else "BACK (Esc)"][i-3]
+	for i in range(7):
+		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (B)" if game.controls.using_gamepad else "BACK (Esc)"][i-3]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())
-		if i < 3 or i in [7,8]:
+		if i < 3:
 			button.toggle_mode = true
-			button.set_pressed_no_signal((3 if i == 7 else (4 if i == 8 else i)) == game.practice.variant)
-			if (3 if i == 7 else (4 if i == 8 else i)) == game.practice.variant: button.add_theme_color_override("font_color",Color("63f5ce"))
+			button.set_pressed_no_signal(i == game.practice.variant)
+			if i == game.practice.variant: button.add_theme_color_override("font_color",Color("63f5ce"))
+	_settings()
 	var practice_buttons := _buttons()
-	var tab_order := [0,1,2,7,8,3,4,5,6]
+	var tab_order := [0,1,2,3,4,5,6,7,8]
 	for j in range(tab_order.size()):
 		var current: Button = practice_buttons[tab_order[j]]
 		current.focus_next = current.get_path_to(practice_buttons[tab_order[(j+1)%tab_order.size()]])
 		current.focus_previous = current.get_path_to(practice_buttons[tab_order[(j+tab_order.size()-1)%tab_order.size()]])
-	_label(Rect2(screen.x*0.5-110,y+10,220,48),"FLOOR %02d" % game.practice.depth,25)
-	_label(Rect2(24,y+72,screen.x-48,56),"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
+	_label(Rect2(screen.x*0.5-110,y+66,220,48),"FLOOR %02d" % game.practice.depth,25)
+	_label(Rect2(24,y+116,screen.x-48,30),"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
 
 func _input(event: InputEvent) -> void:
 	# Observe once, before GUI consumption, including neutral/release events.

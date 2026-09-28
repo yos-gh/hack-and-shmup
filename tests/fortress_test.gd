@@ -13,15 +13,15 @@ func run() -> void:
 	for depth in [5,20,25,30,50,75,100]:
 		game.floor_number = depth
 		game.new_floor()
-		check((game.boss_variant == 3) == (depth%25 == 0),"25-floor replacement")
-	game.practice.variant = 3
+		check(game.boss_variant in [0,1,2],"every fifth floor uses a large boss")
+	game.practice.variant = 0
 	game.practice.depth = 25
 	game.practice.start(game)
 	game.set_physics_process(false)
 	game.discovered[1] = true
 	var e: Dictionary = game.enemies[0]
 	var fortress = game.boss.fortress
-	check(game.boss_variant == 3 and game.rooms[1].size == Vector2i(48,36),"practice and arena")
+	check(game.boss_variant == 0 and game.rooms[1].size == Vector2i(48,36),"practice and arena")
 	check(not game.walkable(game.center(Vector2i(7,-11))),"solid cover")
 	check(fortress.touches(e,e.p+Vector2(140,128).rotated(e.heading),game.PLAYER_HIT_RADIUS),"tracks have contact collision")
 	check(not fortress.touches(e,e.p+Vector2(150,0).rotated(e.heading),game.PLAYER_HIT_RADIUS),"recess beside hull stays traversable")

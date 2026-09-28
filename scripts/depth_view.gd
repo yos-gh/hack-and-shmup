@@ -1,7 +1,6 @@
 extends Node
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
-const BossGeometry = preload("res://scripts/boss_geometry.gd")
 
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Background = preload("res://scripts/background_style.gd")
@@ -68,23 +67,14 @@ func _ready() -> void:
 	make_batch("sniper", sniper_mesh())
 	make_batch("flanker",MobVisuals.mesh(Catalog.Enemy.FLANKER))
 	make_batch("interceptor",MobVisuals.mesh(Catalog.Enemy.INTERCEPTOR))
-	make_batch("siege_base", Glyph.annulus(0.55,4))
-	make_batch("siege_armor", Glyph.plate([Vector2(-1,-0.7),Vector2(0.6,-1),Vector2(1,-0.6),Vector2(1,0.6),Vector2(0.6,1),Vector2(-1,0.7)],-0.12))
-	make_batch("siege_barrel", beveled_square())
-	make_batch("siege_core", Glyph.boss_core())
-	make_batch("hunter_body", Glyph.chevron())
-	make_batch("hunter_wing", Glyph.plate([Vector2(-1,-0.7),Vector2(0.3,-1),Vector2(1,-0.3),Vector2(1,0.3),Vector2(0.3,1),Vector2(-1,0.7)],0.2))
-	make_batch("hunter_core", Glyph.boss_core())
-	make_batch("hunter_drive", beveled_square())
+	make_batch("boss_base", Glyph.annulus(0.55,4))
+	make_batch("boss_armor", Glyph.plate([Vector2(-1,-0.7),Vector2(0.6,-1),Vector2(1,-0.6),Vector2(1,0.6),Vector2(0.6,1),Vector2(-1,0.7)],-0.12))
+	make_batch("boss_barrel", beveled_square())
+	make_batch("boss_core", Glyph.boss_core())
+	make_batch("seraph_body", Glyph.annulus(0.46,24))
+	make_batch("seraph_wing_a", preload("res://scripts/seraph_visuals.gd").wing_mesh(false))
+	make_batch("seraph_wing_b", preload("res://scripts/seraph_visuals.gd").wing_mesh(true))
 	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
-	make_batch("halo_ring", Glyph.annulus(24.0/29.0,16,true))
-	var disk := CylinderMesh.new()
-	disk.top_radius = 1.0
-	disk.bottom_radius = 1.0
-	disk.height = 1.0
-	disk.radial_segments = 48
-	make_batch("halo_base", disk)
-	make_batch("halo_core", Glyph.boss_core())
 	make_batch("actor_core", Glyph.boss_core())
 	sync(get_parent())
 
@@ -96,7 +86,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if key in ["floor", "contact", "wall_mask"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
-	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("siege_") or key.begins_with("hunter_") or key.begins_with("halo_"):
+	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("seraph_"):
 		var glyph_surface := ShaderMaterial.new()
 		glyph_surface.shader = preload("res://scripts/glyph_surface.gdshader")
 		instance.material_override = glyph_surface
@@ -134,12 +124,12 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if not key.begins_with("bg_") and key not in ["floor","contact","wall_mask","wall_v","wall_h"]: instance.multimesh.instance_count = 128
 	stage.add_child(instance)
 	batches[key] = instance.multimesh
-	if key in ["actor_core","siege_core","hunter_core","halo_core"]:
+	if key in ["actor_core","boss_core"]:
 		var core_material := StandardMaterial3D.new()
 		core_material.vertex_color_use_as_albedo = true
 		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		instance.material_override = core_material
-	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("siege_") or key.begins_with("hunter_") or key == "halo_ring":
+	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("seraph_"):
 		var wire := MultiMeshInstance3D.new()
 		var wire_material := ShaderMaterial.new()
 		wire_material.shader = preload("res://scripts/glyph_wire.gdshader")
@@ -251,54 +241,14 @@ func chaser_heading(game, enemy: Dictionary) -> Vector2:
 	return direction.normalized() if direction.length_squared() > 0.001 else enemy.dir
 
 func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector3, color: Color, height: float) -> Dictionary:
-	var variant: int = get_parent().boss_variant
-	var factor: float = BossGeometry.model_scale(variant)
-	var scale: float = BossGeometry.SIZE_SCALE[variant]
-	return chaser_entry(enemy.p+(offset*factor).rotated(facing.angle()),facing,Vector3(size.x*factor,size.y*factor,size.z*scale),color,height*scale)
+	return chaser_entry(enemy.p+offset.rotated(facing.angle()),facing,size,color,height)
 
-func sync_other_bosses(game) -> void:
-	var parts := {"siege_base":[],"siege_armor":[],"siege_barrel":[],"siege_core":[],"hunter_body":[],"hunter_wing":[],"hunter_core":[],"hunter_drive":[]}
-	if game.boss_floor and game.boss_variant != 2:
+func sync_bosses(game) -> void:
+	var parts := {"boss_base":[],"boss_armor":[],"boss_barrel":[],"boss_core":[],"seraph_body":[],"seraph_wing_a":[],"seraph_wing_b":[]}
+	if game.boss_floor:
 		for enemy in game.enemies:
 			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
-			var warning: float = game.attack_warning(enemy)
-			var facing: Vector2 = enemy.p.direction_to(game.player) if enemy.active else enemy.dir
-			if game.boss_variant == 3:
-				game.boss.fortress.draw_depth(self,game,enemy,parts)
-			elif game.boss_variant == 4:
-				game.boss.bastion.draw_depth(self,game,enemy,parts)
-			elif game.boss_variant == 0:
-				var flash: float = game.boss.shot_flash(game,enemy.p)
-				var ink: Color = game.boss.COLORS[0].lerp(Color("fff5ff"),flash*0.8)
-				# Stationary diamond footing, independent of the swivelling turret.
-				parts.siege_base.append(boss_part(enemy,Vector2.RIGHT,Vector2.ZERO,Vector3(BossGeometry.SIEGE_EXTENT,BossGeometry.SIEGE_EXTENT,5),ink,2))
-				for side in [-1,1]:
-					parts.siege_armor.append(boss_part(enemy,facing,Vector2(-3,side*10),Vector3(6,3,5),ink.darkened(0.22),4))
-					parts.siege_barrel.append(boss_part(enemy,facing,Vector2(11-warning*3-flash*4,side*4),Vector3(7,2,4),ink.lerp(Color("fff0fc"),warning),6))
-				parts.siege_core.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(8-warning*3,7-warning*3,5),ink.lerp(Color.WHITE,warning),5))
-			else:
-				var laser_charge := 0.0
-				var firing := false
-				for beam in game.boss.lasers:
-					if beam.owner != enemy: continue
-					# Aim at the locked central beam, not a player moving across it.
-					if laser_charge == 0 and not firing: facing = beam.a.direction_to(beam.b)
-					laser_charge = maxf(laser_charge,clampf(1-beam.warning/0.8,0,1))
-					firing = firing or beam.warning <= 0
-				# Multi-beam patterns are symmetric: use their average direction.
-				var beam_aim := Vector2.ZERO
-				for beam in game.boss.lasers:
-					if beam.owner == enemy: beam_aim += beam.a.direction_to(beam.b)
-				if not beam_aim.is_zero_approx(): facing = beam_aim.normalized()
-				var ink: Color = game.boss.COLORS[1]
-				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(BossGeometry.HUNTER_EXTENT.x,BossGeometry.HUNTER_EXTENT.y,3),ink.darkened(0.65),1))
-				parts.hunter_body.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(22,16,5),ink.darkened(0.18),3))
-				for side in [-1,1]:
-					parts.hunter_wing.append(boss_part(enemy,facing,Vector2(-9,side*(9-laser_charge*2)),Vector3(5,2,4),ink.lerp(Color("e3fcff"),laser_charge*0.6),6))
-					var drive: float = 2.0 if laser_charge > 0 and not firing else 5.0
-					parts.hunter_drive.append(boss_part(enemy,facing,Vector2(-18,side*9),Vector3(drive,2,2),ink.darkened(0.35 if drive == 2 else 0),3))
-				var extent := 7.0-4.0*maxf(laser_charge,warning)
-				parts.hunter_core.append(boss_part(enemy,facing,Vector2.ZERO,Vector3(extent,1.8,4),ink.lerp(Color.WHITE,maxf(laser_charge,warning)),7))
+			game.boss.controller(game.boss_variant).draw_depth(self,game,enemy,parts)
 	for key in parts: upload(key,parts[key])
 
 func chaser_entry(point: Vector2, heading: Vector2, scale_value: Vector3, color: Color, height: float) -> Dictionary:
@@ -419,37 +369,9 @@ func sync(game) -> void:
 	upload("flanker",flankers)
 	upload("interceptor",interceptors)
 	upload("ring", rings)
-	sync_halo(game)
-	sync_other_bosses(game)
+	sync_bosses(game)
 	game.queue_redraw()
 	max_sync_ms = maxf(max_sync_ms, (Time.get_ticks_usec()-started)/1000.0)
-
-func sync_halo(game) -> void:
-	var shells: Array = []
-	var bases: Array = []
-	var cores: Array = []
-	if game.boss_floor and game.boss_variant == 2:
-		var ink: Color = game.boss.COLORS[2]
-		var scale: float = BossGeometry.SIZE_SCALE[2]
-		for enemy in game.enemies:
-			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue
-			var warning: float = game.attack_warning(enemy)
-			var extent := lerpf(12.0,7.0,warning)
-			bases.append(entry(enemy.p,Vector3(24,24,4)*scale,ink.darkened(0.75),3*scale,true))
-			shells.append(entry(enemy.p,Vector3(BossGeometry.HALO_RADIUS,BossGeometry.HALO_RADIUS,12)*scale,ink,7*scale,true))
-			cores.append(entry(enemy.p,Vector3(extent,extent,6)*scale,ink.lerp(Color.WHITE,maxf(warning,game.boss.shot_flash(game,enemy.p))),7*scale))
-		for option in game.boss.options:
-			if option.life <= 0 or option.owner.hp <= 0 or not game.attack_open(option.p): continue
-			var charge: float = game.boss.option_warning(option)
-			var extent := 5.0-charge*2.0
-			var color := ink.lerp(Color("fff5e2"),maxf(charge,game.boss.shot_flash(game,option.p)))
-			bases.append(entry(option.p,Vector3(10,10,3),Color("263847"),3,true))
-			shells.append(entry(option.p,Vector3(11,11,7),color,5,true))
-			cores.append(entry(option.p,Vector3(extent,extent,4),color,6))
-	# Upload empty lists as well, so defeat, retry and floor changes leave no ghosts.
-	upload("halo_ring",shells)
-	upload("halo_base",bases)
-	upload("halo_core",cores)
 
 func refresh_discovery(game) -> void:
 	var started := Time.get_ticks_usec()

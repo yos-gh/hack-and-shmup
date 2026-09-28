@@ -11,7 +11,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	for depth in [25,50]:
-		game.practice.variant = 4
+		game.practice.variant = 1
 		game.practice.depth = depth
 		game.practice.start(game)
 		game.set_depth_view(true)
@@ -59,7 +59,7 @@ func run() -> void:
 		game.set_depth_view(false)
 		await capture(game,"%d-2d" % depth)
 	game.practice.open(game)
-	game.practice.variant = 4
+	game.practice.variant = 1
 	game.menus.sync()
 	await capture(game,"practice-menu")
 	game.free()

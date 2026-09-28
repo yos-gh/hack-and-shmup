@@ -12,7 +12,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	for depth in [25,50]:
-		game.practice.variant = 3
+		game.practice.variant = 0
 		game.practice.depth = depth
 		game.practice.start(game)
 		game.set_depth_view(true)

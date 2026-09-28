@@ -72,7 +72,6 @@ func capture() -> void:
 		var enemy: Dictionary = game.enemies[0]
 		enemy.active = true
 		enemy.cd = 0
-		enemy.summon_cd = 0
 		enemy.laser_cd = 0
 		for frame in range(60): game._physics_process(1.0/60)
 		game.camera_pos = game.center(game.rooms[1].get_center())
@@ -80,45 +79,6 @@ func capture() -> void:
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-%d.png" % (variant+1))
-	for variant in [0,2]:
-		game.floor_number = 15
-		game.new_floor(variant)
-		game.player = game.center(Vector2i(3,1))
-		game.grace = 999
-		game.discovered[1] = true
-		var shooter: Dictionary = game.enemies[0]
-		for enemy in game.enemies:
-			enemy.active = true
-			enemy.cd = 99
-			if enemy != shooter: enemy.hp = 0
-		shooter.shots = 0 if variant == 0 else 1
-		shooter.cd = 0
-		shooter.laser_cd = 99
-		game.boss.enemy_velocity(game,shooter,0.016,Vector2.RIGHT)
-		shooter.cd = 99
-		for frame in range(75): game._physics_process(1.0/60)
-		game.camera_pos = game.center(game.rooms[1].get_center())
-		game.queue_redraw()
-		await process_frame
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://docs/captures/prototype/boss-gaps-%d.png" % variant)
-	for phase in range(3):
-		game.floor_number = 15
-		game.new_floor(2)
-		game.player = game.center(Vector2i(6,1))
-		game.grace = 999
-		game.discovered[1] = true
-		var core: Dictionary = game.enemies[0]
-		core.active = true
-		core.shots = phase
-		core.cd = 99
-		game.boss.fire_halo(game,core,Vector2.LEFT)
-		for frame in range(85): game._physics_process(1.0/60)
-		game.camera_pos = game.center(game.rooms[1].get_center())
-		game.queue_redraw()
-		await process_frame
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://docs/captures/prototype/halo-pattern-%d.png" % phase)
 	game.practice.open(game)
 	game.practice.variant = 2
 	game.practice.depth = 45

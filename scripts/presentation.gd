@@ -62,7 +62,6 @@ func track_motion(game, a: Vector2, b: Vector2, delta: float) -> void:
 	for enemy in game.enemies:
 		if enemy.hp<=0 or not game.attack_open(enemy.p): continue
 		if enemy.charge>0: add_trail(enemy.p,enemy.dir,Color("ad8fff"),15,0.15)
-		elif enemy.kind == Catalog.Enemy.BOSS and game.boss_variant == 1 and game.boss.lasers.is_empty(): add_trail(enemy.p,enemy.dir,Color("7be8ff"),18,0.15)
 func add_trail(p: Vector2, direction: Vector2, color: Color, radius: float, life: float) -> void:
 	var item: Dictionary = trails.pop_front() if trail_pool.is_empty() else trail_pool.pop_back()
 	item.p = p

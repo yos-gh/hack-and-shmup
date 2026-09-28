@@ -16,7 +16,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	check(game.replay_input.is_empty() and game.title_screen, "normal launch remains interactive title")
-	for scenario in ["normal19", "halo45"]:
+	for scenario in ["normal19", "seraph45"]:
 		var expected := ""
 		for repeat in range(2):
 			Scenario.configure(game, scenario, 19045, 1)

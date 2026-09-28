@@ -8,7 +8,7 @@ func run() -> void:
 	game.depth_view.set_process(false)
 	var failed := false
 	for depth in [5,15,25,50]:
-		Fixture.new().configure(game,depth,"standard",3,0)
+		Fixture.new().configure(game,depth,"standard",0,0)
 		var e: Dictionary = game.enemies[0]
 		game.player = e.p+Vector2(-300,0)
 		game.build_flow()

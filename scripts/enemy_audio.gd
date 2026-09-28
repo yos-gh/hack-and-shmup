@@ -1,9 +1,10 @@
 extends Node
 
 # One pending cue per attack family; independent of combat and random streams.
-const PRIORITY := {"sniper_fire":0,"siege_fire":1,"halo_fire":1,"halo_option":0,"hunter_burst":1,"hunter_fire":2,"hunter_lock":3}
+const PRIORITY := {"sniper_fire":0,"siege_fire":1,"halo_fire":1,"hunter_fire":2,"hunter_lock":3,"seraph_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2}
 # The modulated laser warning has a quieter source; +6 dB brings its RMS near laser fire.
-const LEVEL := {"sniper_fire":-14.0,"siege_fire":-10.0,"halo_fire":-11.0,"halo_option":-16.0,"hunter_burst":-14.0,"hunter_fire":-10.0,"hunter_lock":-3.0}
+const LEVEL := {"sniper_fire":-14.0,"siege_fire":-10.0,"halo_fire":-11.0,"hunter_fire":-10.0,"hunter_lock":-3.0,"seraph_charge":-5.0,"boss_orb_charge":-9.0,"boss_mark":-5.0,"boss_release":-10.0}
+const WARNINGS := ["hunter_lock","seraph_charge","boss_orb_charge","boss_mark"]
 const GAP := 0.065
 var pending: Dictionary = {}
 var cooldown: Dictionary = {}
@@ -56,8 +57,9 @@ func _process(delta: float) -> void:
 		return
 	for cue in take(delta):
 		if sound.headless: continue
-		# Slot zero is exclusively for the laser's advance warning.
-		var slot := 0 if cue.key == "hunter_lock" else -1
+		# Critical telegraphs have a reserved voice; ordinary volleys cannot steal it.
+		var slot := 0 if cue.key in WARNINGS else -1
+		if slot == 0 and voices[0].playing and ranks[0] >= cue.score: continue
 		if slot < 0:
 			for i in range(1,voices.size()):
 				if not voices[i].playing:

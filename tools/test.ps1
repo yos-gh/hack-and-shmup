@@ -7,8 +7,8 @@ $results = @()
 foreach ($test in Get-ChildItem -LiteralPath (Join-Path $projectPath 'tests') -Filter '*_test.gd' | Sort-Object Name) {
     $logFile = Join-Path $logPath ($test.BaseName + '.log')
     $arguments = @('--path', ('"' + $projectPath + '"'), '--disable-crash-handler', '--log-file', ('"' + $logFile + '"'), '--script', "res://tests/$($test.Name)")
-    # The game deliberately disables playback when DisplayServer is headless.
-    if ($test.Name -notin @('audio_test.gd', 'fortress_test.gd', 'view_state_test.gd', 'effect_view_test.gd', 'depth_view_test.gd', 'background_view_test.gd', 'background_art_test.gd', 'background_edges_test.gd', 'camera_view_test.gd', 'sniper_warning_test.gd', 'hud_audio_test.gd', 'halo_view_test.gd', 'boss_art_test.gd', 'boss_hitbox_test.gd', 'enemy_audio_test.gd')) { $arguments += '--headless' }
+    # Audio and real renderer/MultiMesh readback tests need a display backend.
+    if ($test.Name -notin @('audio_test.gd', 'boss_audio_test.gd', 'fortress_test.gd', 'view_state_test.gd', 'effect_view_test.gd', 'depth_view_test.gd', 'background_view_test.gd', 'background_art_test.gd', 'background_edges_test.gd', 'camera_view_test.gd', 'sniper_warning_test.gd', 'hud_audio_test.gd', 'enemy_audio_test.gd', 'seraph_test.gd')) { $arguments += '--headless' }
     $process = Start-Process -FilePath $Godot -ArgumentList $arguments -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(120000)) {
         $process.Kill()
@@ -18,7 +18,6 @@ foreach ($test in Get-ChildItem -LiteralPath (Join-Path $projectPath 'tests') -F
     $exitCode = $process.ExitCode
     $log = Get-Content -LiteralPath $logFile -Raw
     $completion = switch ($test.Name) {
-        'halo_shock_test.gd' { 'LV45 SHOCK:' }
         'title_exit_test.gd' { 'Native title Esc dispatched' }
         default { 'PASS:' }
     }

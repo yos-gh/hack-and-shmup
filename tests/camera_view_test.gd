@@ -67,7 +67,7 @@ func run() -> void:
 		await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://docs/validation/camera/tilt-%d.png" % angle)
-	for scenario in ["normal19","hunter15"]:
+	for scenario in ["normal19","bastion15"]:
 		var baseline := ""
 		for angle in [0.0,25.0,35.0]:
 			Scenario.configure(game,scenario,19045,1)

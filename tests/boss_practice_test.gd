@@ -15,36 +15,6 @@ func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
-	var layouts := {}
-	game.floor_number = 15
-	for seed_value in range(80):
-		game.rng.seed = seed_value
-		game.new_floor(0)
-		var positions := []
-		for e in game.enemies:
-			positions.append(e.p)
-			check(e.p.distance_to(game.entrances[1][0]) > 140, "turrets keep entry safe")
-			check(game.cells.get(game.tile(e.p),-1) == 1, "turrets stay in arena")
-			for other in game.enemies:
-				if other != e: check(e.p.distance_to(other.p) >= 190, "turrets maintain minimum spacing")
-		layouts[str(positions)] = true
-		game.restart_attempt()
-		check(game.enemies == game.initial_enemies, "retry preserves layout")
-	check(layouts.size() >= 12, "multiple distinct formations and bounded variations")
-	game.new_floor(2)
-	game.discovered[1] = true
-	var owner: Dictionary = game.enemies[0]
-	game.boss.fire_halo(game,owner,Vector2.LEFT)
-	check(game.boss.options.size() == 4 and game.enemies.size() == 1, "floor 15 has four non-enemy options")
-	game.rebuild_enemy_buckets()
-	for option in game.boss.options:
-		check(game.bullet_target(option.p).is_empty(), "options do not intercept player shots")
-	game.bullets.clear()
-	game.boss.advance_attacks(game,0.71)
-	check(game.bullets.any(func(b): return b.p.distance_to(owner.p) > 140), "shots originate from satellites")
-	owner.hp = 0
-	game.boss.advance_attacks(game,0.016)
-	check(game.boss.options.is_empty() and game.boss.salvos.is_empty(), "death clears satellites and scheduled fire")
 	game.return_to_title()
 	game.best_cleared = 10
 	key(game,KEY_B)
@@ -88,6 +58,6 @@ func run() -> void:
 			check(is_equal_approx(game.LANCE_WIDTH,78.0),"high-floor practice has double lance width")
 		game.restart_attempt()
 		check(game.session.run.upgrade_counts.values().reduce(func(total,count): return total+count,0) == depth-1,"retry retains practice build")
-	if failures == 0: print("PASS: layout variety and clearance, satellite attacks, debug input, upgrades, retry and record isolation")
+	if failures == 0: print("PASS: debug input, upgrades, retry and record isolation")
 	game.free()
 	quit(1 if failures else 0)

@@ -9,3 +9,11 @@ const PRIMARY = preload("res://assets/definitions/weapon_primary.tres")
 
 static func is_mob(kind: int) -> bool:
 	return ENEMIES.has(kind)
+
+## Hostile shape expresses attack behavior, never boss identity or speed alone.
+## Field = unaimed spatial pattern; needle = directed fire; seeker = can turn.
+static func projectile_shape(bullet: Dictionary) -> String:
+	if bullet.get("energy_orb",false): return "energy"
+	if bullet.get("guided",false): return "seeker"
+	if bullet.get("field",false): return "pearl"
+	return "needle"

@@ -185,7 +185,7 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 			var side: float = 1.0 if gun == 1 else -1.0
 			var heading := origin.direction_to(game.player).rotated(side*0.48)
 			boss.add_laser(origin,game.attack_end(origin,heading,1800),0.95,0.8,e)
-			boss.lasers[-1].merge({"gun":gun,"heading":heading,"sweep":-side*0.65})
+			boss.lasers[-1].merge({"gun":gun,"heading":heading,"sweep":-side*0.32})
 	elif name == "fan":
 		# Opposite cannons alternate wide fans; later fans close the first gaps.
 		for wave in range((2+int(rage)) if e.low >= 0.5 else (1+int(rage))):
@@ -206,6 +206,7 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 			boss.add_laser(origin,game.attack_end(origin,heading,1800),0.9*e.attack_scale,0.55,e)
 			boss.lasers[-1].merge({"gun":gun,"heading":heading})
 	elif name == "slam":
+		game.enemy_attack_cue("boss_mark",game.player,false)
 		# Hammer targets stay fixed while the tank drives on. Cover blocks impact.
 		e.slam.append({"p":game.player,"radius":lerpf(58.0,68.0,e.low),"time":0.95*e.attack_scale,"warning":0.95*e.attack_scale,"fired":false})
 		if rage:
@@ -289,15 +290,15 @@ func draw(game) -> void:
 
 func draw_depth(view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("ff9470") if e.hp > e.max_hp*0.5 else Color("ff496a")
-	parts.siege_base.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(132,112,12),Color("304454"),3))
+	parts.boss_base.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(132,112,12),Color("304454"),3))
 	for side in [-1,1]:
-		parts.siege_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(0,side*128),Vector3(151,20,17),Color("607987"),8))
+		parts.boss_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(0,side*128),Vector3(151,20,17),Color("607987"),8))
 		for tread in range(9):
-			parts.siege_barrel.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(-144+fposmod(tread*32+e.tread,288),side*128),Vector3(9,23,3),Color("273745"),26))
+			parts.boss_barrel.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2(-144+fposmod(tread*32+e.tread,288),side*128),Vector3(9,23,3),Color("273745"),26))
 	for gun in range(4):
 		var offset := Vector2.from_angle(gun*PI/2+PI/4)*140
 		var facing := gun_direction(game,e,gun)
-		parts.siege_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),offset,Vector3(24,24,14),ink.darkened(0.4),18))
+		parts.boss_armor.append(view.boss_part(e,Vector2.from_angle(e.heading),offset,Vector3(24,24,14),ink.darkened(0.4),18))
 		# boss_part rotates offsets, so compute cannon world-space independently.
-		parts.siege_barrel.append(view.chaser_entry(gun_position(e,gun)+facing*22,facing,Vector3(30,6,6),ink,28))
-	parts.siege_core.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(34,34,14),ink,18))
+		parts.boss_barrel.append(view.chaser_entry(gun_position(e,gun)+facing*22,facing,Vector3(30,6,6),ink,28))
+	parts.boss_core.append(view.boss_part(e,Vector2.from_angle(e.heading),Vector2.ZERO,Vector3(34,34,14),ink,18))

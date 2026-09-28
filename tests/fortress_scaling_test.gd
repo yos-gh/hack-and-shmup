@@ -17,7 +17,7 @@ func run() -> void:
 	var prior_hp := -1.0
 	var prior_gap := INF
 	for depth in [5,10,15,20,25,30,40,50,75,100]:
-		Fixture.new().configure(game,depth,"standard",3,0)
+		Fixture.new().configure(game,depth,"standard",0,0)
 		var e: Dictionary = game.enemies[0]
 		var dps: float = Balance.primary_dps(game.power,game.fire_rate,float(Engine.physics_ticks_per_second))
 		var relative_hp: float = e.max_hp/dps

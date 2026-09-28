@@ -26,7 +26,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
-	for scenario in ["normal19", "halo45"]:
+	for scenario in ["normal19", "seraph45"]:
 		Scenario.configure(game, scenario, 19045, 0)
 		for frame in range(120):
 			Scenario.input_frame(game, frame)

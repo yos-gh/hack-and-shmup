@@ -50,7 +50,7 @@ func run() -> void:
 	var weak_normal = generator.generate(settings, 93)
 	settings.power = 14.2
 	settings.fire_rate = 9.0
-	settings.recharge = 0.5
+	settings.power = 14.2
 	var strong_normal = generator.generate(settings, 93)
 	check(weak_normal.enemies == strong_normal.enemies and weak_normal.rng.state == strong_normal.rng.state, "normal HP and composition independent of actual build")
 	for enemy in strong_normal.enemies:
@@ -60,11 +60,11 @@ func run() -> void:
 	settings.fire_rate = 9.0
 	for variant in range(3):
 		settings.boss_choice = variant
-		settings.recharge = 0.0
+		settings.power = 7.1
 		var original = generator.generate(settings, 19045)
-		settings.recharge = 0.5
+		settings.power = 14.2
 		var charged = generator.generate(settings, 19045)
-		check(charged.boss_max_hp > original.boss_max_hp, "boss accounts for recharge")
+		check(charged.boss_max_hp > original.boss_max_hp, "boss accounts for primary power")
 		check(original.rng.state == charged.rng.state and original.cells == charged.cells, "HP consumes no randomness and preserves layout")
 		var sum := 0.0
 		for enemy in charged.enemies: sum += enemy.hp
@@ -79,16 +79,11 @@ func run() -> void:
 	game.session.run.recharge = 0.5
 	game.new_floor(1)
 	var boss_hp: float = game.boss_max_hp
-	check(is_equal_approx(boss_hp, Balance.boss_health(14.2,9.0,0.5,1,Engine.physics_ticks_per_second,100)), "live generation passes recharge, ticks and depth")
 	game.sub_weapon = 2
 	check(game.boss_max_hp == boss_hp, "weapon switch does not change boss HP")
 	game.floor_number = 104
 	check(game.boss_max_hp == boss_hp, "boss HP remains a generated snapshot")
 	game.floor_number = 100
-	game.boss.summon(game, game.enemies[0])
-	check(not game.boss.pending_summons.is_empty(), "summon fixture produces mobs")
-	for enemy in game.boss.pending_summons:
-		check(enemy.hp == Balance.mob_health(enemy.kind, 100), "summoned mob uses identical health")
 	game.enemies[0].hp = 1
 	game.restart_attempt()
 	check(is_equal_approx(game.boss.health(game), boss_hp), "retry restores boss health")
@@ -104,5 +99,5 @@ func run() -> void:
 	game.hurt_enemy(shield, 1.0, Vector2.RIGHT)
 	check(shield.hp <= 0, "unshielded body dies in one base shot")
 	game.free()
-	if failures == 0: print("PASS: early/high-floor health, real cadence, boss recharge, summon parity, shields and retries")
+	if failures == 0: print("PASS: early/high-floor health, real cadence, boss scaling, shields and retries")
 	quit(1 if failures else 0)

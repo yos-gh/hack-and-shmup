@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Run with --script res://tools/scenario.gd -- --scenario=normal19 (or halo45).
+# Run with --script res://tools/scenario.gd -- --scenario=normal19 (or seraph45).
 # --frames=0 enables ordinary interactive play; otherwise fixed 60 Hz input.
 const Scenario = preload("res://tools/dev_scenario.gd")
 
@@ -16,8 +16,8 @@ func run() -> void:
 			quit(2)
 			return
 		options[pair[0]] = pair[1]
-	if not options.tilt.is_valid_float() or float(options.tilt) < 0 or float(options.tilt) > 40 or not options.view in ["2d", "3d"] or not options.scenario in ["normal11", "normal19", "siege5", "hunter15", "halo45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
-		printerr("Expected scenario=normal11|normal19|siege5|hunter15|halo45, integer seed, weapon=0..2, frames>=0, tilt=0..40")
+	if not options.tilt.is_valid_float() or float(options.tilt) < 0 or float(options.tilt) > 40 or not options.view in ["2d", "3d"] or not options.scenario in ["normal11", "normal19", "citadel5", "bastion15", "seraph45"] or not options.seed.is_valid_int() or not options.weapon.is_valid_int() or not options.frames.is_valid_int() or int(options.weapon) < 0 or int(options.weapon) > 2 or int(options.frames) < 0:
+		printerr("Expected scenario=normal11|normal19|citadel5|bastion15|seraph45, integer seed, weapon=0..2, frames>=0, tilt=0..40")
 		quit(2)
 		return
 	var game = load("res://main.tscn").instantiate()

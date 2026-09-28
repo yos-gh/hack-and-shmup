@@ -12,13 +12,24 @@ func run() -> void:
 	game.set_physics_process(false)
 	game.depth_view.set_process(false)
 	for depth in [5,25,50]:
-		Fixture.new().configure(game,depth,"standard",4,0)
+		Fixture.new().configure(game,depth,"standard",1,0)
 		var e: Dictionary = game.enemies[0]
-		check(game.boss_variant == 4 and game.rooms[1].size == Vector2i(32,42),"practice opens tall bastion arena")
+		check(game.boss_variant == 1 and game.rooms[1].size == Vector2i(32,42),"practice opens tall bastion arena")
 		check(e.turrets.size() == (8 if depth >= 50 else 6),"turret tier")
 		check(e.p.x == game.center(Vector2i(26,1)).x,"stronghold occupies the east wall")
 		check(game.boss.bastion.gun_position(e,0).y < e.p.y-530 and game.boss.bastion.gun_position(e,5).y > e.p.y+530,"emplacements span the taller room")
 		var arm: PackedVector2Array = game.boss.bastion.arm_joints(e,0)
+		for pair in [[0,2],[5,3]]:
+			var end: Vector2 = game.boss.bastion.gun_position(e,pair[0])
+			var middle: Vector2 = game.boss.bastion.gun_position(e,pair[1])
+			check(end.x < middle.x-100,"upper/lower guns wrap forward beyond their animation sway")
+			var outer_arm: PackedVector2Array = game.boss.bastion.arm_joints(e,pair[0])
+			var inner_arm: PackedVector2Array = game.boss.bastion.arm_joints(e,pair[1])
+			check(outer_arm[0].x < inner_arm[0].x-130,"wall sockets follow the same bow, rather than stretching arms")
+		for age in [0.0,2.0,5.0,10.0]:
+			e.age = age
+			for gun in range(e.turrets.size()): check(game.walkable(game.boss.bastion.gun_position(e,gun),23),"animated gun remains clear of curved wall and cover")
+		e.age = 0
 		check(arm.size() == 3 and arm[0].x > arm[1].x and arm[1].x > arm[2].x,"each gun has a wall socket and articulated elbow")
 		e.age = 1.0
 		check(arm[1].distance_to(game.boss.bastion.arm_joints(e,0)[1]) > 5,"arm elbow articulates as the gun moves")
@@ -87,7 +98,7 @@ func run() -> void:
 		check(not game.bullets.any(func(b): return b.get("probe",false)) and orb.orb_flash > 0,"orb absorbs primary fire")
 		turret.hp = 0
 		game.restart_attempt()
-		check(game.boss_variant == 4 and game.enemies[0].turrets[0].hp > 0,"retry restores selected stronghold and its guns")
+		check(game.boss_variant == 1 and game.enemies[0].turrets[0].hp > 0,"retry restores selected stronghold and its guns")
 	game.free()
 	if failures == 0: print("PASS: bastion layout, destructible arms, regeneration and layered attacks")
 	quit(1 if failures else 0)

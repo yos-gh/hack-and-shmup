@@ -28,7 +28,7 @@ func draw(game, screen: Vector2) -> void:
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x,3)),Color("263847"))
 	game.draw_rect(Rect2(weapon.position+Vector2(0,51),Vector2(weapon.size.x*cooldown_fraction(game),3)),weapon_ink)
 	if game.boss_floor:
-		label_at(game, timer.position+Vector2(0,20), "CORE %d / 6" % game.boss.remaining(game) if game.boss_variant == 0 else "BOSS", 23, game.boss.COLORS[game.boss_variant])
+		label_at(game, timer.position+Vector2(0,20), "BOSS", 23, game.boss.COLORS[game.boss_variant])
 		label_at(game, timer.position+Vector2(0,42), "NO TIME LIMIT", 12, Color("8194aa"))
 		game.draw_rect(Rect2(0,76,bar_width*game.boss.health(game)/maxf(game.boss_max_hp,1),3),game.boss.COLORS[game.boss_variant])
 	else:
