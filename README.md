@@ -4,7 +4,7 @@ Find your way. Fight your way. A roguelite dungeon shooter.
 
 [Play in your browser](https://yos-gh.github.io/hack-and-shmup/)
 
-[Download for Windows](https://github.com/yos-gh/hack-and-shmup/releases/tag/v0.1.0-preview.3) — run the single executable.
+[Download for Windows](https://github.com/yos-gh/hack-and-shmup/releases/tag/v0.1.0-preview.4) — run the single executable.
 
 Reach the stairs before time runs out. Defeat enemies to earn more time, and choose upgrades as you descend.
 
