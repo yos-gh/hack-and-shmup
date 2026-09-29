@@ -36,7 +36,7 @@ def inventory():
             production = rendered.get(path.name)
             if production and digest(path) != production['sha256']:
                 raise ValueError('Approved audio hash differs: ' + relative)
-            generator = 'generate_boss_audio.py' if path.stem in {'seraph_charge','seraph_beam','boss_orb_charge','boss_mark','boss_release'} else ('generate_warning.py' if path.stem == 'warning' else 'generate_audio.py')
+            generator = 'generate_boss_audio.py' if path.stem in {'triad_charge','triad_beam','boss_orb_charge','boss_mark','boss_release'} else ('generate_warning.py' if path.stem == 'warning' else 'generate_audio.py')
             if path.stem == 'boss_destroy': generator = 'generate_boss_destruction.py'
             source = production['source'] if production else 'tools/' + generator
             row.update(kind='rendered_audio' if production else 'generated_audio', source=source, source_sha256=digest(ROOT / source))

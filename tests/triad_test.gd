@@ -6,22 +6,22 @@ func check(ok: bool, message: String) -> void:
 	if not ok:
 		push_error("FAIL: "+message)
 		failures += 1
-func check_wing_projection(boss, e: Dictionary) -> void:
-	for index in [0,1]:
-		var mesh: ArrayMesh = boss.Visual.wing_mesh(index%2 == 1)
-		var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-		var ground := PackedVector2Array()
-		for vertex in vertices:
-			if is_zero_approx(vertex.z): ground.append(e.p+Vector2(vertex.x,-vertex.y).rotated(boss.wing_angle(e,index)))
-		for corner in boss.wing_polygon(e,index):
+# Every contact part corner must exist on the ground footprint of its 3D mesh.
+func check_footprint(mesh: ArrayMesh, shapes: Array) -> void:
+	var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var ground := PackedVector2Array()
+	for vertex in vertices:
+		if is_zero_approx(vertex.z): ground.append(Vector2(vertex.x,-vertex.y))
+	for shape in shapes:
+		for corner in shape:
 			var matched := false
 			for point in ground:
 				if point.distance_to(corner) < 0.001: matched = true; break
-			check(matched,"3D wing footprint agrees with 2D/contact hull")
+			check(matched,"3D battery footprint agrees with its contact hull")
 
 func check_projectile_batch(game) -> void:
-	var renderer = game.world_view.seraph_projectiles
-	var boss = game.boss.seraph
+	var renderer = game.world_view.field_projectiles
+	var boss = game.boss.triad
 	game.bullets.clear()
 	game.player = Vector2(260,48)
 	game.discovered[1] = true
@@ -86,15 +86,21 @@ func run() -> void:
 	for depth in [5,50]:
 		Fixture.new().configure(game,depth,"standard",2,0)
 		var e: Dictionary = game.enemies[0]
-		var boss = game.boss.seraph
+		var boss = game.boss.triad
 		check_pressure(game,boss,e)
-		check_wing_projection(boss,e)
+		check_footprint(boss.Visual.gantry_mesh(),boss.Visual.GANTRY_HULL)
+		check_footprint(boss.Visual.carriage_mesh(),[boss.Visual.CARRIAGE_HULL])
 		check(game.time_limit == 0 and e.cover_points.size() == 4,"untimed arena with four shelters")
 		for point in e.cover_points: check(not game.attack_open(point),"shelter has physical cover")
 		check(boss.touches(e,e.p+Vector2(130,0),5),"carapace matches contact boundary")
 		for i in range(6):
-			check(boss.touches(e,boss.mouth_position(e,i),5),"wing mouth belongs to a solid wing")
+			check(boss.touches(e,boss.mouth_position(e,i),5),"turret muzzle sits on a solid carriage")
+			check(boss.touches(e,boss.needle_position(e,i),5),"needle pod sits on a solid rail")
 		check(not boss.touches(e,e.p+Vector2(-370,0),5),"open outer route stays traversable")
+		for pair in range(3):
+			var gap := Vector2.from_angle(boss.gantry_angle(e,pair)+PI/3)
+			for radius in [170.0,230.0,300.0]:
+				check(not boss.touches(e,e.p+gap*radius,5),"lanes between gantries reach the core")
 		boss.fire_streams(game,e)
 		var reference: Array = game.bullets.duplicate(true)
 		game.bullets.clear()
@@ -128,5 +134,5 @@ func run() -> void:
 		check(game.boss_variant == 2 and game.enemies[0].motif == 0,"retry rebuilds encounter")
 	check_projectile_batch(game)
 	game.free()
-	if failures == 0: print("PASS: Seraph contact hull, cover, telegraphs, retry and batched projectile rendering")
+	if failures == 0: print("PASS: Triad Battery contact hull, cover, telegraphs, retry and batched projectile rendering")
 	quit(1 if failures else 0)

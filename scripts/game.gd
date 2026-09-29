@@ -211,7 +211,7 @@ func enemy_touches_player(e: Dictionary) -> bool:
 	if e.kind == Catalog.Enemy.BOSS and boss_variant == 1:
 		return boss.bastion.touches(e,player,PLAYER_HIT_RADIUS)
 	if e.kind == Catalog.Enemy.BOSS and boss_variant == 2:
-		return boss.seraph.touches(e,player,PLAYER_HIT_RADIUS)
+		return boss.triad.touches(e,player,PLAYER_HIT_RADIUS)
 	if e.kind == Catalog.Enemy.SNIPER: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
 	var half_size := 12.0 if e.kind == Catalog.Enemy.SHIELD else 10.0
 	var nearest: Vector2 = player.clamp(e.p-Vector2.ONE*half_size,e.p+Vector2.ONE*half_size)
@@ -282,7 +282,7 @@ func fire_sub(aim: Vector2) -> void:
 			for e in enemies:
 				if e.has("plates"):
 					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,SHOCK_RADIUS): continue
-					(boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).shock(self,e,power*definition.damage)
+					(boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).shock(self,e,power*definition.damage)
 					continue
 				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
 				if e.p.distance_to(player) <= SHOCK_RADIUS + body_radius and attack_reaches(player, e.p):
@@ -296,7 +296,7 @@ func fire_sub(aim: Vector2) -> void:
 			for e in enemies:
 				if e.has("plates"):
 					if boss_variant == 1 and boss.bastion.orb_absorbs_lance(self,rays): continue
-					(boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).lance(self,e,rays,direction,power*definition.damage)
+					(boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).lance(self,e,rays,direction,power*definition.damage)
 					continue
 				if LanceTrace.hits(self,e,rays,direction):
 					hurt_enemy(e,power*definition.damage,direction,definition.knockback)
@@ -402,7 +402,7 @@ func burst(p: Vector2, color: Color, count: int = 8) -> void:
 
 func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: float = 180.0, armor_checked: bool = false) -> void:
 	if e.hp <= 0: return
-	if e.kind == Catalog.Enemy.BOSS and not armor_checked and (boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).block_damage(self,e,damage,direction): return
+	if e.kind == Catalog.Enemy.BOSS and not armor_checked and (boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).block_damage(self,e,damage,direction): return
 	if e.kind != Catalog.Enemy.BOSS: e.push += direction * knockback
 	if e.kind == Catalog.Enemy.SHIELD and direction.dot(e.dir) < -0.35:
 		combat_events.enemy_hit.emit(e.p,0.0,true,false)
@@ -551,7 +551,7 @@ func _physics_process(delta: float) -> void:
 						absorbed = true
 						break
 					if absorbed: break
-				if boss_floor and (boss.bastion if boss_variant == 1 else (boss.seraph if boss_variant == 2 else boss.fortress)).intercept_bullet(self,b):
+				if boss_floor and (boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).intercept_bullet(self,b):
 					b.life = 0
 					break
 				var target := bullet_target(b.p)

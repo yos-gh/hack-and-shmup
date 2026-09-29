@@ -10,7 +10,7 @@ Normal launch now uses the 25-degree 3D view. The development scenario still acc
 
 Run from the project root with Godot 4.7 stable. These tools are excluded from Web exports.
 
-For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario citadel5`, `-Scenario bastion15`, or `-Scenario seraph45`). F6 switches between the same live game's classic and 3D presentation. Normal damage, time and input remain enabled. This is an early appearance study: terrain, player shell, regular enemies and all three boss bodies are 3D; bullets, attack ranges and UI retain the established 2D presentation. Initial 3D rendering can stall briefly; Web performance and final art are not yet validated.
+For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario citadel5`, `-Scenario bastion15`, or `-Scenario triad45`). F6 switches between the same live game's classic and 3D presentation. Normal damage, time and input remain enabled. This is an early appearance study: terrain, player shell, regular enemies and all three boss bodies are 3D; bullets, attack ranges and UI retain the established 2D presentation. Initial 3D rendering can stall briefly; Web performance and final art are not yet validated.
 
 ```powershell
 # All regression tests; audio and view-state checks use a display.
@@ -22,15 +22,15 @@ For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario citadel5`,
 # Play a repeatable Lv19 floor. Weapon: 0 scatter, 1 shockwave, 2 lance.
 Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal19 --seed=19045 --weapon=1 --frames=0
 
-# Play ASTRAL SERAPH at Lv45 with the same seed and balanced automatic upgrades.
-Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=seraph45 --frames=0
+# Play TRIAD BATTERY at Lv45 with the same seed and balanced automatic upgrades.
+Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=triad45 --frames=0
 
 # Direct 3D study launch (F6 toggles presentation).
 Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal19 --frames=0 --view=3d
 
 # 3600 fixed simulation steps, one per rendered frame, capped at 60 FPS.
 # Create docs/validation first (test.ps1 also creates it).
-Godot_console.exe --path . --disable-crash-handler --log-file scenario.log --max-fps 60 --script res://tools/scenario.gd -- --scenario=seraph45 --frames=3600 --output=res://docs/validation/seraph45.json --capture=res://docs/validation/seraph45.png
+Godot_console.exe --path . --disable-crash-handler --log-file scenario.log --max-fps 60 --script res://tools/scenario.gd -- --scenario=triad45 --frames=3600 --output=res://docs/validation/triad45.json --capture=res://docs/validation/triad45.png
 ```
 
 Measurement mode disables live gameplay input, keeps the player stationary and protected, rotates aim, and fires both weapons whenever ready. Time is replenished. Interactive mode (`frames=0`) uses normal damage, time and controls. These fixtures measure a defined encounter, not maximum load or survival difficulty. Normal11 starts at the normal spawn with ten automatic upgrades; Normal19 enters room 1; other rooms retain normal sleeping behavior.
@@ -61,7 +61,7 @@ Existing keyboard bindings now live in `project.godot` InputMap (physical WASD f
 
 ## Combat definitions
 
-Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy movement, shot/warning timing, shield charge/recovery and primary fire are also authored resources. Boss-specific behavior is separated into Citadel/Bastion/Seraph classes; the shared Boss owns queued attacks and warnings.
+Edit authored values in `assets/definitions/*.tres`; `combat_catalog.gd` preserves the original weapon/enemy/upgrade index order. Resources are shared read-only at runtime. Weapon reach feeds both hit logic and previews, while upgrade title/description and effects are loaded from the same resource. Enemy HP interpolation keeps extrapolation beyond depth 15. Enemy movement, shot/warning timing, shield charge/recovery and primary fire are also authored resources. Boss-specific behavior is separated into Citadel/Bastion/Triad classes; the shared Boss owns queued attacks and warnings.
 
 `combat_events_test.gd` checks shield, damage, kill and death notifications, duplicate suppression, and combat parity with the standard feedback listener disconnected. Signals carry values rather than mutable enemy dictionaries.
 

@@ -28,7 +28,7 @@ func _ready() -> void:
 	limiter.ceiling_db = -2.5
 	limiter.pre_gain_db = -2.0
 	AudioServer.add_bus_effect(bus_index, limiter)
-	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","seraph_charge","seraph_beam","boss_orb_charge","boss_mark","boss_release"]:
+	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","triad_charge","triad_beam","boss_orb_charge","boss_mark","boss_release"]:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	clips["boss_destroy"] = load("res://assets/audio/boss_destroy.wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
@@ -49,7 +49,7 @@ func _ready() -> void:
 	add_child(enemy_audio)
 	for voice in enemy_audio.voices: voice.bus = effects_bus_name
 	# A dedicated, bounded voice follows beam state, never the general shot pool.
-	var beam_loop: AudioStreamWAV = clips.seraph_beam.duplicate()
+	var beam_loop: AudioStreamWAV = clips.triad_beam.duplicate()
 	beam_loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	beam_loop.loop_begin = 0
 	beam_loop.loop_end = beam_loop.data.size()/4 # Stereo 16-bit PCM frames.

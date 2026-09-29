@@ -73,9 +73,10 @@ func _ready() -> void:
 	make_batch("boss_armor", Glyph.plate([Vector2(-1,-0.7),Vector2(0.6,-1),Vector2(1,-0.6),Vector2(1,0.6),Vector2(0.6,1),Vector2(-1,0.7)],-0.12))
 	make_batch("boss_barrel", beveled_square())
 	make_batch("boss_core", Glyph.boss_core())
-	make_batch("seraph_body", Glyph.annulus(0.46,24))
-	make_batch("seraph_wing_a", preload("res://scripts/seraph_visuals.gd").wing_mesh(false))
-	make_batch("seraph_wing_b", preload("res://scripts/seraph_visuals.gd").wing_mesh(true))
+	make_batch("triad_body", Glyph.annulus(0.46,24))
+	# Triad Battery: gantry frames (a) and sliding turret carriages (b).
+	make_batch("triad_gantry", preload("res://scripts/triad_visuals.gd").gantry_mesh())
+	make_batch("triad_carriage", preload("res://scripts/triad_visuals.gd").carriage_mesh())
 	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
 	make_batch("actor_core", Glyph.boss_core())
 	sync(get_parent())
@@ -88,7 +89,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if key in ["floor", "contact", "wall_mask"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
-	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("seraph_"):
+	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("triad_"):
 		var glyph_surface := ShaderMaterial.new()
 		glyph_surface.shader = preload("res://scripts/glyph_surface.gdshader")
 		instance.material_override = glyph_surface
@@ -132,7 +133,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		core_material.vertex_color_use_as_albedo = true
 		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		instance.material_override = core_material
-	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("seraph_"):
+	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("triad_"):
 		var wire := MultiMeshInstance3D.new()
 		var wire_material := ShaderMaterial.new()
 		wire_material.shader = preload("res://scripts/glyph_wire.gdshader")
@@ -252,7 +253,7 @@ func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector
 	return chaser_entry(enemy.p+offset.rotated(facing.angle()),facing,size,color,height)
 
 func sync_bosses(game) -> void:
-	var parts := {"boss_base":[],"boss_armor":[],"boss_barrel":[],"boss_core":[],"seraph_body":[],"seraph_wing_a":[],"seraph_wing_b":[]}
+	var parts := {"boss_base":[],"boss_armor":[],"boss_barrel":[],"boss_core":[],"triad_body":[],"triad_gantry":[],"triad_carriage":[]}
 	if game.boss_floor:
 		for enemy in game.enemies:
 			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue

@@ -102,7 +102,7 @@
       "sha256": "8ef62545bdb8a3aa923d0e6f4e46a0e8b40ca127cb2082a07e65948ebf839b9b",
       "kind": "generated_audio",
       "source": "tools/generate_boss_audio.py",
-      "source_sha256": "6903a06af3c5796c61ea0974283648d1b49a3761b607012e0ea9e8f472ffb955",
+      "source_sha256": "5deae721ce2db726930bcde854baeea937d5a468d8ef793295c69450fdb3e914",
       "channels": 2,
       "sample_bytes": 2,
       "sample_rate": 48000,
@@ -114,7 +114,7 @@
       "sha256": "259e6cddc58b102fc9e67d642a2df4dfb4b90691b1fff04e8da6b514eaf27cc3",
       "kind": "generated_audio",
       "source": "tools/generate_boss_audio.py",
-      "source_sha256": "6903a06af3c5796c61ea0974283648d1b49a3761b607012e0ea9e8f472ffb955",
+      "source_sha256": "5deae721ce2db726930bcde854baeea937d5a468d8ef793295c69450fdb3e914",
       "channels": 2,
       "sample_bytes": 2,
       "sample_rate": 48000,
@@ -126,7 +126,7 @@
       "sha256": "0c60e6e2f052eec2a265c0e672973ff7e4957dd46842b7b4b01876e1b6bb0159",
       "kind": "generated_audio",
       "source": "tools/generate_boss_audio.py",
-      "source_sha256": "6903a06af3c5796c61ea0974283648d1b49a3761b607012e0ea9e8f472ffb955",
+      "source_sha256": "5deae721ce2db726930bcde854baeea937d5a468d8ef793295c69450fdb3e914",
       "channels": 2,
       "sample_bytes": 2,
       "sample_rate": 48000,
@@ -289,30 +289,6 @@
       "frames": 11040
     },
     {
-      "path": "assets/audio/seraph_beam.wav",
-      "bytes": 192044,
-      "sha256": "679322c4fc1e352763566b29f62a6590b16c9c72857836790cd822cb130cdca3",
-      "kind": "generated_audio",
-      "source": "tools/generate_boss_audio.py",
-      "source_sha256": "6903a06af3c5796c61ea0974283648d1b49a3761b607012e0ea9e8f472ffb955",
-      "channels": 2,
-      "sample_bytes": 2,
-      "sample_rate": 48000,
-      "frames": 48000
-    },
-    {
-      "path": "assets/audio/seraph_charge.wav",
-      "bytes": 220844,
-      "sha256": "ae3f6614325f45385cd9282df3b0d55237ffe6c1cec9e3754f6a857c64e9fb24",
-      "kind": "generated_audio",
-      "source": "tools/generate_boss_audio.py",
-      "source_sha256": "6903a06af3c5796c61ea0974283648d1b49a3761b607012e0ea9e8f472ffb955",
-      "channels": 2,
-      "sample_bytes": 2,
-      "sample_rate": 48000,
-      "frames": 55200
-    },
-    {
       "path": "assets/audio/shield.wav",
       "bytes": 4012,
       "sha256": "5cf0957836ce6cbe63b144037f65d87719169e0fc1a8806b3866bfedd2d5620e",
@@ -395,6 +371,30 @@
       "sample_bytes": 2,
       "sample_rate": 22050,
       "frames": 14332
+    },
+    {
+      "path": "assets/audio/triad_beam.wav",
+      "bytes": 192044,
+      "sha256": "679322c4fc1e352763566b29f62a6590b16c9c72857836790cd822cb130cdca3",
+      "kind": "generated_audio",
+      "source": "tools/generate_boss_audio.py",
+      "source_sha256": "5deae721ce2db726930bcde854baeea937d5a468d8ef793295c69450fdb3e914",
+      "channels": 2,
+      "sample_bytes": 2,
+      "sample_rate": 48000,
+      "frames": 48000
+    },
+    {
+      "path": "assets/audio/triad_charge.wav",
+      "bytes": 220844,
+      "sha256": "ae3f6614325f45385cd9282df3b0d55237ffe6c1cec9e3754f6a857c64e9fb24",
+      "kind": "generated_audio",
+      "source": "tools/generate_boss_audio.py",
+      "source_sha256": "5deae721ce2db726930bcde854baeea937d5a468d8ef793295c69450fdb3e914",
+      "channels": 2,
+      "sample_bytes": 2,
+      "sample_rate": 48000,
+      "frames": 55200
     },
     {
       "path": "assets/audio/warning.wav",
@@ -536,8 +536,8 @@
     },
     {
       "path": "scripts/background_floor.gdshader",
-      "bytes": 671,
-      "sha256": "a4cfbecc2ebbf089dcc9bd238b30586a042ac229cde11e22aef2f4c68a758fa7",
+      "bytes": 2550,
+      "sha256": "f1e364d8896e5179f92adf6b649819d6edd321c522af9f9f0faaf8c27ed463c3",
       "kind": "authored_shader",
       "source": "scripts/background_floor.gdshader"
     },
@@ -550,17 +550,24 @@
     },
     {
       "path": "scripts/glyph_surface.gdshader",
-      "bytes": 438,
-      "sha256": "8142cf734e4445a63082cc3c5e2416f9dc1ec23f4eab072a2632adece6e3def9",
+      "bytes": 521,
+      "sha256": "915a48a2ad3af2a756a332aecb54fbd90b4010f34945344730a8a4c258523d16",
       "kind": "authored_shader",
       "source": "scripts/glyph_surface.gdshader"
     },
     {
       "path": "scripts/glyph_wire.gdshader",
-      "bytes": 1159,
-      "sha256": "afefb28b60735d7fad6db4960d0aaba641488da5b88aeefa470d970eb99e3caf",
+      "bytes": 1386,
+      "sha256": "cadb751d776c0c7a3648335500355ab571f8f469f8106ddacb5bdbc6273b2c0d",
       "kind": "authored_shader",
       "source": "scripts/glyph_wire.gdshader"
+    },
+    {
+      "path": "scripts/screen_fx.gdshader",
+      "bytes": 2182,
+      "sha256": "9debf7d7c9806c12f9125d79b5f8d9b6af77f7e4d072c75fa698d87df7045b1e",
+      "kind": "authored_shader",
+      "source": "scripts/screen_fx.gdshader"
     },
     {
       "path": "scripts/sniper_iris.gdshader",

@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cx68a5f160ly7"
-path="res://.godot/imported/seraph_beam.wav-a85207572e6e7e4d306f770a8c8556fe.sample"
+path="res://.godot/imported/triad_beam.wav-d4bca742692dc7a4ddf30b9a42baa412.sample"
 
 [deps]
 
-source_file="res://assets/audio/seraph_beam.wav"
-dest_files=["res://.godot/imported/seraph_beam.wav-a85207572e6e7e4d306f770a8c8556fe.sample"]
+source_file="res://assets/audio/triad_beam.wav"
+dest_files=["res://.godot/imported/triad_beam.wav-d4bca742692dc7a4ddf30b9a42baa412.sample"]
 
 [params]
 

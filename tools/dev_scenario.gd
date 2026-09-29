@@ -3,12 +3,12 @@ extends RefCounted
 # Explicit development entry point; tools/ is excluded from release exports.
 static func configure(game, scenario: String, seed_value: int, weapon: int) -> void:
 	game.start_run()
-	game.floor_number = {"normal11":11,"normal19":19,"citadel5":5,"bastion15":15,"seraph45":45}[scenario]
+	game.floor_number = {"normal11":11,"normal19":19,"citadel5":5,"bastion15":15,"triad45":45}[scenario]
 	for i in range(game.floor_number - 1): game.apply_upgrade([0, 1, 3, 2][i % 4])
 	game.rng.seed = seed_value
 	game.effects_rng.seed = seed_value ^ 0x5EED
 	game.sub_weapon = weapon
-	game.new_floor({"citadel5":0,"bastion15":1,"seraph45":2}.get(scenario,-1))
+	game.new_floor({"citadel5":0,"bastion15":1,"triad45":2}.get(scenario,-1))
 	game.player = game.spawn_point if scenario == "normal11" else (game.center(Vector2i(3, 1)) if game.boss_floor else game.entrances[1][0])
 	game.camera_pos = game.player
 	if scenario != "normal11": game.discovered[1] = true

@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cmr0p65opypg3"
-path="res://.godot/imported/seraph_charge.wav-33cf9a4fe04dea33874d0500ba14aa77.sample"
+path="res://.godot/imported/triad_charge.wav-e1de7953b6d69c98654208c6f4ca64c9.sample"
 
 [deps]
 
-source_file="res://assets/audio/seraph_charge.wav"
-dest_files=["res://.godot/imported/seraph_charge.wav-33cf9a4fe04dea33874d0500ba14aa77.sample"]
+source_file="res://assets/audio/triad_charge.wav"
+dest_files=["res://.godot/imported/triad_charge.wav-e1de7953b6d69c98654208c6f4ca64c9.sample"]
 
 [params]
 

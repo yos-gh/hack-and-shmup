@@ -5,7 +5,7 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 const BossFx = preload("res://scripts/boss_fx.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
-var seraph_projectiles = preload("res://scripts/seraph_projectiles.gd").new()
+var field_projectiles = preload("res://scripts/field_projectiles.gd").new()
 var radial_cache: Dictionary = {}
 var radial_floor := -1
 var radial_discovery := -1
@@ -78,7 +78,7 @@ func draw(game, screen: Vector2) -> void:
 	draw_lasers(game)
 	if game.boss_floor and game.boss_variant == 0: game.boss.fortress.draw(game)
 	if game.boss_floor and game.boss_variant == 1: game.boss.bastion.draw(game)
-	if game.boss_floor and game.boss_variant == 2: game.boss.seraph.draw(game)
+	if game.boss_floor and game.boss_variant == 2: game.boss.triad.draw(game)
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
@@ -106,7 +106,7 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		elif e.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]:
 			MobVisuals.draw_body(game,e)
-	seraph_projectiles.draw(game,view)
+	field_projectiles.draw(game,view)
 	for b in game.bullets:
 		var shape: String = Catalog.projectile_shape(b)
 		if shape == "pearl": continue
@@ -360,10 +360,10 @@ func draw_lasers(game) -> void:
 	var clock: float = game.presentation.clock
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
-		var seraph: bool = game.boss_variant == 2
-		var hue := Color("ffd9a8") if seraph else Color("ff5a52")
+		var triad: bool = game.boss_variant == 2
+		var hue := Color("ffd9a8") if triad else Color("ff5a52")
 		var charging := -1.0
-		if beam.warning > 0: charging = 1.0-beam.warning/(1.15 if seraph else 0.95)
+		if beam.warning > 0: charging = 1.0-beam.warning/(1.15 if triad else 0.95)
 		var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0) if beam.warning <= 0 else 0.0
 		BossFx.beam(game,beam.a,beam.b,float(beam.get("width",14.0)),hue,charging,flash,clock)
 

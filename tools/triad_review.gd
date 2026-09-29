@@ -6,7 +6,7 @@ func capture(game, name: String, overview: bool = false) -> void:
 	game.queue_redraw()
 	await process_frame
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/validation/seraph-%s.png" % name)
+	root.get_texture().get_image().save_png("res://docs/validation/triad-%s.png" % name)
 func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
@@ -37,7 +37,7 @@ func run() -> void:
 				await capture(game,"%d-reverse" % depth,true)
 		game.player = e.cover_points[0]+Vector2(-65,0)
 		e.eviction_cd = 0
-		game.boss.seraph.advance(game.boss,game,e,0.1,Vector2.ZERO)
+		game.boss.triad.advance(game.boss,game,e,0.1,Vector2.ZERO)
 		await capture(game,"%d-eviction" % depth,true)
 		game.set_depth_view(false)
 		await capture(game,"%d-2d" % depth,true)
@@ -46,5 +46,5 @@ func run() -> void:
 	game.menus.sync()
 	await capture(game,"practice-menu")
 	game.free()
-	print("PASS: Seraph body, three motifs, laser, cover strike and practice rendered")
+	print("PASS: Triad body, three motifs, laser, cover strike and practice rendered")
 	quit()

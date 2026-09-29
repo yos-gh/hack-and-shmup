@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('normal11', 'normal19', 'citadel5', 'bastion15', 'seraph45')][string]$Scenario = 'normal19',
+    [ValidateSet('normal11', 'normal19', 'citadel5', 'bastion15', 'triad45')][string]$Scenario = 'normal19',
     [ValidateRange(0, 2)][int]$Weapon = 1,
     [ValidateRange(0,40)][double]$Tilt = 25,
     [int]$Seed = 19045,

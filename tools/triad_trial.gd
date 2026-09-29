@@ -67,7 +67,7 @@ func run() -> void:
 			elapsed = (frame+1)/60.0
 			if game.pending_respawn: outcome = "death"; break
 			if game.stairs_unlocked: outcome = "clear"; break
-		print("SERAPH LIVE: floor=%d outcome=%s seconds=%.2f hp=%.1f%% max_bullets=%d" % [depth,outcome,elapsed,maxf(0,e.hp/e.max_hp*100),maximum])
+		print("TRIAD LIVE: floor=%d outcome=%s seconds=%.2f hp=%.1f%% max_bullets=%d" % [depth,outcome,elapsed,maxf(0,e.hp/e.max_hp*100),maximum])
 		if outcome == "death":
 			var nearest := INF
 			for b in game.bullets:

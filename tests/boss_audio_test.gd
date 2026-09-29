@@ -21,15 +21,15 @@ func run() -> void:
 	var audio = sound.enemy_audio
 	audio.set_process(false)
 	audio.reset()
-	game.boss.seraph.start_laser(game.boss,game,e,false)
-	check(audio.pending.has("seraph_charge"),"charge sound starts at the laser warning")
+	game.boss.triad.start_laser(game.boss,game,e,false)
+	check(audio.pending.has("triad_charge"),"charge sound starts at the laser warning")
 	game.boss.advance_lasers(game,0.1)
 	check(not sound.boss_beam_active and not sound.boss_beam.playing,"no sustained sound before discharge")
 	audio._process(0.1)
-	check(audio.voices[0].stream == sound.clips.seraph_charge and audio.voices[0].playing,"charge owns protected warning voice")
+	check(audio.voices[0].stream == sound.clips.triad_charge and audio.voices[0].playing,"charge owns protected warning voice")
 	for i in range(50): audio.request(game,"siege_fire",game.player)
 	audio._process(0.1)
-	check(audio.voices[0].stream == sound.clips.seraph_charge,"ordinary fire cannot steal the charge cue")
+	check(audio.voices[0].stream == sound.clips.triad_charge,"ordinary fire cannot steal the charge cue")
 	var beam: Dictionary = game.boss.lasers[0]
 	beam.warning = 0.01
 	game.boss.advance_lasers(game,0.02)
@@ -61,7 +61,7 @@ func run() -> void:
 	game.boss.advance_lasers(game,0.02)
 	sound._process(0.5)
 	check(not sound.boss_beam.playing,"beam end releases and stops its voice")
-	game.boss.seraph.start_laser(game.boss,game,e,false)
+	game.boss.triad.start_laser(game.boss,game,e,false)
 	game.boss.lasers[0].warning = 0
 	game.boss.advance_lasers(game,0.01)
 	game.restart_attempt()
@@ -69,7 +69,7 @@ func run() -> void:
 	e = game.enemies[0]
 	game.discovered[1] = true
 	game.player = e.p+Vector2(-400,0)
-	game.boss.seraph.start_laser(game.boss,game,e,false)
+	game.boss.triad.start_laser(game.boss,game,e,false)
 	game.boss.lasers[0].warning = 0
 	game.boss.advance_lasers(game,0.01)
 	game.grace = 0

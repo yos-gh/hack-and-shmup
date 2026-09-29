@@ -4,9 +4,9 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 
 var fortress = preload("res://scripts/boss_fortress.gd").new()
 var bastion = preload("res://scripts/boss_bastion.gd").new()
-var seraph = preload("res://scripts/boss_seraph.gd").new()
+var triad = preload("res://scripts/boss_triad.gd").new()
 
-const NAMES := ["IRON CITADEL", "BASTION OF STARS", "ASTRAL SERAPH"]
+const NAMES := ["IRON CITADEL", "BASTION OF STARS", "TRIAD BATTERY"]
 const COLORS := [Color("ff9470"), Color("e0a5fa"), Color("f7dab0")]
 var lasers: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
@@ -15,7 +15,7 @@ func controller(variant: int):
 	match variant:
 		0: return fortress
 		1: return bastion
-	return seraph
+	return triad
 
 func reset() -> void:
 	lasers.clear()
@@ -43,7 +43,7 @@ func build_layout(data) -> void:
 			for y in range(2):
 				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
 	if data.boss_variant == 2:
-		for pillar in seraph.COVER_CELLS:
+		for pillar in triad.COVER_CELLS:
 			for y in range(2):
 				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
 	data.connect_rooms(0,1)
@@ -64,7 +64,7 @@ func build_layout(data) -> void:
 		data.enemies[0].p = data.center(Vector2i(24,1))+Vector2(-240,0)
 		fortress.setup(data,data.enemies[0])
 	if data.boss_variant == 1: bastion.setup(data,data.enemies[0])
-	if data.boss_variant == 2: seraph.setup(data,data.enemies[0])
+	if data.boss_variant == 2: triad.setup(data,data.enemies[0])
 	data.boss_max_hp = data.enemies[0].hp
 	data.time_limit = 0.0
 	data.route_seconds = 0.0
@@ -131,7 +131,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 	match game.boss_variant:
 		0: return fortress.advance(self,game,e,delta,toward)
 		1: return bastion.advance(self,game,e,delta,toward)
-		2: return seraph.advance(self,game,e,delta,toward)
+		2: return triad.advance(self,game,e,delta,toward)
 	return Vector2.ZERO
 
 func advance_attacks(game, delta: float) -> void:
@@ -148,7 +148,7 @@ func advance_lasers(game, delta: float) -> void:
 	var sounded_owners: Array = []
 	for beam in lasers:
 		if beam.owner.hp <= 0: beam.duration = 0; continue
-		if beam.get("seraph",false):
+		if beam.get("triad",false):
 			if beam.warning <= 0:
 				var desired: Vector2 = beam.owner.p.direction_to(game.player)
 				beam.heading = beam.heading.rotated(clampf(angle_difference(beam.heading.angle(),desired.angle()),-beam.turn_rate*delta,beam.turn_rate*delta))
@@ -161,7 +161,7 @@ func advance_lasers(game, delta: float) -> void:
 		if beam.warning > 0:
 			beam.warning = maxf(0.0,beam.warning-delta)
 			if beam.warning == 0 and game.boss_variant in [0,2] and not sounded_owners.has(beam.owner):
-				game.enemy_attack_cue("boss_release" if beam.get("seraph",false) else "hunter_fire",beam.a)
+				game.enemy_attack_cue("boss_release" if beam.get("triad",false) else "hunter_fire",beam.a)
 				sounded_owners.append(beam.owner)
 			continue
 		beam.duration -= delta
@@ -172,7 +172,7 @@ func advance_lasers(game, delta: float) -> void:
 	var sustained := false
 	var source := Vector2.ZERO
 	for beam in lasers:
-		if beam.get("seraph",false) and beam.warning <= 0 and beam.owner.hp > 0:
+		if beam.get("triad",false) and beam.warning <= 0 and beam.owner.hp > 0:
 			sustained = true
 			source = beam.a
 			break

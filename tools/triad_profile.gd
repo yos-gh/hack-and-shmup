@@ -72,11 +72,11 @@ func run() -> void:
 			counts.append(game.bullets.size())
 		var result := {"floor":depth,"weapon":weapon,"hide_projectiles":game.hide_projectiles,"physics_ms":stats(physics),"canvas_ms":stats(paint),"depth_sync_ms":stats(sync_times),"frame_ms":stats(frames),"draw_calls":stats(calls),"bullets":stats(counts)}
 		results.append(result)
-		print("SERAPH PROFILE: "+JSON.stringify(result))
+		print("TRIAD PROFILE: "+JSON.stringify(result))
 	var args := OS.get_cmdline_user_args()
 	var name: String = args[0] if not args.is_empty() else "latest"
-	var file := FileAccess.open("res://docs/validation/seraph-profile-%s.json" % name,FileAccess.WRITE)
+	var file := FileAccess.open("res://docs/validation/triad-profile-%s.json" % name,FileAccess.WRITE)
 	file.store_string(JSON.stringify(results,"\t"))
 	game.free()
-	print("PASS: native Seraph profile complete")
+	print("PASS: native Triad profile complete")
 	quit()

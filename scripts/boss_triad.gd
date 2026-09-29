@@ -1,6 +1,6 @@
 extends "res://scripts/boss_fortress.gd"
-## Six wing mouths write slow, mirrored ribbons around a shielded laser iris.
-const Visual = preload("res://scripts/seraph_visuals.gd")
+## Triad Battery: three gantries slide six turrets around a shielded laser iris.
+const Visual = preload("res://scripts/triad_visuals.gd")
 const INK := Color("f7dab0")
 const BLUE := Color("8abaff")
 const ROSE := Color("ff91b1")
@@ -48,24 +48,27 @@ func setup(data, e: Dictionary) -> void:
 	e.dir = Vector2.LEFT
 	e.cd = 0.5
 
-func wing_angle(e: Dictionary, index: int) -> float:
+# Carriage position of turret `index` on its gantry rail, as an angle about the
+# core. The rigid gantry turns with the shared term; carriages slide along it.
+func carriage_angle(e: Dictionary, index: int) -> float:
 	return index*TAU/6.0+e.age*0.035+0.08*sin(e.age*0.4)+0.045*sin(e.age*0.85+index*PI/3)
 
-func wing_polygon(e: Dictionary, index: int) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var mirror: float = 1.0 if index%2 == 0 else -1.0
-	for p in Visual.WING_SHAPE:
-		points.append(e.p+Vector2(p.x,p.y*mirror).rotated(wing_angle(e,index)))
-	return points
+# Three rigid gantries, each carrying the turret pair (2k, 2k+1).
+func gantry_angle(e: Dictionary, pair: int) -> float:
+	return (pair*2+0.5)*TAU/6.0+e.age*0.035+0.08*sin(e.age*0.4)
+
+func turret_pivot(e: Dictionary, index: int) -> Vector2:
+	return e.p+Vector2.from_angle(carriage_angle(e,index))*Visual.TURRET_RADIUS
 
 func mouth_position(e: Dictionary, index: int) -> Vector2:
-	return e.p+Vector2(268,-18 if index%2 == 0 else 18).rotated(wing_angle(e,index))
+	return turret_pivot(e,index)+stream_heading(e,index)*Visual.MUZZLE
 
+# Hull launch ports for the outward petal volleys.
 func root_position(e: Dictionary, index: int) -> Vector2:
-	return e.p+Vector2.from_angle(wing_angle(e,index)+PI/6)*147
+	return e.p+Vector2.from_angle(carriage_angle(e,index)+PI/6)*147
 
 func stream_heading(e: Dictionary, index: int) -> Vector2:
-	var inward: float = (e.p-mouth_position(e,index)).angle()
+	var inward: float = (e.p-turret_pivot(e,index)).angle()
 	var handed: float = -1.0 if e.motif == 2 or (e.motif == 1 and index%2 == 1) else 1.0
 	var phase: float = e.pattern_time*0.95+(index%2)*0.6
 	if e.motif == 1: phase += (index%3)*TAU/3
@@ -73,11 +76,27 @@ func stream_heading(e: Dictionary, index: int) -> Vector2:
 	# into broad ribbons outside. They never sample the player's position.
 	return Vector2.from_angle(inward+handed*(0.78+0.13*sin(phase)))
 
+# Solid contact parts: gantry frames plus each turret carriage housing.
+func hull_parts(e: Dictionary) -> Array[PackedVector2Array]:
+	var parts: Array[PackedVector2Array] = []
+	for pair in range(3):
+		var angle := gantry_angle(e,pair)
+		for shape in Visual.GANTRY_HULL:
+			var polygon := PackedVector2Array()
+			for p in shape: polygon.append(e.p+p.rotated(angle))
+			parts.append(polygon)
+	for index in range(6):
+		var pivot := turret_pivot(e,index)
+		var angle := gantry_angle(e,index >> 1)
+		var housing := PackedVector2Array()
+		for p in Visual.CARRIAGE_HULL: housing.append(pivot+p.rotated(angle))
+		parts.append(housing)
+	return parts
+
 func touches(e: Dictionary, player: Vector2, radius: float) -> bool:
 	if e.p.distance_to(player) < BODY_RADIUS+radius: return true
-	if e.p.distance_to(player) > 328+radius: return false
-	for index in range(6):
-		var polygon := wing_polygon(e,index)
+	if e.p.distance_to(player) > Visual.REACH+radius: return false
+	for polygon in hull_parts(e):
 		if Geometry2D.is_point_in_polygon(player,polygon): return true
 		for j in range(polygon.size()):
 			if Geometry2D.get_closest_point_to_segment(player,polygon[j],polygon[(j+1)%polygon.size()]).distance_to(player) < radius: return true
@@ -85,7 +104,7 @@ func touches(e: Dictionary, player: Vector2, radius: float) -> bool:
 
 func emit_pearl(game, origin: Vector2, direction: Vector2, speed: float, tone: int, pattern: String) -> void:
 	game.emit_shot(origin,direction,speed,1,true,1100)
-	game.bullets[-1].merge({"seraph":true,"field":true,"tone":tone,"pattern":pattern,"source":origin})
+	game.bullets[-1].merge({"triad":true,"field":true,"tone":tone,"pattern":pattern,"source":origin})
 
 func stream_open(e: Dictionary, index: int) -> bool:
 	# Alternating banks hand off the openings instead of all six falling silent.
@@ -110,13 +129,15 @@ func fire_bloom(game, e: Dictionary) -> void:
 	for index in range(6):
 		if index%2 != posmod(e.bloom_cycle,2): continue
 		var origin := root_position(e,index)
-		var heading: Vector2 = Vector2.from_angle(wing_angle(e,index)+PI/6+0.42*sin(e.pattern_time*0.85))
+		var heading: Vector2 = Vector2.from_angle(carriage_angle(e,index)+PI/6+0.42*sin(e.pattern_time*0.85))
 		for j in range(count):
 			emit_pearl(game,origin,heading.rotated((j-(count-1)*0.5)*(0.09+0.02*e.mid)),96+8*e.mid,index%2,"petal")
 	e.root_flash = 0.4
 
+# Needle pods ride the rail inboard of each turret, toward its partner.
 func needle_position(e: Dictionary, index: int) -> Vector2:
-	return e.p+Vector2(241,43 if index%2 == 0 else -43).rotated(wing_angle(e,index))
+	var partner: int = index+1 if index%2 == 0 else index-1
+	return turret_pivot(e,index).lerp(turret_pivot(e,partner),Visual.NEEDLE_ALONG)
 
 func prepare_needles(game, e: Dictionary, rage: bool) -> void:
 	var closest := 0
@@ -149,7 +170,7 @@ func advance_needles(game, e: Dictionary, delta: float, rage: bool) -> void:
 		var rake: float = (volley.fired-1)*0.045*(1 if volley.gun%2 == 0 else -1)
 		for side in ([-1,1] if e.mid >= 0.8 else [0]):
 			game.emit_shot(origin,volley.heading.rotated(rake+side*0.075),lerpf(185,230,e.low)+25*e.mid,1,true,1100)
-			game.bullets[-1].merge({"pressure":true,"pattern":"seraph_aimed","source":origin})
+			game.bullets[-1].merge({"pressure":true,"pattern":"triad_aimed","source":origin})
 		volley.left -= 1
 		volley.fired += 1
 		volley.timer += 0.14
@@ -159,13 +180,13 @@ func laser_duration(rage: bool) -> float:
 	return LASER_DURATION+(1.0 if rage else 0.0)
 
 func start_laser(boss, game, e: Dictionary, rage: bool) -> void:
-	game.enemy_attack_cue("seraph_charge",e.p,false)
+	game.enemy_attack_cue("triad_charge",e.p,false)
 	var heading: Vector2 = e.p.direction_to(game.player)
 	if heading.is_zero_approx(): heading = Vector2.LEFT
 	var origin: Vector2 = e.p+heading*82
 	var duration: float = laser_duration(rage)
 	boss.lasers.append({"owner":e,"a":origin,"b":game.attack_end(origin,heading,1600),"heading":heading,
-		"warning":LASER_WARNING,"duration":duration,"peak_duration":duration,"seraph":true,
+		"warning":LASER_WARNING,"duration":duration,"peak_duration":duration,"triad":true,
 		"turn_rate":(0.29+0.075*e.mid)*(1.24 if rage else 1.0),"width":100.0})
 
 func near_cover(e: Dictionary, player: Vector2) -> bool:

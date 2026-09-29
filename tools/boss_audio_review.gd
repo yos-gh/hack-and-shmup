@@ -40,7 +40,7 @@ func run() -> void:
 		var samples := PackedVector2Array()
 		if variant == 2:
 			e.laser_cd = 30
-			game.boss.seraph.start_laser(game.boss,game,e,false)
+			game.boss.triad.start_laser(game.boss,game,e,false)
 		else:
 			e.cd = 30
 			game.boss.bastion.launch_orb(game,e)
@@ -55,7 +55,7 @@ func run() -> void:
 			await create_timer(1.0/60).timeout
 			samples.append_array(capture.get_buffer(capture.get_frames_available()))
 		game.sound.stop_boss_beam()
-		save_mix(samples,"seraph-laser-mix" if variant == 2 else "bastion-heavy-mix")
+		save_mix(samples,"triad-laser-mix" if variant == 2 else "bastion-heavy-mix")
 	AudioServer.remove_bus_effect(0,AudioServer.get_bus_effect_count(0)-1)
 	game.free()
 	print("PASS: native boss SE-only mixes recorded")

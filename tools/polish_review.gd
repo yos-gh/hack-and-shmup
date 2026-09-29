@@ -10,7 +10,7 @@ func run() -> void:
 		if arg.begins_with("--output="): destination = arg.trim_prefix("--output=")
 	DirAccess.make_dir_recursive_absolute(destination)
 	var reports: Array = []
-	for scenario in ["normal19","citadel5","bastion15","seraph45","burst80"]:
+	for scenario in ["normal19","citadel5","bastion15","triad45","burst80"]:
 		var game = load("res://main.tscn").instantiate()
 		root.add_child(game)
 		Scenario.configure(game,"normal19" if scenario == "burst80" else scenario,19045,1)

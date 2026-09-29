@@ -25,7 +25,7 @@ func run() -> void:
 	game.set_view_pitch(0)
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
-	for scenario in ["normal19", "citadel5", "bastion15", "seraph45"]:
+	for scenario in ["normal19", "citadel5", "bastion15", "triad45"]:
 		var expected := PackedByteArray()
 		for mode in range(2):
 			Scenario.configure(game, scenario, 19045, 1)

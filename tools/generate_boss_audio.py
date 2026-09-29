@@ -52,6 +52,6 @@ def render(name, duration, kind):
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    for spec in [("seraph_charge",1.15,"charge"),("seraph_beam",1.0,"beam"),
+    for spec in [("triad_charge",1.15,"charge"),("triad_beam",1.0,"beam"),
                  ("boss_orb_charge",1.05,"orb"),("boss_mark",0.72,"mark"),("boss_release",0.55,"release")]:
         render(*spec)

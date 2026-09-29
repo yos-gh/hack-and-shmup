@@ -33,7 +33,7 @@ func run() -> void:
  audio.reset()
  for key in audio.PRIORITY: audio.request(game,key,game.player+Vector2(-100,0))
  audio._process(0.1)
- check(audio.voices[0].playing and audio.voices[0].stream == game.sound.clips.seraph_charge,"highest-priority laser warning owns reserved voice")
+ check(audio.voices[0].playing and audio.voices[0].stream == game.sound.clips.triad_charge,"highest-priority laser warning owns reserved voice")
  check(audio.voices.slice(1).filter(func(v): return v.playing).size()==4,"general attack mix bounded to four voices")
  check(is_equal_approx(audio.voices[1].volume_db,audio.levels[1]-6),"laser warning ducks ordinary enemy attacks")
  check(audio.voices[0].position.x<game.get_viewport_rect().size.x/2,"left attack placed left of listener")
