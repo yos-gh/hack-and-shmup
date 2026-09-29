@@ -25,6 +25,19 @@ func run() -> void:
 	check(not game.walkable(game.center(Vector2i(7,-11))),"pillars are solid cover")
 	check(fortress.touches(e,e.p+Vector2(140,128).rotated(e.heading),game.PLAYER_HIT_RADIUS),"tracks have contact collision")
 	check(not fortress.touches(e,e.p+Vector2(150,0).rotated(e.heading),game.PLAYER_HIT_RADIUS),"recess beside hull stays traversable")
+	# Every contact corner exists on the ground footprint of the 3D tracks or frame.
+	var vertices: PackedVector3Array = fortress.CitadelVisual.chassis_mesh().surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	vertices.append_array(fortress.CitadelVisual.frame_mesh().surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+	var ground := PackedVector2Array()
+	for vertex in vertices:
+		if is_zero_approx(vertex.z): ground.append(Vector2(vertex.x,-vertex.y))
+	var local := Transform2D(e.heading,e.p).affine_inverse()
+	for polygon in fortress.CitadelVisual.contact_parts(e):
+		for corner in polygon:
+			var matched := false
+			for point in ground:
+				if point.distance_to(local*corner) < 0.01: matched = true; break
+			check(matched,"3D chassis footprint agrees with its contact hull")
 
 	# Armour: a plate absorbs hits until broken, then that side exposes the core.
 	var hp: float = e.hp

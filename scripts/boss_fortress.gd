@@ -9,6 +9,7 @@ const PATTERNS := ["radial","fan","laser","missile","fan","slam","radial","laser
 const EXPERT_PATTERNS := ["radial","crossfire","laser","missile","weave","slam","fan","scissor","radial","crossfire","missile","weave","slam","laser"]
 var motion = preload("res://scripts/fortress_motion.gd").new()
 const BossFx = preload("res://scripts/boss_fx.gd")
+const CitadelVisual = preload("res://scripts/citadel_visuals.gd")
 const SHIELD_INK := Color("ffb07a")
 
 func setup(data, e: Dictionary) -> void:
@@ -41,16 +42,15 @@ func setup(data, e: Dictionary) -> void:
 	motion.setup(e)
 
 func touches(e: Dictionary, player: Vector2, radius: float) -> bool:
-	var offset := (player-Vector2(e.p)).rotated(-e.heading)
-	if offset.length() < 108+radius: return true
-	# Diamond chassis, separate tracks and turret housings leave the visible
-	# recesses beside the hull traversable instead of killing inside an AABB.
-	if absf(offset.x)/(132+radius)+absf(offset.y)/(112+radius) < 1: return true
-	for side in [-1,1]:
-		var center := Vector2(0,side*128)
-		if offset.clamp(center-Vector2(151,20),center+Vector2(151,20)).distance_to(offset) < radius: return true
+	if e.p.distance_to(player) < 108+radius: return true
+	# Hull, separate track belts and sponson rings match the 3D chassis
+	# footprint; the recess ahead of the glacis stays traversable.
+	for polygon in CitadelVisual.contact_parts(e):
+		if Geometry2D.is_point_in_polygon(player,polygon): return true
+		for j in range(polygon.size()):
+			if Geometry2D.get_closest_point_to_segment(player,polygon[j],polygon[(j+1)%polygon.size()]).distance_to(player) < radius: return true
 	for gun in range(4):
-		if offset.distance_to(Vector2.from_angle(gun*PI/2+PI/4)*140) < 24+radius: return true
+		if player.distance_to(gun_position(e,gun)) < CitadelVisual.MOUNT_RADIUS+radius: return true
 	return false
 
 func plate_position(e: Dictionary, i: int) -> Vector2:
@@ -246,17 +246,7 @@ func draw(game) -> void:
 		if not e.has("plates") or e.hp <= 0 or not game.attack_open(e.p): continue
 		var ink := Color("ff9470") if e.hp > e.max_hp*0.5 else Color("ff496a")
 		motion.draw(game,e)
-		if not game.depth_enabled:
-			game.draw_set_transform_matrix(game.world_transform()*Transform2D(e.heading,e.p))
-			game.draw_colored_polygon(PackedVector2Array([Vector2(-132,0),Vector2(0,-112),Vector2(132,0),Vector2(0,112)]),Color("283b4b"))
-			for side in [-1,1]:
-				game.draw_rect(Rect2(Vector2(-150,side*128-19),Vector2(300,38)),Color("556777"))
-			for gun in range(4):
-				var point := Vector2.from_angle(gun*PI/2+PI/4)*140
-				game.draw_circle(point,24,ink.darkened(0.4))
-				game.draw_line(point,point+gun_direction(game,e,gun).rotated(-e.heading)*45,ink,10,true)
-			game.draw_circle(Vector2.ZERO,CORE,ink)
-			game.draw_set_transform_matrix(game.world_transform())
+		CitadelVisual.draw(self,game,e,ink)
 		var clock: float = game.presentation.clock
 		var rage: bool = e.hp <= e.max_hp*0.5
 		BossFx.shield_ring(game,e,COUNT,SHIELD_INK,REBUILD)
@@ -303,16 +293,4 @@ func draw(game) -> void:
 
 func draw_depth(view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("ff9470") if e.hp > e.max_hp*0.5 else Color("ff496a")
-	var facing_hull := Vector2.from_angle(e.heading)
-	parts.boss_base.append(view.weight(view.boss_part(e,facing_hull,Vector2.ZERO,Vector3(132,112,12),Color("304454"),3),0.9))
-	for side in [-1,1]:
-		parts.boss_armor.append(view.weight(view.boss_part(e,facing_hull,Vector2(0,side*128),Vector3(151,20,17),Color("607987"),8),0.75))
-		for tread in range(9):
-			parts.boss_barrel.append(view.weight(view.boss_part(e,facing_hull,Vector2(-144+fposmod(tread*32+e.tread,288),side*128),Vector3(9,23,3),Color("3a5163"),26),0.45))
-	for gun in range(4):
-		var offset := Vector2.from_angle(gun*PI/2+PI/4)*140
-		var facing := gun_direction(game,e,gun)
-		parts.boss_armor.append(view.weight(view.boss_part(e,facing_hull,offset,Vector3(24,24,14),ink.darkened(0.4),18),0.9))
-		# boss_part rotates offsets, so compute cannon world-space independently.
-		parts.boss_barrel.append(view.chaser_entry(gun_position(e,gun)+facing*22,facing,Vector3(30,6,6),ink,28))
-	parts.boss_core.append(view.boss_part(e,facing_hull,Vector2.ZERO,Vector3(34,34,14),ink,18))
+	CitadelVisual.draw_depth(self,view,game,e,parts,ink)
