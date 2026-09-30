@@ -155,6 +155,7 @@ func interceptor(game, e: Dictionary, delta: float, player_motion: Vector2) -> V
 		if target.is_finite():
 			e.warp_target = target
 			e.warp_warning = WARP_WARNING
+			game.sound.enemy_audio.request(game,"warp",e.p)
 			e.escape_time = 0.0
 			warp_owner = e
 			return Vector2.ZERO

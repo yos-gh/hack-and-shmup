@@ -374,6 +374,7 @@ func _notification(what: int) -> void:
 func upgrade(index: int) -> void:
 	if not choosing or index < 0 or index >= choices.size() or not session.run.can_upgrade(choices[index]): return
 	apply_upgrade(choices[index])
+	sound.play_sfx("select")
 	floor_number += 1
 	new_floor()
 
@@ -447,7 +448,9 @@ func _physics_process(delta: float) -> void:
 	for effect in effects: effect.life -= delta
 	effects = effects.filter(func(effect: Dictionary) -> bool: return effect.life > 0)
 	main_cd -= delta
-	sub_cd = maxf(0, sub_cd - delta)
+	if sub_cd > 0:
+		sub_cd = maxf(0, sub_cd - delta)
+		if sub_cd == 0 and sub_cd_total >= 0.5: sound.play_sfx("ready")
 	grace = maxf(0, grace - delta)
 	banner -= delta
 	var movement: Vector2 = controls.movement(self)
@@ -547,6 +550,7 @@ func _physics_process(delta: float) -> void:
 						if not orb.get("energy_orb",false) or orb.life <= 0: continue
 						if b.p.distance_to(orb.p) > orb.orb_radius+2.0: continue
 						orb.orb_flash = 0.15
+						sound.play_sfx("armor")
 						b.life = 0
 						absorbed = true
 						break

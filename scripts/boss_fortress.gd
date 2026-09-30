@@ -62,6 +62,7 @@ func damage_plate(game, e: Dictionary, i: int, damage: float) -> void:
 	game.combat_events.enemy_hit.emit(plate_position(e,i),damage,true,false)
 	if plate.hp == 0:
 		plate.timer = REBUILD
+		game.sound.play_sfx("armor_break")
 		game.burst(plate_position(e,i),Color("63f5ce"),8)
 
 func intercept_bullet(game, bullet: Dictionary) -> bool:

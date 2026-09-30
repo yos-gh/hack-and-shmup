@@ -20,7 +20,7 @@ class AssetAuditTests(unittest.TestCase):
         shutil.copy2(ROOT / 'addons/sentry/web/sentry-bundle.js', self.root / 'addons/sentry/web/sentry-bundle.js')
         (self.root / 'tools').mkdir()
         (self.root / 'scripts').mkdir()
-        for name in ['audit_assets.py', 'generate_audio.py', 'generate_warning.py', 'generate_boss_audio.py', 'generate_boss_destruction.py']:
+        for name in ['audit_assets.py', 'generate_audio.py', 'generate_sfx.py']:
             shutil.copy2(ROOT / 'tools' / name, self.root / 'tools' / name)
         # Production provenance is also hashed by the inventory. Copy its
         # source files into the isolated fixture, not only legacy generators.

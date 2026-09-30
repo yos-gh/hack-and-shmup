@@ -93,6 +93,7 @@ func intercept_bullet(game, bullet: Dictionary) -> bool:
 			game.combat_events.enemy_hit.emit(gun_position(e,i),bullet.damage,true,false)
 			if turret.hp == 0:
 				turret.timer = TURRET_REBUILD
+				game.sound.play_sfx("armor_break")
 				game.burst(gun_position(e,i),Color("e0a5fa"),10)
 			return true
 	return super.intercept_bullet(game,bullet)

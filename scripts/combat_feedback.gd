@@ -3,6 +3,9 @@ extends RefCounted
 func bind_to(game) -> void:
 	game.combat_events.enemy_hit.connect(enemy_hit.bind(game))
 	game.combat_events.player_died.connect(player_died.bind(game))
+	game.combat_events.charge_changed.connect(func(p,_d,started): if started: game.sound.enemy_audio.request(game,"charge",p))
+	game.combat_events.stairs_opened.connect(func(_p): game.sound.play_sfx("stairs"))
+	game.combat_events.scene_changed.connect(func(scene): if scene == "arrival": game.sound.play_sfx("arrival"))
 
 func enemy_hit(position: Vector2, damage: float, blocked: bool, killed: bool, game) -> void:
 	# Brief, local impact marks; bounded independently of weapon effects.
@@ -12,7 +15,6 @@ func enemy_hit(position: Vector2, damage: float, blocked: bool, killed: bool, ga
 	if impact_count < 32:
 		game.effects.append({"kind":2,"p":position,"life":0.10,"blocked":blocked})
 	if blocked:
-		game.sound.play_sfx("shield")
 		game.burst(position,Color.SKY_BLUE,3)
 		return
 	var offset := Vector2((game.damage_labels.size() % 3 - 1) * 13, -18)

@@ -111,6 +111,7 @@ func _button(rect: Rect2, text: String, callback: Callable) -> Button:
 	button.position = rect.position
 	button.size = rect.size
 	button.text = text
+	button.pressed.connect(func(): game.sound.play_sfx("select"))
 	button.pressed.connect(callback)
 	surface.add_child(button)
 	return button

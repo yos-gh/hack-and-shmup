@@ -1,9 +1,8 @@
 extends Node
 
 # One pending cue per attack family; independent of combat and random streams.
-const PRIORITY := {"sniper_fire":0,"siege_fire":1,"halo_fire":1,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2}
-# The modulated laser warning has a quieter source; +6 dB brings its RMS near laser fire.
-const LEVEL := {"sniper_fire":-14.0,"siege_fire":-10.0,"halo_fire":-11.0,"hunter_fire":-10.0,"hunter_lock":-3.0,"triad_charge":-5.0,"boss_orb_charge":-9.0,"boss_mark":-5.0,"boss_release":-10.0}
+const PRIORITY := {"pearl_fire":0,"sniper_fire":0,"siege_fire":1,"halo_fire":1,"charge":1,"warp":2,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2}
+# Levels come from the shared SE mix in sound.gd.
 const WARNINGS := ["hunter_lock","triad_charge","boss_orb_charge","boss_mark"]
 const GAP := 0.065
 var pending: Dictionary = {}
@@ -34,7 +33,7 @@ func request(game, key: String, point: Vector2) -> void:
 	var relative: Vector2 = point-game.camera_pos
 	var visible := Rect2(-screen*0.5,screen).has_point(relative)
 	var score: float = PRIORITY[key]*4.0+(2.0 if visible else 0.0)+1.0/(1.0+distance/300.0)
-	var cue := {"key":key,"score":score,"screen":relative+screen*0.5,"db":LEVEL[key]-(0.0 if visible else 6.0)-minf(distance/300,3)}
+	var cue := {"key":key,"score":score,"screen":relative+screen*0.5,"db":game.sound.MIX[key]-(0.0 if visible else 6.0)-minf(distance/300,3)}
 	if not pending.has(key) or score > pending[key].score: pending[key] = cue
 
 func take(delta: float) -> Array:

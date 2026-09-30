@@ -47,7 +47,7 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## HUD and warning audio
 
-`python tools/generate_warning.py` regenerates only the original 0.16-second warning WAV (mono 16-bit PCM, 22050 Hz). Keep its Godot import compression disabled, as with the existing effects. The countdown warns once at each 5-to-1-second threshold per attempt; time bonuses do not repeat a threshold. Death/timeout and clear effects have a reserved voice, and countdown has another. Use `tools/play_study.ps1` to check the cooldown bar while switching weapons and judge the warning level during firing. `hud_audio_test.gd` checks priority, saturation, mute, retry and pause behavior; listening remains necessary for the final mix.
+`python tools/generate_sfx.py` regenerates every sound effect (48 kHz stereo 16-bit PCM) from 2A03-style pulse, triangle and noise voices; `--only key,key` and `--out DIR` render a subset elsewhere for auditioning. Each clip is normalised to the same short-term loudness, so the balance lives in the `MIX` table in `scripts/sound.gd` (enemy cues read it too). Primary fire retriggers its own voice so rapid fire never stacks. Keep Godot import compression disabled (`compress/mode=0`) for new clips. The countdown warns once at each 5-to-1-second threshold per attempt; time bonuses do not repeat a threshold. Death/timeout and clear effects have a reserved voice, and countdown has another. Use `tools/play_study.ps1` to check the cooldown bar while switching weapons and judge the warning level during firing. `hud_audio_test.gd` checks priority, saturation, mute, retry and pause behavior; listening remains necessary for the final mix.
 
 ## Publication workflow
 

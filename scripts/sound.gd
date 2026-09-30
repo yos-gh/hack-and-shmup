@@ -14,9 +14,26 @@ var hit_gap := 0.0
 var burst_gaps: Dictionary = {}
 var effects_bus_name := ""
 var boss_beam := AudioStreamPlayer2D.new()
+# Primary fire retriggers one mono voice, like a sound-driver channel, so rapid fire never smears.
+var shot_voice := AudioStreamPlayer.new()
+var shot_rng := RandomNumberGenerator.new()
+# A cue that should follow, not bury under, the critical sound on slot 0.
+var after_critical := ""
 var boss_beam_active := false
 var boss_beam_level := -60.0
 const CRITICAL_PRIORITIES := {"boss_destroy": 1, "clear": 2, "death": 3, "timeout": 3}
+# Every clip is rendered at one loudness (tools/generate_sfx.py); this table is the mix.
+const MIX := {
+	"death": -2.0, "boss_destroy": -2.0, "timeout": -4.0, "clear": -8.0, "stairs": -9.0,
+	"warning": -6.0, "shock": -2.0, "scatter": -3.0, "lance": -3.0,
+	"kill": -6.0, "armor_break": -7.0, "shield": -13.0, "hit": -13.0, "armor": -15.0, "shot": -12.0,
+	"arrival": -10.0, "select": -10.0, "ready": -14.0,
+	"sniper_fire": -11.0, "siege_fire": -10.0, "halo_fire": -10.0, "pearl_fire": -14.0, "hunter_fire": -9.0,
+	"hunter_lock": -5.0, "boss_mark": -4.0, "triad_charge": -5.0, "boss_orb_charge": -6.0, "boss_release": -7.0,
+	"charge": -8.0, "warp": -10.0, "triad_beam": -12.0,
+}
+const DUCK := 6.0
+const BURST_GAPS := {"kill": 0.045, "shield": 0.045, "armor": 0.05, "armor_break": 0.08, "select": 0.05}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
@@ -28,9 +45,8 @@ func _ready() -> void:
 	limiter.ceiling_db = -2.5
 	limiter.pre_gain_db = -2.0
 	AudioServer.add_bus_effect(bus_index, limiter)
-	for key in ["shot","scatter","shock","lance","hit","shield","kill","death","clear","timeout","warning","siege_fire","hunter_lock","hunter_fire","sniper_fire","halo_fire","triad_charge","triad_beam","boss_orb_charge","boss_mark","boss_release"]:
+	for key in MIX:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
-	clips["boss_destroy"] = load("res://assets/audio/boss_destroy.wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
 	var loop: AudioStreamWAV = load("res://assets/audio/descent.wav").duplicate()
@@ -46,6 +62,10 @@ func _ready() -> void:
 		add_child(voice)
 		voice.volume_db = -5
 		voices.append(voice)
+	shot_voice.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	shot_voice.bus = effects_bus_name
+	shot_voice.stream = clips.shot
+	add_child(shot_voice)
 	add_child(enemy_audio)
 	for voice in enemy_audio.voices: voice.bus = effects_bus_name
 	# A dedicated, bounded voice follows beam state, never the general shot pool.
@@ -66,8 +86,12 @@ func _process(delta: float) -> void:
 	hit_gap = maxf(0, hit_gap - delta)
 	for key in burst_gaps: burst_gaps[key] = maxf(0, burst_gaps[key] - delta)
 	if paused_state: return
-	var target: float = -16.0 if boss_beam_active else -60.0
-	if boss_beam_active and enemy_audio.voices[0].playing: target -= 6
+	if after_critical != "" and not voices[0].playing:
+		var key := after_critical
+		after_critical = ""
+		play_sfx(key)
+	var target: float = MIX.triad_beam if boss_beam_active else -60.0
+	if boss_beam_active and enemy_audio.voices[0].playing: target -= DUCK
 	boss_beam_level = move_toward(boss_beam_level,target,180*delta)
 	boss_beam.volume_db = boss_beam_level
 	if not boss_beam_active and boss_beam_level <= -60: boss_beam.stop()
@@ -87,8 +111,12 @@ func stop_boss_beam() -> void:
 	boss_beam_level = -60
 	boss_beam.stop()
 
-func hear_hit(_position: Vector2, _damage: float, blocked: bool, killed: bool) -> void:
-	if blocked or killed or hit_gap > 0 or paused_state: return
+func hear_hit(_position: Vector2, damage: float, blocked: bool, killed: bool) -> void:
+	if blocked and not paused_state:
+		# Zero damage is a shield enemy's guarded front; damage is boss armor soaking it.
+		play_sfx("armor" if damage > 0 else "shield")
+		return
+	if killed or hit_gap > 0 or paused_state: return
 	hit_gap = 0.055
 	play_sfx("hit")
 
@@ -96,6 +124,7 @@ func hear_boss_destroyed(_position: Vector2, _color: Color) -> void:
 	play_sfx("boss_destroy")
 
 func stop_boss_destruction() -> void:
+	after_critical = ""
 	if voices[0].stream == clips.boss_destroy: voices[0].stop()
 
 func _exit_tree() -> void:
@@ -104,9 +133,9 @@ func _exit_tree() -> void:
 
 func play_sfx(key: String) -> void:
 	if audio_mode == 2 or headless: return
-	if key in ["kill", "shield"]:
+	if BURST_GAPS.has(key):
 		if burst_gaps.get(key, 0.0) > 0: return
-		burst_gaps[key] = 0.045
+		burst_gaps[key] = BURST_GAPS[key]
 	if CRITICAL_PRIORITIES.has(key):
 		var priority: int = CRITICAL_PRIORITIES[key]
 		if voices[0].playing and priority < critical_priority: return
@@ -114,21 +143,32 @@ func play_sfx(key: String) -> void:
 		stop_boss_beam()
 		enemy_audio.reset()
 		for voice in voices: voice.stop()
-		_set_voice_level(0, -5)
+		shot_voice.stop()
+		_set_voice_level(0, MIX[key])
 		voices[0].stream = clips[key]
 		voices[0].play()
 		return
 	if key == "warning":
 		if voices[0].playing: return
-		_set_voice_level(1, -5)
+		_set_voice_level(1, MIX[key])
 		voices[1].stream = clips[key]
 		voices[1].play()
+		return
+	if voices[0].playing:
+		if key == "stairs": after_critical = key
+		if key in ["stairs", "arrival"]: return
+	var duck := DUCK if voices[0].playing else 0.0
+	if key == "shot":
+		shot_voice.stop()
+		shot_voice.volume_db = MIX.shot - duck
+		shot_voice.pitch_scale = shot_rng.randf_range(0.97, 1.03)
+		shot_voice.play()
 		return
 	# Slots 0/1 are reserved; repeated shots cannot exhaust or replace alerts.
 	for i in range(2,voices.size()):
 		var voice := voices[i]
 		if not voice.playing:
-			_set_voice_level(i, -11 if voices[0].playing else -5)
+			_set_voice_level(i, MIX[key] - duck)
 			voice.stream = clips[key]
 			voice.play()
 			return
@@ -151,6 +191,7 @@ func set_paused(value: bool) -> void:
 	enemy_audio.set_paused(value)
 	music.stream_paused = value
 	for voice in voices: voice.stream_paused = value
+	shot_voice.stream_paused = value
 	boss_beam.stream_paused = value
 
 func set_audio_mode(value: int) -> void:
@@ -159,8 +200,10 @@ func set_audio_mode(value: int) -> void:
 	if enemy_audio.muted: enemy_audio.reset()
 	_refresh_music_level()
 	if audio_mode == 2:
+		after_critical = ""
 		stop_boss_beam()
 		for voice in voices: voice.stop()
+		shot_voice.stop()
 
 func _refresh_music_level() -> void:
 	music.volume_db = -10 if audio_mode == 0 else -80

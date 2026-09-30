@@ -36,8 +36,7 @@ def inventory():
             production = rendered.get(path.name)
             if production and digest(path) != production['sha256']:
                 raise ValueError('Approved audio hash differs: ' + relative)
-            generator = 'generate_boss_audio.py' if path.stem in {'triad_charge','triad_beam','boss_orb_charge','boss_mark','boss_release'} else ('generate_warning.py' if path.stem == 'warning' else 'generate_audio.py')
-            if path.stem == 'boss_destroy': generator = 'generate_boss_destruction.py'
+            generator = 'generate_audio.py' if path.stem == 'descent' else 'generate_sfx.py'
             source = production['source'] if production else 'tools/' + generator
             row.update(kind='rendered_audio' if production else 'generated_audio', source=source, source_sha256=digest(ROOT / source))
             if production: row.update(production=production)
@@ -73,7 +72,7 @@ def verify_audio():
         (workspace / 'tools').mkdir()
         output = workspace / 'assets/audio'
         output.mkdir(parents=True)
-        for name in ['generate_audio.py', 'generate_warning.py', 'generate_boss_audio.py', 'generate_boss_destruction.py']:
+        for name in ['generate_audio.py', 'generate_sfx.py']:
             shutil.copy2(ROOT / 'tools' / name, workspace / 'tools' / name)
             subprocess.run([sys.executable, str(workspace / 'tools' / name)], check=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

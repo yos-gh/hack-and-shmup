@@ -133,6 +133,7 @@ func fire_bloom(game, e: Dictionary) -> void:
 		for j in range(count):
 			emit_pearl(game,origin,heading.rotated((j-(count-1)*0.5)*(0.09+0.02*e.mid)),96+8*e.mid,index%2,"petal")
 	e.root_flash = 0.4
+	game.enemy_attack_cue("pearl_fire",e.p,false)
 
 # Needle pods ride the rail inboard of each turret, toward its partner.
 func needle_position(e: Dictionary, index: int) -> Vector2:
@@ -171,6 +172,7 @@ func advance_needles(game, e: Dictionary, delta: float, rage: bool) -> void:
 		for side in ([-1,1] if e.mid >= 0.8 else [0]):
 			game.emit_shot(origin,volley.heading.rotated(rake+side*0.075),lerpf(185,230,e.low)+25*e.mid,1,true,1100)
 			game.bullets[-1].merge({"pressure":true,"pattern":"triad_aimed","source":origin})
+		game.enemy_attack_cue("pearl_fire",origin,false)
 		volley.left -= 1
 		volley.fired += 1
 		volley.timer += 0.14

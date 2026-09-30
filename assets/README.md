@@ -4,12 +4,12 @@
 
 | Outputs | Editable source | Current provenance evidence |
 | --- | --- | --- |
-| `audio/descent.wav` and nine combat effects | `tools/generate_audio.py` | Repository synthesis code, fixed random seed 177, Python standard library |
-| `audio/warning.wav` | `tools/generate_warning.py` | Repository two-pulse synthesis code, Python standard library |
+| `audio/descent.wav` | `tools/generate_audio.py` | Repository synthesis code, fixed random seed 177, Python standard library |
+| All other `audio/*.wav` effects | `tools/generate_sfx.py` | Repository 2A03-style synthesis code, per-effect fixed seeds, Python standard library |
 | `definitions/*.tres` | The `.tres` files themselves | Authored combat/upgrade values; consumed by `scripts/combat_catalog.gd` |
 | Sniper iris material | `scripts/sniper_iris.gdshader` | Repository shader source |
 
-Keep editable generators in `tools`, game outputs in `assets/audio`, and combat data in `assets/definitions`. Audio names follow their event names in `scripts/sound.gd`. The current output format is mono, signed 16-bit PCM at 22050 Hz; the catalog records exact frame counts. Python/platform math differences may cause a regeneration mismatch, which must be reviewed rather than automatically accepted.
+Keep editable generators in `tools`, game outputs in `assets/audio`, and combat data in `assets/definitions`. Audio names follow their event names in `scripts/sound.gd`. Effects are stereo signed 16-bit PCM at 48 kHz and the music loop is mono 22050 Hz; the catalog records exact frame counts. Python/platform math differences may cause a regeneration mismatch, which must be reviewed rather than automatically accepted.
 
 Player, enemy and environment geometry is built in code, principally `scripts/depth_view.gd`; the classic view is drawn in `scripts/world_view.gd`. Menu styling is in `scripts/menu_theme.gd`. These remain code-reviewed sources rather than external model files. Headings use bundled Rajdhani SemiBold; body text uses Barlow Regular/Medium. Their OFL-1.1 notices are included in assets/fonts and exported third-party notices. Exact font bytes and upstream locations are recorded in the dependency catalog.
 
