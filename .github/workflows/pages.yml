@@ -111,10 +111,12 @@ jobs:
             *-*) args+=(--prerelease --title "HACK & SHMUP Preview ${GITHUB_REF_NAME}") ;;
             *) args+=(--title "HACK & SHMUP ${GITHUB_REF_NAME}") ;;
           esac
-          # An annotated tag's message becomes the release notes.
+          # An annotated tag's message becomes the release notes. gh rejects
+          # --notes-from-tag together with --repo, so pass the message as a file.
           git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
           if [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = tag ]; then
-            args+=(--notes-from-tag)
+            git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release-notes.md"
+            args+=(--notes-file "${RUNNER_TEMP}/release-notes.md")
           else
             args+=(--generate-notes)
           fi
