@@ -49,6 +49,8 @@ Preview with Python 3:
 python tools/serve_web.py web
 ```
 
-Open [localhost:8123](http://localhost:8123). To publish, export the latest game, commit the updated `web/` files, and push to `main`. GitHub Actions publishes Pages automatically.
+Open [localhost:8123](http://localhost:8123). The exported files in `web/` are for local preview only and are not committed; only `web/index.html` is.
+
+GitHub Actions builds both the Web and Windows versions on every pull request and push. A push to `main` publishes the Web version to Pages. Pushing a `v*` tag publishes the Windows executable as a GitHub Release (a tag with a hyphen, such as `v0.1.0-preview.6`, becomes a pre-release, and an annotated tag's message becomes the release notes).
 
 [Development tools](tools/README.md) · [Asset sources and notices](assets/README.md)
