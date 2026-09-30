@@ -40,14 +40,14 @@ jobs:
             echo "Godot reported errors during import/export"; exit 1
           fi
           rm import.log export.log
-          cp web/index.html "${OUT}/"
+          cp web/index.html web/site.css "${OUT}/"
           for font in Barlow-Regular.ttf Rajdhani-SemiBold.ttf Barlow-OFL.txt Rajdhani-OFL.txt; do
             cp "assets/fonts/${font}" "${OUT}/fonts/"
           done
           jq -n --arg version "$(git describe --tags --always)" --arg rev "${GITHUB_SHA}" --arg engine "$(godot --version)" \
             '{version: $version, source_revision: $rev, engine: $engine}' > "${OUT}/build-info.json"
           grep -q 'src="sentry-bundle.js"' "${OUT}/game-v2.html" || { echo "Sentry bundle was not added"; exit 1; }
-          for f in index.html game-v2.html game-v2.js game-v2.wasm game-v2.pck sentry-bundle.js THIRD_PARTY_NOTICES.txt; do
+          for f in index.html site.css game-v2.html game-v2.js game-v2.wasm game-v2.pck sentry-bundle.js THIRD_PARTY_NOTICES.txt; do
             test -s "${OUT}/${f}" || { echo "Missing or empty: ${f}"; exit 1; }
           done
       - uses: actions/upload-pages-artifact@v3
