@@ -148,6 +148,7 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 				sync())
 		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (B)" if game.controls.using_gamepad else "TITLE (Esc)",func():
 			if game.paused: game.return_to_title(); sync())
+		_settings()
 	else:
 		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",28,Color("63f5ce"))
 		_label(Rect2(24,y-115,screen.x-48,35),"LEFT STICK / DPAD: SELECT     A / LB: CONFIRM" if game.controls.using_gamepad else "CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
