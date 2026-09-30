@@ -47,9 +47,9 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## Publication workflow
 
-The Pages workflow runs on pushes to `main` and also supports `workflow_dispatch`. Review playable changes and export matching `web/` artifacts before pushing. The workflow uploads checked-in files; it does not build them.
+`.github/workflows/pages.yml` builds on GitHub-hosted Ubuntu runners for every pull request, push to `main`, `v*` tag and manual run. The Web job exports the `Web` preset with the Sentry release set to `hack-and-shmup@<commit>`, adds `web/index.html`, fonts, notices and `build-info.json`, and a push to `main` deploys it to Pages. The Windows job exports the `Windows Preview` single executable with the same Sentry removal as `export_windows_preview.ps1`, checks it with `verify_windows_preview.gd`, and keeps it as a workflow artifact; on a `v*` tag it also creates the GitHub Release. The Godot version comes from `tools/toolchain.json` (`tools/ci/install_godot.sh`). The Linux editor also needs the Sentry Linux library, which `tools/ci/install_sentry_linux.sh` downloads from the matching sentry-godot release. Hosted runners do not run the native regressions; those remain in the manual Windows workflow below.
 
-Prototype baseline: local annotated tag `v0.1.0-prototype` at `b79a17c`. To prepare rollback, restore `web/` from that tag into a new branch, review the diff, merge and explicitly deploy. No history rewrite is required. Tags, merges, pushes and publication are separate operations; publication must be requested explicitly.
+Prototype baseline: annotated tag `v0.1.0-prototype` at `b79a17c`. To roll back the Web version, revert the change on `main`; the next run publishes the reverted build. Merging to `main` publishes the Web version; pushing a tag publishes a Windows release.
 
 ## Input and session regression
 

@@ -1,26 +1,121 @@
-name: Publish game to Pages
+name: Build and publish
 on:
   push:
     branches: [main]
+    tags: ["v*"]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: pages
+  group: publish-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  deploy:
+  # Every run builds both targets; publishing depends only on the trigger.
+  # main -> Pages (Web). v* tag -> GitHub Release (Windows single executable).
+  web:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Godot and export templates
+        run: ./tools/ci/install_godot.sh
+      - name: Install Sentry Linux library for the editor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/ci/install_sentry_linux.sh
+      - name: Export Web build
+        run: |
+          set -euo pipefail
+          # Sentry groups events by the commit that produced the build.
+          sed -i "s|^options/release=.*|options/release=\"hack-and-shmup@${GITHUB_SHA}\"|" project.godot
+          OUT=export/web
+          mkdir -p "${OUT}/fonts"
+          godot --headless --path . --editor --import 2>&1 | tee import.log
+          godot --headless --path . --export-release Web "${OUT}/game-v2.html" 2>&1 | tee export.log
+          godot --headless --path . --script res://tools/export_notices.gd -- "${PWD}/${OUT}/THIRD_PARTY_NOTICES.txt"
+          if grep -E 'SCRIPT ERROR|Error loading extension' import.log export.log; then
+            echo "Godot reported errors during import/export"; exit 1
+          fi
+          rm import.log export.log
+          cp web/index.html web/site.css "${OUT}/"
+          for font in Barlow-Regular.ttf Rajdhani-SemiBold.ttf Barlow-OFL.txt Rajdhani-OFL.txt; do
+            cp "assets/fonts/${font}" "${OUT}/fonts/"
+          done
+          jq -n --arg version "$(git describe --tags --always)" --arg rev "${GITHUB_SHA}" --arg engine "$(godot --version)" \
+            '{version: $version, source_revision: $rev, engine: $engine}' > "${OUT}/build-info.json"
+          grep -q 'src="sentry-bundle.js"' "${OUT}/game-v2.html" || { echo "Sentry bundle was not added"; exit 1; }
+          for f in index.html site.css game-v2.html game-v2.js game-v2.wasm game-v2.pck sentry-bundle.js THIRD_PARTY_NOTICES.txt; do
+            test -s "${OUT}/${f}" || { echo "Missing or empty: ${f}"; exit 1; }
+          done
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: export/web
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: web
       - uses: actions/deploy-pages@v4
         id: deployment
+
+  windows:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and export templates
+        run: ./tools/ci/install_godot.sh
+      - name: Export Windows Preview executable
+        run: |
+          set -euo pipefail
+          # The preview build must neither load nor distribute the telemetry SDK
+          # (same steps as tools/export_windows_preview.ps1).
+          rm -rf addons/sentry assets/catalog.json assets/README.md
+          sed -i '/^\[sentry\]/,/^\[/{/^\[sentry\]/d;/^\[/!d}' project.godot
+          mkdir -p export/windows
+          EXE="${PWD}/export/windows/HACK-AND-SHMUP-preview.exe"
+          godot --headless --path . --editor --import 2>&1 | tee import.log
+          godot --headless --path . --export-release "Windows Preview" "${EXE}" 2>&1 | tee export.log
+          if grep -E 'SCRIPT ERROR|Error loading extension' import.log export.log; then
+            echo "Godot reported errors during import/export"; exit 1
+          fi
+          test -s "${EXE}"
+          (cd export/windows && godot --headless --main-pack "${EXE}" --script "${GITHUB_WORKSPACE}/tools/verify_windows_preview.gd" | tee package.log)
+          grep -q '^PASS:' export/windows/package.log
+          rm export/windows/package.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ github.sha }}
+          path: export/windows/HACK-AND-SHMUP-preview.exe
+          retention-days: 14
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=(--repo "${GITHUB_REPOSITORY}" --verify-tag)
+          case "${GITHUB_REF_NAME}" in
+            *-*) args+=(--prerelease --title "HACK & SHMUP Preview ${GITHUB_REF_NAME}") ;;
+            *) args+=(--title "HACK & SHMUP ${GITHUB_REF_NAME}") ;;
+          esac
+          # An annotated tag's message becomes the release notes.
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          if [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = tag ]; then
+            args+=(--notes-from-tag)
+          else
+            args+=(--generate-notes)
+          fi
+          gh release create "${GITHUB_REF_NAME}" export/windows/HACK-AND-SHMUP-preview.exe "${args[@]}"
