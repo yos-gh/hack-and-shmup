@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/lance_profile.gd" id="1"]
+
+[node name="LanceProfile" type="Node"]
+script = ExtResource("1")

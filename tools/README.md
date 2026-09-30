@@ -41,6 +41,10 @@ The read-only `WorldView` and `GameHud` render during the host Game's draw callb
 
 Determinism is scoped to the same engine, fixture, seed, weapon and frame count. This is not cross-version replay. Particle RNG is independent from gameplay RNG; fixtures seed both. Changing particle counts cannot change combat or later floor generation. Map generation and combat still share the gameplay stream. Digests from before this separation are not expected to match new runs.
 
+## Lance cost profile
+
+`Godot_console.exe --path . --max-fps 0 res://tools/lance_profile.tscn -- --output=<file>` measures lane tracing, firing and aiming/firing frame times at base and maximum lance width in 2D and 3D, beside the Shockwave guide on the same floor. Vsync is disabled so CPU cost is visible. For a browser measurement, export a copy of the project with this scene as main scene and `tools/*` removed from the Web exclude filter; the report is printed and stored in `window.lanceProfile`.
+
 ## HUD and warning audio
 
 `python tools/generate_warning.py` regenerates only the original 0.16-second warning WAV (mono 16-bit PCM, 22050 Hz). Keep its Godot import compression disabled, as with the existing effects. The countdown warns once at each 5-to-1-second threshold per attempt; time bonuses do not repeat a threshold. Death/timeout and clear effects have a reserved voice, and countdown has another. Use `tools/play_study.ps1` to check the cooldown bar while switching weapons and judge the warning level during firing. `hud_audio_test.gd` checks priority, saturation, mute, retry and pause behavior; listening remains necessary for the final mix.

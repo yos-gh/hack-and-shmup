@@ -11,6 +11,8 @@ var radial_floor := -1
 var radial_discovery := -1
 var radial_reach := -1.0
 var glow_texture: Texture2D = soft_glow()
+var guide_key: Array = []
+var guide_rays: Array = []
 
 static func soft_glow() -> Texture2D:
 	var gradient := Gradient.new()
@@ -168,7 +170,7 @@ func draw(game, screen: Vector2) -> void:
 		draw_radial_fill(game, game.player, fan, Color(1,0.75,0.4,preview_alpha * 0.4))
 		game.draw_polyline(fan,Color(1,0.75,0.4,preview_alpha * 2),1)
 	elif game.sub_weapon == 2:
-		draw_lance_guide(game,game.LanceTrace.lanes(game,game.player,preview_aim),game.sub_cd <= 0,game.hud.cooldown_fraction(game))
+		draw_lance_guide(game,guide_lanes(game,preview_aim),game.sub_cd <= 0,game.hud.cooldown_fraction(game))
 	if game.sub_weapon == 1:
 		var outline = PackedVector2Array()
 		outline = shock_outline(game,game.player,game.SHOCK_RADIUS)
@@ -261,6 +263,15 @@ func draw(game, screen: Vector2) -> void:
 	if not game.boss_floor and game.time_left <= 5.0:
 		game.draw_arc(game.player,29,-PI/2,-PI/2+TAU*clampf(game.time_left/5,0.001,1),48,Color(1,0.28,0.34,0.8),3)
 
+# The aiming guide reuses its traced lanes while the player, aim, width and
+# opened rooms are unchanged.
+func guide_lanes(game, aim: Vector2) -> Array:
+	var key: Array = [game.player,aim,game.LANCE_WIDTH,game.floor_revision,game.discovered.hash()]
+	if key != guide_key:
+		guide_key = key
+		guide_rays = game.LanceTrace.lanes(game,game.player,aim)
+	return guide_rays
+
 const LANCE_INK := Color(0.55,0.84,1.0)
 const TAPER_SAMPLES := [0.0,5.0,10.0,17.0,26.0]
 
@@ -280,6 +291,31 @@ func lane_polygon(game, ray: Dictionary, direction: Vector2, scale: float = 1.0)
 	right.reverse()
 	left.append_array(right)
 	return left
+
+# All lane fills as one triangle list: lanes abut without overlap, so a single
+# draw matches per-lane polygons while avoiding one draw call per unit of width.
+func draw_lane_fills(game, rays: Array, direction: Vector2, color: Color) -> void:
+	var side := direction.orthogonal()
+	var points := PackedVector2Array()
+	var indices := PackedInt32Array()
+	var tapers: Array = TAPER_SAMPLES.map(func(d): return game.LanceTrace.taper(d))
+	for ray in rays:
+		var length: float = ray.p.distance_to(ray.end)
+		if length*length < 0.01: continue
+		var offset: Vector2 = ray.p-ray.origin
+		var half: float = ray.width*0.5
+		var base := points.size()
+		for j in range(TAPER_SAMPLES.size()+1):
+			var d: float = TAPER_SAMPLES[j] if j < TAPER_SAMPLES.size() else length
+			if d >= length and j < TAPER_SAMPLES.size(): continue
+			var t: float = tapers[j] if j < TAPER_SAMPLES.size() else game.LanceTrace.taper(length)
+			var center: Vector2 = ray.origin+offset*t+direction*d
+			points.append(center-side*half*t)
+			points.append(center+side*half*t)
+		for k in range(base,points.size()-2,2):
+			indices.append_array([k,k+2,k+1,k+1,k+2,k+3])
+	if indices.is_empty(): return
+	RenderingServer.canvas_item_add_triangle_array(game.get_canvas_item(),indices,points,PackedColorArray([color]))
 
 func lance_direction(rays: Array) -> Vector2:
 	for ray in rays:
@@ -301,20 +337,20 @@ func lance_outline(game, rays: Array, direction: Vector2, ink: Color, width: flo
 			edge.append(game.LanceTrace.lane_point(ray,direction,d)+side*sign_value*ray.width*0.5*game.LanceTrace.taper(d))
 		game.draw_polyline(edge,ink,width,true)
 	var previous := Vector2.INF
+	var caps := PackedVector2Array()
 	for ray in rays:
 		if ray.p.distance_squared_to(ray.end) < 0.01: continue
 		var half: Vector2 = side*ray.width*0.5
-		game.draw_line(ray.end-half,ray.end+half,ink,width)
+		caps.append_array([ray.end-half,ray.end+half])
 		if previous != Vector2.INF and previous.distance_to(ray.end-half) > 1.5:
-			game.draw_line(previous,ray.end-half,ink,width)
+			caps.append_array([previous,ray.end-half])
 		previous = ray.end+half
+	if not caps.is_empty(): game.draw_multiline(caps,ink,width)
 
 func draw_lance_guide(game, rays: Array, ready: bool, fraction: float) -> void:
 	var direction := lance_direction(rays)
 	if direction == Vector2.ZERO: return
-	for ray in rays:
-		if ray.p.distance_squared_to(ray.end) < 0.01: continue
-		game.draw_colored_polygon(lane_polygon(game,ray,direction),Color(LANCE_INK,0.07 if ready else 0.025))
+	draw_lane_fills(game,rays,direction,Color(LANCE_INK,0.07 if ready else 0.025))
 	lance_outline(game,rays,direction,Color(LANCE_INK,0.6 if ready else 0.16),1.2)
 	var middle: Dictionary = rays[int(rays.size()*0.5)]
 	var length: float = middle.p.distance_to(middle.end)
@@ -333,9 +369,7 @@ func draw_lance_guide(game, rays: Array, ready: bool, fraction: float) -> void:
 func draw_lance_fire(game, rays: Array, fade: float, core: float) -> void:
 	var direction := lance_direction(rays)
 	if direction == Vector2.ZERO: return
-	for ray in rays:
-		if ray.p.distance_squared_to(ray.end) < 0.01: continue
-		game.draw_colored_polygon(lane_polygon(game,ray,direction),Color(0.62,0.86,1,0.34*fade))
+	draw_lane_fills(game,rays,direction,Color(0.62,0.86,1,0.34*fade))
 	lance_outline(game,rays,direction,Color(0.82,0.96,1,0.9*fade),1.6)
 	if core <= 0: return
 	# The hot core follows the central lanes and the same muzzle taper.
