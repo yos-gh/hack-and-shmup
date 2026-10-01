@@ -15,6 +15,7 @@ func restart_attempt(game) -> void:
 	game.presentation.reset()
 	game.boss.reset()
 	game.mobs.reset()
+	game.pickups.reset()
 	game.sound.enemy_audio.reset()
 	game.sound.stop_boss_beam()
 	game.stairs_unlocked = not game.boss_floor
@@ -61,6 +62,7 @@ func return_to_title(game) -> void:
 	game.sound.stop_boss_destruction()
 	game.boss.reset()
 	game.mobs.reset()
+	game.pickups.reset()
 	game.sound.enemy_audio.reset()
 	game.sound.stop_boss_beam()
 	game.bullets.clear()
@@ -80,7 +82,7 @@ func return_to_title(game) -> void:
 
 
 func die(game, reason: String = "HIT") -> void:
-	if game.pending_respawn or (game.grace > 0 and reason != "TIME UP"): return
+	if game.pending_respawn or ((game.grace > 0 or game.pickups.invincible()) and reason != "TIME UP"): return
 	game.deaths += 1
 	game.death_reason = reason
 	game.pending_respawn = true

@@ -122,6 +122,8 @@ var choices: Array[int]:
 	get: return session.run.choices
 	set(value): session.run.choices = value
 var banner := 4.0
+var pickups = preload("res://scripts/pickups.gd").new()
+var boss_supply: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 var effects_rng := RandomNumberGenerator.new()
 # Development replay input. Empty uses the normal keyboard and mouse.
@@ -197,6 +199,7 @@ func new_floor(boss_choice: int = -1) -> void:
 		boss_max_hp = generated.boss_max_hp
 	route_seconds = generated.route_seconds
 	time_limit = generated.time_limit
+	boss_supply = generated.boss_supply
 	rng.state = generated.rng.state
 	session.floor_snapshot.capture(self)
 	restart_attempt()
@@ -463,8 +466,9 @@ func _physics_process(delta: float) -> void:
 	banner -= delta
 	var movement: Vector2 = controls.movement(self)
 	var previous_player := player
-	player = preload("res://scripts/player_motion.gd").move(self,player, movement.normalized() * (SPEED + move_bonus) * delta, PLAYER_HIT_RADIUS)
+	player = preload("res://scripts/player_motion.gd").move(self,player, movement.normalized() * (SPEED + move_bonus) * pickups.speed_scale() * delta, PLAYER_HIT_RADIUS)
 	presentation.track_motion(self,previous_player,player,delta)
+	pickups.advance(self,delta)
 	camera_pos = camera_pos.lerp(player, 1.0 - exp(-12 * delta))
 	var room_id: int = cells.get(tile(player), -1)
 	if room_id >= 0:
@@ -473,7 +477,11 @@ func _physics_process(delta: float) -> void:
 	hud.minimap.observe(self)
 	var aim: Vector2 = controls.aim(self)
 	if fire_armed and primary and main_cd <= 0:
-		emit_shot(player, aim.rotated(rng.randf_range(-Catalog.PRIMARY.spread, Catalog.PRIMARY.spread)), Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)
+		var shot_aim: Vector2 = aim.rotated(rng.randf_range(-Catalog.PRIMARY.spread, Catalog.PRIMARY.spread))
+		emit_shot(player, shot_aim, Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)
+		if pickups.spread():
+			for side in [-1.0, 1.0]:
+				emit_shot(player, shot_aim.rotated(side*pickups.SPREAD_ANGLE), Catalog.PRIMARY.speed, power*Catalog.PRIMARY.damage, false, Catalog.PRIMARY.reach)
 		sound.play_sfx(Catalog.PRIMARY.sound)
 		main_cd = Catalog.PRIMARY.cooldown / fire_rate
 	if fire_armed and secondary and sub_cd <= 0:
@@ -546,7 +554,7 @@ func _physics_process(delta: float) -> void:
 			b.p += travel / steps
 			if not attack_open(b.p): b.life = 0; break
 			if b.hostile:
-				if b.p.distance_to(player) < PLAYER_HIT_RADIUS + (22.0 if b.get("energy_orb",false) else 2.0):
+				if not pickups.invincible() and b.p.distance_to(player) < PLAYER_HIT_RADIUS + (22.0 if b.get("energy_orb",false) else 2.0):
 					die()
 					if pending_respawn: return
 					b.life = 0
@@ -573,7 +581,10 @@ func _physics_process(delta: float) -> void:
 			if b.life <= 0: break
 	bullets = bullets.filter(func(b: Dictionary) -> bool: return b.life > 0)
 	for e in enemies:
-		if e.hp <= 0: kills += 1; burst(e.p, Color("ff647c"), 12)
+		if e.hp <= 0:
+			kills += 1
+			burst(e.p, Color("ff647c"), 12)
+			pickups.drop_from(e)
 	enemies = enemies.filter(func(e: Dictionary) -> bool: return e.hp > 0)
 	if boss_floor and not stairs_unlocked and boss.remaining(self) == 0:
 		stairs_unlocked = true

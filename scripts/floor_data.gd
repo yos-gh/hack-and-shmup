@@ -26,6 +26,8 @@ var goal_room := 0
 var boss_floor := false
 var boss_variant := 0
 var boss_max_hp := 0.0
+# Boss-fight supply schedule; see pickups.gd.
+var boss_supply: Array[Dictionary] = []
 var route_seconds := 0.0
 var time_limit := 0.0
 

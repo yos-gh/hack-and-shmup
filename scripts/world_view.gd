@@ -2,6 +2,7 @@ extends RefCounted
 
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const Pickups = preload("res://scripts/pickups.gd")
 const BossFx = preload("res://scripts/boss_fx.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
@@ -94,6 +95,7 @@ func draw(game, screen: Vector2) -> void:
 		MobVisuals.draw_warning(game,e)
 		var warning = game.attack_warning(e)
 		if e.kind == Catalog.Enemy.BOSS: continue
+		if e.has("drop"): draw_carrier_mark(game,e)
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)
 		if game.depth_enabled and Catalog.is_mob(e.kind):
@@ -115,6 +117,7 @@ func draw(game, screen: Vector2) -> void:
 			game.draw_line(p + dir * 16 - side, p + dir * 16 + side, Color("c7eaff"), 4)
 		elif e.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]:
 			MobVisuals.draw_body(game,e)
+	draw_pickups(game)
 	field_projectiles.draw(game,view)
 	for b in game.bullets:
 		var shape: String = Catalog.projectile_shape(b)
@@ -285,6 +288,7 @@ func draw(game, screen: Vector2) -> void:
 			if effect.p.distance_to(tip) <= 12: continue
 			var start: Vector2 = effect.p.move_toward(tip,12)
 			game.draw_line(start,tip,Color(0.76,1,0.9,fade*0.85),2)
+	draw_buffs(game)
 	if game.grace > 0:
 		# The existing one-second protection is readable without delaying retry.
 		var remaining: float = clampf(game.grace,0,1)
@@ -492,3 +496,38 @@ func draw_particles(game) -> void:
 
 static func damage_number(damage: float) -> String:
 	return str(roundi(damage * 10.0))
+
+# A faint glint orbiting a carrier; readable once learned, easy to overlook.
+func draw_carrier_mark(game, e: Dictionary) -> void:
+	var angle: float = game.presentation.clock*2.2+e.p.x*0.01
+	var p: Vector2 = e.p+Vector2.from_angle(angle)*19
+	var ink: Color = Pickups.COLORS[e.drop]
+	game.draw_circle(p,1.8,Color(ink,0.75))
+	game.draw_line(p-Vector2(3.5,0),p+Vector2(3.5,0),Color(ink,0.35),1)
+	game.draw_line(p-Vector2(0,3.5),p+Vector2(0,3.5),Color(ink,0.35),1)
+
+func draw_pickups(game) -> void:
+	var clock: float = game.presentation.clock
+	for item in game.pickups.items:
+		if game.cells.get(game.tile(item.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(item.p)]): continue
+		if item.life > 0 and item.life < 2.0 and fmod(item.life,0.2) < 0.08: continue
+		var ink: Color = Pickups.COLORS[item.kind]
+		var bob: float = sin(clock*3.0+item.p.y*0.05)*2.0
+		var p: Vector2 = item.p+Vector2(0,bob)
+		glow(game,p,30,Color(ink,0.22))
+		var spin: float = clock*1.6
+		var diamond := PackedVector2Array()
+		for i in range(5): diamond.append(p+Vector2.from_angle(spin+i*TAU/4)*10)
+		game.draw_polyline(diamond,ink,2,true)
+		game.label_at(p+Vector2(-4,5),Pickups.NAMES[item.kind].left(1),13,ink)
+
+func draw_buffs(game) -> void:
+	var ring := 25.0
+	for kind in range(game.pickups.timers.size()):
+		var left: float = game.pickups.timers[kind]
+		if left <= 0: continue
+		var fraction: float = clampf(left/Pickups.DURATIONS[kind],0,1)
+		var ink: Color = Pickups.COLORS[kind]
+		if left < 2.0 and fmod(left,0.25) < 0.1: ink.a = 0.3
+		game.draw_arc(game.player,ring,-PI/2,-PI/2+TAU*fraction,40,ink,2,true)
+		ring += 5.0

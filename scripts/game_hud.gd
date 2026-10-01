@@ -3,6 +3,7 @@ extends RefCounted
 var minimap = preload("res://scripts/minimap.gd").new()
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const Pickups = preload("res://scripts/pickups.gd")
 const CYAN := Color("63f5ce")
 const AMBER := Color("ffb95e")
 const DANGER := Color("ff647c")
@@ -51,6 +52,7 @@ func draw(game, screen: Vector2) -> void:
 		label_at(game, timer.position+Vector2(digits_width+4,26), "s", 18, Color(time_ink,0.75))
 		label_at(game, timer.position+Vector2(0,45), "LOW TIME" if urgent else "TO DESCEND", 12, time_ink if urgent else MUTED)
 		meter(game, Rect2(0,76,bar_width,4), clampf(game.time_left / maxf(game.time_limit, 0.01),0,1), time_ink, clock)
+	draw_buffs(game)
 	draw_help(game, screen)
 	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-14),"PRACTICE" if game.controls.using_gamepad else "PRACTICE / R RETRY / B SELECT",12,CYAN)
 	if game.banner > 0: draw_banner(game, screen)
@@ -68,6 +70,16 @@ func draw(game, screen: Vector2) -> void:
 	if layout.map.size.x > 0: minimap.draw(game,layout.map)
 	if not game.controls.using_gamepad or game.replay_input.has("cursor"):
 		draw_cursor(game, game.controls.pointer(game), clock)
+
+func draw_buffs(game) -> void:
+	var y := 118.0
+	for kind in range(game.pickups.timers.size()):
+		var left: float = game.pickups.timers[kind]
+		if left <= 0: continue
+		var ink: Color = Pickups.COLORS[kind]
+		label_at(game, Vector2(14,y), "%s  %.1f" % [Pickups.NAMES[kind], left], 13, ink)
+		meter(game, Rect2(14,y+5,110,3), clampf(left/Pickups.DURATIONS[kind],0,1), ink, game.presentation.clock)
+		y += 24.0
 
 func draw_depth(game) -> void:
 	label_at(game, Vector2(26,24), "DLVL", 11, MUTED)

@@ -4,6 +4,7 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 const Data = preload("res://scripts/floor_data.gd")
 const Settings = preload("res://scripts/floor_settings.gd")
 const Boss = preload("res://scripts/boss.gd")
+const Pickups = preload("res://scripts/pickups.gd")
 
 func generate(settings: Settings, seed_value: int) -> Data:
 	var random := RandomNumberGenerator.new()
@@ -23,6 +24,7 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 	if data.boss_floor:
 		data.boss_variant = data.rng.randi_range(0,2) if settings.boss_choice < 0 else clampi(settings.boss_choice,0,2)
 		Boss.new().build_layout(data)
+		Pickups.plan_floor(data,random_state)
 		return data
 	# Scatter larger rooms without overlap, then connect a spanning tree and loops.
 	var target_count: int = data.rng.randi_range(7, 10)
@@ -115,6 +117,7 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 				"flank_side":1 if n % 2 == 0 else -1, "warp_cd":0.0, "warp_warning":0.0, "arrival":0.0, "escape_time":0.0,
 				"room":i, "active":false, "searching":false, "notice":data.rng.randf_range(0.35,0.85), "turn_speed":data.rng.randf_range(1.8,3.8),
 				"cd":data.rng.randf_range(0.25,0.65), "charge":0.0, "stun":0.0, "dir":Vector2.from_angle(data.rng.randf()*TAU), "push":Vector2.ZERO})
+	Pickups.plan_floor(data,random_state)
 	data.player = data.spawn_point
 	data.build_flow()
 	var cursor: Vector2i = data.tile(data.stairs)
