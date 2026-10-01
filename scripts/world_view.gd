@@ -13,6 +13,13 @@ var radial_reach := -1.0
 var glow_texture: Texture2D = soft_glow()
 var guide_key: Array = []
 var guide_rays: Array = []
+var burst_strokes := PackedVector2Array()
+var burst_stroke_colors := PackedColorArray()
+var burst_rings := PackedVector2Array()
+var burst_ring_colors := PackedColorArray()
+var burst_dots := PackedVector2Array()
+var burst_dot_colors := PackedColorArray()
+const DOT_SEGMENTS := 16
 
 static func soft_glow() -> Texture2D:
 	var gradient := Gradient.new()
@@ -176,6 +183,15 @@ func draw(game, screen: Vector2) -> void:
 		outline = shock_outline(game,game.player,game.SHOCK_RADIUS)
 		draw_radial_fill(game, game.player, outline, Color(0.3, 1, 0.85, 0.035))
 		game.draw_polyline(outline, Color(0.3, 1, 0.85, 0.3 if game.sub_cd <= 0 else 0.08), 1)
+	# Kill bursts and hit marks arrive in dozens at once (a Shockwave clearing a
+	# crowd): their strokes and dots are gathered and drawn once after the loop
+	# instead of as hundreds of separate polyline/arc/circle draws.
+	burst_strokes.clear()
+	burst_stroke_colors.clear()
+	burst_rings.clear()
+	burst_ring_colors.clear()
+	burst_dots.clear()
+	burst_dot_colors.clear()
 	for effect in game.effects:
 		if effect.kind == 5:
 			if effect.life < 0.02: continue
@@ -188,9 +204,9 @@ func draw(game, screen: Vector2) -> void:
 				var axis := Vector2.from_angle(i*TAU/6+progress*0.6)
 				var center: Vector2 = effect.p+axis*(8+progress*30)
 				var side := axis.orthogonal()*(3*(1-progress))
-				game.draw_polyline(PackedVector2Array([center-axis*3-side,center+side,center+axis*5+side]),ink,2.0,true)
-			game.draw_arc(effect.p,8+progress*26,0,TAU,32,Color(1,0.85,0.9,(1-progress)*(1-progress)*0.8),2.0,true)
-			game.draw_arc(effect.p,6+progress*16,0,TAU,24,Color(1,0.45,0.6,(1-progress)*0.5),1.2,true)
+				add_stroke(burst_strokes,burst_stroke_colors,PackedVector2Array([center-axis*3-side,center+side,center+axis*5+side]),ink)
+			add_ring(burst_strokes,burst_stroke_colors,effect.p,8+progress*26,32,Color(1,0.85,0.9,(1-progress)*(1-progress)*0.8))
+			add_ring(burst_rings,burst_ring_colors,effect.p,6+progress*16,24,Color(1,0.45,0.6,(1-progress)*0.5))
 		elif effect.kind == 2:
 			var fade: float = clampf(effect.life/0.10,0,1)
 			var radius := 9+(1-fade)*6
@@ -198,14 +214,14 @@ func draw(game, screen: Vector2) -> void:
 				var ink := Color(0.55,0.82,1.0,fade)
 				for side in [-1,1]:
 					var points := PackedVector2Array([effect.p+Vector2(side*(radius-4),-8),effect.p+Vector2(side*radius,-4),effect.p+Vector2(side*radius,4),effect.p+Vector2(side*(radius-4),8)])
-					game.draw_polyline(points,ink,2,true)
+					add_stroke(burst_strokes,burst_stroke_colors,points,ink)
 			else:
 				var ink := Color(1.0,0.9,0.76,fade)
 				glow(game,effect.p,14,Color(1,0.85,0.6,fade*0.55))
-				game.draw_circle(effect.p,3*fade,Color(1,0.98,0.9,fade*0.8))
+				add_dot(effect.p,3*fade,Color(1,0.98,0.9,fade*0.8))
 				for i in range(4):
 					var ray := Vector2.from_angle(PI/4+i*PI/2)
-					game.draw_line(effect.p+ray*(radius-5),effect.p+ray*radius,ink,2,true)
+					add_stroke(burst_strokes,burst_stroke_colors,PackedVector2Array([effect.p+ray*(radius-5),effect.p+ray*radius]),ink)
 		elif effect.kind == 0:
 			var outline = PackedVector2Array()
 			var reach_outline = PackedVector2Array()
@@ -225,6 +241,19 @@ func draw(game, screen: Vector2) -> void:
 			var fade: float = minf(1.0,effect.life/0.09)
 			var core: float = clampf((effect.life-0.16)/0.12,0,1)
 			draw_lance_fire(game,effect.rays,fade,core)
+	if not burst_dots.is_empty():
+		var indices := PackedInt32Array()
+		indices.resize(burst_dots.size()/DOT_SEGMENTS*(DOT_SEGMENTS-2)*3)
+		var k := 0
+		for base in range(0,burst_dots.size(),DOT_SEGMENTS):
+			for i in range(1,DOT_SEGMENTS-1):
+				indices[k] = base
+				indices[k+1] = base+i
+				indices[k+2] = base+i+1
+				k += 3
+		RenderingServer.canvas_item_add_triangle_array(game.get_canvas_item(),indices,burst_dots,burst_dot_colors)
+	if not burst_strokes.is_empty(): game.draw_multiline_colors(burst_strokes,burst_stroke_colors,2.0,true)
+	if not burst_rings.is_empty(): game.draw_multiline_colors(burst_rings,burst_ring_colors,1.2,true)
 	draw_particles(game)
 	for entry in game.damage_labels:
 		var number = damage_number(entry.damage)
@@ -385,10 +414,38 @@ func draw_lance_fire(game, rays: Array, fade: float, core: float) -> void:
 		var spark := Vector2.from_angle(direction.angle()+PI+(i-1.5)*0.55)
 		game.draw_line(middle.end+spark*4,middle.end+spark*(10+total*0.8*core),Color(0.9,0.97,1,core),1.5,true)
 
+# The same non-degenerate fan triangles as one triangle list: the Shockwave
+# guide and blast would otherwise issue a polygon draw per outline segment.
 func draw_radial_fill(game, origin: Vector2, outline: PackedVector2Array, color: Color) -> void:
+	var points := PackedVector2Array([origin])
+	points.append_array(outline)
+	var indices := PackedInt32Array()
 	for i in range(outline.size() - 1):
 		if absf((outline[i] - origin).cross(outline[i + 1] - origin)) > 0.01:
-			game.draw_colored_polygon(PackedVector2Array([origin, outline[i], outline[i + 1]]), color)
+			indices.append_array([0, i + 1, i + 2])
+	if indices.is_empty(): return
+	RenderingServer.canvas_item_add_triangle_array(game.get_canvas_item(), indices, points, PackedColorArray([color]))
+
+# Polyline and closed ring as segment pairs for one draw_multiline_colors call.
+static func add_stroke(lines: PackedVector2Array, colors: PackedColorArray, points: PackedVector2Array, color: Color) -> void:
+	for i in range(points.size() - 1):
+		lines.append(points[i])
+		lines.append(points[i + 1])
+		colors.append(color)
+
+static func add_ring(lines: PackedVector2Array, colors: PackedColorArray, center: Vector2, radius: float, segments: int, color: Color) -> void:
+	var previous := center + Vector2(radius, 0)
+	for i in range(1, segments + 1):
+		var next := center + Vector2.from_angle(i * TAU / segments) * radius
+		lines.append(previous)
+		lines.append(next)
+		colors.append(color)
+		previous = next
+
+func add_dot(center: Vector2, radius: float, color: Color) -> void:
+	for i in range(DOT_SEGMENTS):
+		burst_dots.append(center + Vector2.from_angle(i * TAU / DOT_SEGMENTS) * radius)
+		burst_dot_colors.append(color)
 
 func draw_lasers(game) -> void:
 	var clock: float = game.presentation.clock

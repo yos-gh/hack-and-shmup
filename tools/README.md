@@ -45,6 +45,10 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 `Godot_console.exe --path . --max-fps 0 res://tools/lance_profile.tscn -- --output=<file>` measures lane tracing, firing and aiming/firing frame times at base and maximum lance width in 2D and 3D, beside the Shockwave guide on the same floor. Vsync is disabled so CPU cost is visible. For a browser measurement, export a copy of the project with this scene as main scene and `tools/*` removed from the Web exclude filter; the report is printed and stored in `window.lanceProfile`.
 
+## Shockwave cost profile
+
+`Godot_console.exe --path . --max-fps 0 res://tools/shock_profile.tscn -- --output=<file>` times the Shockwave firing call, the frame it fires on and the frames of its blast effect against idle frames with the guide, in 2D and 3D: alone, with 200 hostile bullets inside the blast, and with 60 mobs killed at once (kill bursts, hit marks, numbers and sparks). Browser measurement works as for the Lance profile; the report is stored in `window.shockProfile`.
+
 ## HUD and warning audio
 
 `python tools/generate_sfx.py` regenerates every sound effect (48 kHz stereo 16-bit PCM) from 2A03-style pulse, triangle and noise voices; `--only key,key` and `--out DIR` render a subset elsewhere for auditioning. Each clip is normalised to the same short-term loudness, so the balance lives in the `MIX` table in `scripts/sound.gd` (enemy cues read it too). Primary fire retriggers its own voice so rapid fire never stacks. Keep Godot import compression disabled (`compress/mode=0`) for new clips. The countdown warns once at each 5-to-1-second threshold per attempt; time bonuses do not repeat a threshold. Death/timeout and clear effects have a reserved voice, and countdown has another. Use `tools/play_study.ps1` to check the cooldown bar while switching weapons and judge the warning level during firing. `hud_audio_test.gd` checks priority, saturation, mute, retry and pause behavior; listening remains necessary for the final mix.

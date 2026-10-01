@@ -279,15 +279,17 @@ func fire_sub(aim: Vector2) -> void:
 			effects.append({"kind":3,"p":player,"tips":muzzle,"life":0.08})
 			sub_cd = sub_cd_total
 		1:
+			# The reach is a computed property; read it once for the whole floor.
+			var radius := SHOCK_RADIUS
 			for e in enemies:
 				if e.has("plates"):
-					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,SHOCK_RADIUS): continue
+					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,radius): continue
 					(boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).shock(self,e,power*definition.damage)
 					continue
 				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
-				if e.p.distance_to(player) <= SHOCK_RADIUS + body_radius and attack_reaches(player, e.p):
+				if e.p.distance_to(player) <= radius + body_radius and attack_reaches(player, e.p):
 					hurt_enemy(e, power * definition.damage, player.direction_to(e.p), definition.knockback)
-			bullets = bullets.filter(func(b: Dictionary) -> bool: return not (b.hostile and not b.get("energy_orb",false) and b.p.distance_to(player) <= SHOCK_RADIUS and attack_reaches(player, b.p)))
+			bullets = bullets.filter(func(b: Dictionary) -> bool: return not (b.hostile and not b.get("energy_orb",false) and b.p.distance_to(player) <= radius and attack_reaches(player, b.p)))
 			effects.append({"kind": 0, "p": player, "end": player, "life": 0.4})
 			sub_cd = sub_cd_total
 		2:
