@@ -32,6 +32,14 @@ func run() -> void:
 	game.replay_input.primary = false
 	game._physics_process(0.01)
 	check(game.fire_armed, "release re-arms normal controls")
+	for what in [Node.NOTIFICATION_APPLICATION_FOCUS_OUT,Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT]:
+		game.paused = false
+		Input.action_press("move_right")
+		Input.action_press("fire_primary")
+		game._notification(what)
+		check(game.paused, "focus loss %d pauses" % what)
+		check(not Input.is_action_pressed("move_right") and not Input.is_action_pressed("fire_primary"), "focus loss %d releases held keys whose keyup the canvas never sees" % what)
+	game.paused = false
 	game.choosing = true
 	game.choices.assign([0,1,2])
 	game._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
