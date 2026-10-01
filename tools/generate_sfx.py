@@ -337,6 +337,17 @@ EFFECTS = {
     'select': dict(length=0.1, hp=200, voices=[
         *seq([83, 88], 0.045, 0.5, level=0.8, tail=0.01),
     ]),
+    # Drop item collected: a soft upward fifth, rounded off like the stair cues.
+    'pickup': dict(length=0.34, hp=120, lp=2600, voices=[
+        *seq([67, 74, 79], 0.055, 0.5, level=0.8, tail=0.18),
+        *seq([67, 74, 79], 0.055, 0.25, gain=0.3, level=0.8, tail=0.12, start=0.03),
+        tri(0, 0.34, steps([note(55), note(62), note(67)], 0.055), line((0, 0.8), (0.2, 0.7), (0.34, 0))),
+    ]),
+    # Drop effect runs out: the same interval falling, quieter and shorter.
+    'buff_end': dict(length=0.22, hp=150, lp=1800, voices=[
+        *seq([74, 67], 0.07, 0.25, level=0.7, tail=0.08),
+        tri(0, 0.22, steps([note(62), note(55)], 0.07), line((0, 0.6), (0.22, 0))),
+    ]),
     'ready': dict(length=0.07, hp=400, voices=[
         pulse(0, 0.07, const(note(91)), decay(0.6, 0.07), 0.25),
         pulse(0.02, 0.05, const(note(96)), decay(0.4, 0.05), 0.25),

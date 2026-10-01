@@ -27,7 +27,7 @@ const MIX := {
 	"death": -2.0, "boss_destroy": -2.0, "timeout": -4.0, "clear": -8.0, "stairs": -9.0,
 	"warning": -6.0, "shock": -2.0, "scatter": -3.0, "lance": -3.0,
 	"kill": -6.0, "armor_break": -7.0, "shield": -13.0, "hit": -13.0, "armor": -15.0, "shot": -12.0,
-	"arrival": -10.0, "select": -10.0, "ready": -14.0,
+	"arrival": -10.0, "select": -10.0, "ready": -14.0, "pickup": -11.0, "buff_end": -15.0,
 	"sniper_fire": -11.0, "siege_fire": -10.0, "halo_fire": -10.0, "pearl_fire": -14.0, "hunter_fire": -9.0,
 	"hunter_lock": -5.0, "boss_mark": -4.0, "triad_charge": -5.0, "boss_orb_charge": -6.0, "boss_release": -7.0,
 	"charge": -8.0, "warp": -10.0, "triad_beam": -12.0,
