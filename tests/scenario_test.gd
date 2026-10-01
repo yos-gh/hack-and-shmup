@@ -42,6 +42,14 @@ func run() -> void:
 	check(game.floor_number == 11 and game.player == game.spawn_point and not game.boss_floor,"floor 11 study starts at the normal spawn")
 	check(game.discovered.size() == 1 and game.session.run.upgrade_counts.values().reduce(func(a,b): return a+b,0) == 10,"floor 11 study uses ten upgrades without revealing combat rooms")
 	check(game.grace == 1.0 and game.time_left == game.time_limit and game.replay_input.is_empty(),"interactive floor 11 retains ordinary damage timer and controls")
+	for depth in [1, 23, 100]:
+		Scenario.configure_floor(game,depth,19045,2)
+		check(game.floor_number == depth and game.player == game.spawn_point and game.sub_weapon == 2,"floor %d starts at the normal spawn" % depth)
+		check(game.session.run.upgrade_counts.values().reduce(func(a,b): return a+b,0) == depth-1,"floor %d spends one upgrade per cleared floor" % depth)
+		check(game.walkable(game.player, game.PLAYER_HIT_RADIUS) and game.replay_input.is_empty(),"floor %d is interactive on walkable ground" % depth)
+	for variant in range(3):
+		Scenario.configure_floor(game,35,19045,1,variant)
+		check(game.boss_floor and game.boss_variant == variant,"boss floor honors requested boss %d" % variant)
 	game.free()
 	if failures == 0: print("PASS: scenario seed, equipment, walkability and fixed-input replay")
 	quit(1 if failures else 0)

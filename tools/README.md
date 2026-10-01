@@ -19,6 +19,12 @@ For the 3D art study, run `./tools/play_study.ps1` (or add `-Scenario citadel5`,
 # Play from the normal floor-11 spawn with ten automatic upgrades.
 ./tools/play_study.ps1 -Scenario normal11
 
+# Play any floor from its normal spawn (one automatic upgrade per cleared floor).
+# On boss floors, -Boss 0/1/2 picks Citadel/Bastion/Triad; omit for the seeded pick.
+./tools/play_study.ps1 -Floor 23
+./tools/play_study.ps1 -Floor 30 -Boss 2
+Godot_console.exe --path . --script res://tools/scenario.gd -- --floor=23 --frames=0
+
 # Play a repeatable Lv19 floor. Weapon: 0 scatter, 1 shockwave, 2 lance.
 Godot_console.exe --path . --script res://tools/scenario.gd -- --scenario=normal19 --seed=19045 --weapon=1 --frames=0
 
