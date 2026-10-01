@@ -365,7 +365,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	controls.handle_event(self,event)
 
 func _notification(what: int) -> void:
-	if what != NOTIFICATION_APPLICATION_FOCUS_OUT: return
+	# The Web build hears keys only on its canvas, so a key released after the
+	# canvas lost focus never sends its keyup and stays held. Drop held input on
+	# any focus loss; the player presses again after resuming.
+	if what != NOTIFICATION_APPLICATION_FOCUS_OUT and what != NOTIFICATION_WM_WINDOW_FOCUS_OUT: return
+	Input.flush_buffered_events()
+	for action in InputMap.get_actions():
+		if Input.is_action_pressed(action): Input.action_release(action)
 	if not is_node_ready(): return
 	fire_armed = false
 	if not title_screen and not choosing:
