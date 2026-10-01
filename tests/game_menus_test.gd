@@ -49,6 +49,15 @@ func run():
 	check(not game.paused and not game.fire_armed, "resume control preserves input gate")
 	game.paused = true
 	menus.sync()
+	buttons = menus._buttons()
+	check(buttons.size() == 4 and buttons[2].text.begins_with("AUDIO:") and buttons[3].text in ["FULLSCREEN","WINDOWED"],"pause exposes both session settings")
+	var pause_audio: int = game.audio_mode
+	buttons[2].grab_focus()
+	buttons[2].pressed.emit()
+	check(game.paused and game.audio_mode == (pause_audio+1)%3,"pause sound setting changes without resuming")
+	check(root.gui_get_focus_owner() != null and root.gui_get_focus_owner().text.begins_with("AUDIO:"),"pause setting retains focus after refresh")
+	game.cycle_audio()
+	game.cycle_audio()
 	for width in [640,960,1280]:
 		var screen := Vector2(width,720)
 		for i in range(3):
