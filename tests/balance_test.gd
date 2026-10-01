@@ -15,7 +15,7 @@ func run() -> void:
 	check(game.enemy_health(1,1) == 1.0 and game.enemy_health(2,30) == 1.0, "sniper starting HP and shield HP")
 	game.floor_number = 14
 	game.new_floor()
-	check(is_equal_approx(game.time_limit,(game.route_seconds*1.35+2.0)*1.5), "full time allowance increases by 50 percent")
+	check(is_equal_approx(game.time_limit,(game.route_seconds*1.35+2.0)*1.2), "full time allowance is 20 percent over the padded route")
 	for enemy in game.enemies:
 		check(is_equal_approx(enemy.hp,game.enemy_health(enemy.kind,14)), "generated enemies use adjusted HP")
 	game.time_left = game.time_limit

@@ -72,14 +72,22 @@ func draw(game, screen: Vector2) -> void:
 		draw_cursor(game, game.controls.pointer(game), clock)
 
 func draw_buffs(game) -> void:
-	var y := 118.0
+	var y := 112.0 if game.boss_floor else 92.0
 	for kind in range(game.pickups.timers.size()):
 		var left: float = game.pickups.timers[kind]
 		if left <= 0: continue
 		var ink: Color = Pickups.COLORS[kind]
-		label_at(game, Vector2(14,y), "%s  %.1f" % [Pickups.NAMES[kind], left], 13, ink)
-		meter(game, Rect2(14,y+5,110,3), clampf(left/Pickups.DURATIONS[kind],0,1), ink, game.presentation.clock)
-		y += 24.0
+		var alpha := 0.35 if game.pickups.fading(kind) else 1.0
+		var panel := Rect2(12,y,150,34)
+		game.draw_colored_polygon(chamfer(panel,6),Color(PANEL,0.82))
+		game.draw_polyline(closed(chamfer(panel,6)),Color(ink,0.45*alpha),1,true)
+		var mark := panel.position+Vector2(16,17)
+		var diamond := PackedVector2Array([mark+Vector2(0,-7),mark+Vector2(6,0),mark+Vector2(0,7),mark+Vector2(-6,0)])
+		game.draw_colored_polygon(diamond,Color(ink,0.85*alpha))
+		label_at(game, panel.position+Vector2(30,16), Pickups.NAMES[kind], 13, Color(ink,alpha))
+		label_at(game, panel.position+Vector2(108,16), "%4.1f" % left, 13, Color(Color("eafffa"),alpha))
+		meter(game, Rect2(panel.position+Vector2(30,24),Vector2(110,3)), clampf(left/Pickups.DURATIONS[kind],0,1), Color(ink,alpha), game.presentation.clock)
+		y += 40.0
 
 func draw_depth(game) -> void:
 	label_at(game, Vector2(26,24), "DLVL", 11, MUTED)

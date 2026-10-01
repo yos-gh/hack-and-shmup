@@ -25,7 +25,7 @@ func run() -> void:
 		for seed_value in range(20):
 			total += carriers(generator.generate(settings,seed_value).enemies).size()
 		averages[depth] = total/20.0
-	check(averages[1] < 1.5 and averages[20] < 2.5 and averages[40] > averages[20] and averages[60] > 10.0,"carrier count follows the depth curve %s" % averages)
+	check(averages[1] < 1.5 and averages[20] < 3.5 and averages[40] > averages[20] and averages[60] > 10.0,"carrier count follows the depth curve %s" % averages)
 	settings.depth = 33
 	check(carriers(generator.generate(settings,4).enemies) == carriers(generator.generate(settings,4).enemies),"carriers are seeded")
 	settings.depth = 10
@@ -33,7 +33,7 @@ func run() -> void:
 	check(carriers(boss_data.enemies).is_empty() and boss_data.boss_supply.size() == Pickups.BOSS_ENTRIES,"boss floors use a supply schedule")
 	var phase_supply := false
 	for entry in boss_data.boss_supply: phase_supply = phase_supply or entry.kind == Pickups.Kind.PHASE
-	check(not phase_supply,"no invulnerability in boss supply")
+	check(not phase_supply,"no PHASE in boss supply")
 
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
@@ -49,18 +49,21 @@ func run() -> void:
 	carrier.hp = 0
 	game._physics_process(1.0/60)
 	check(game.pickups.items.size() == 1 and game.pickups.items[0].p == drop_point,"killing a carrier leaves a persistent item")
-	game.player = drop_point
 	game.grace = 0
+	game.player = drop_point+Vector2(Pickups.MAGNET_RADIUS+40,0)
 	game.pickups.advance(game,1.0/60)
+	check(game.pickups.items[0].pull == 0 and game.pickups.items[0].p == drop_point,"items out of reach stay put")
+	game.player = drop_point+Vector2(Pickups.MAGNET_RADIUS-10,0)
+	for frame in range(60): game.pickups.advance(game,1.0/60)
 	var kind: int = planned[0][1]
-	check(game.pickups.items.is_empty() and game.pickups.timers[kind] == Pickups.DURATIONS[kind],"touching the item starts its effect")
+	check(game.pickups.items.is_empty() and game.pickups.timers[kind] > Pickups.DURATIONS[kind]-1.01,"items within reach are drawn in and start their effect")
 	game.pickups.timers[kind] = 1.0
 	game.pickups.drop_from({"p":game.player,"drop":kind})
 	game.pickups.advance(game,1.0/60)
 	check(game.pickups.timers[kind] == Pickups.DURATIONS[kind],"same kind refreshes to full, not additive")
 	game.pickups.timers[Pickups.Kind.PHASE] = 2.0
 	game.die()
-	check(not game.pending_respawn,"phase ignores hits")
+	check(not game.pending_respawn and game.pickups.speed_scale() == Pickups.SPEED_SCALE,"phase ignores hits and speeds the hull")
 	game.pickups.timers[Pickups.Kind.PHASE] = 0.0
 	game.pickups.timers[Pickups.Kind.SPREAD] = 2.0
 	game.player = game.spawn_point

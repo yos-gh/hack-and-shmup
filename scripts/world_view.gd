@@ -3,6 +3,7 @@ extends RefCounted
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Catalog = preload("res://scripts/combat_catalog.gd")
 const Pickups = preload("res://scripts/pickups.gd")
+const DepthView = preload("res://scripts/depth_view.gd")
 const BossFx = preload("res://scripts/boss_fx.gd")
 var particle_batch: MultiMesh
 var particles_warmed := false
@@ -265,6 +266,7 @@ func draw(game, screen: Vector2) -> void:
 		var size := 17 if entry.life < 0.55 else 20
 		game.label_at(entry.p + Vector2(1,2), number, size, Color(0.02,0.03,0.05,alpha*0.9))
 		game.label_at(entry.p, number, size, Color(1.0,0.95,0.75,alpha).lerp(Color.WHITE,clampf((entry.life-0.5)*6,0,1)))
+	draw_phase_trail(game)
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
 		var breath: float = 0.5+0.5*sin(game.presentation.clock*5.0)
 		glow(game,game.player,34+breath*4,Color(0.3,1,0.85,0.20+breath*0.06))
@@ -509,25 +511,62 @@ func draw_carrier_mark(game, e: Dictionary) -> void:
 func draw_pickups(game) -> void:
 	var clock: float = game.presentation.clock
 	for item in game.pickups.items:
-		if game.cells.get(game.tile(item.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(item.p)]): continue
-		if item.life > 0 and item.life < 2.0 and fmod(item.life,0.2) < 0.08: continue
+		if not DepthView.item_visible(game,item): continue
 		var ink: Color = Pickups.COLORS[item.kind]
-		var bob: float = sin(clock*3.0+item.p.y*0.05)*2.0
-		var p: Vector2 = item.p+Vector2(0,bob)
-		glow(game,p,30,Color(ink,0.22))
-		var spin: float = clock*1.6
-		var diamond := PackedVector2Array()
-		for i in range(5): diamond.append(p+Vector2.from_angle(spin+i*TAU/4)*10)
-		game.draw_polyline(diamond,ink,2,true)
-		game.label_at(p+Vector2(-4,5),Pickups.NAMES[item.kind].left(1),13,ink)
+		var pulse: float = 0.5+0.5*sin(clock*4.0+item.p.x*0.03)
+		glow(game,item.p,36+pulse*8,Color(ink,0.22+pulse*0.10))
+		if item.pull > 0:
+			# Streak back along the pull toward where the item came from.
+			var tail: Vector2 = item.p+item.p.direction_to(game.player)*-minf(36.0,item.pull*0.05)
+			game.draw_line(tail,item.p,Color(ink,0.55),3,true)
+		var spin: float = clock*1.6+item.p.x*0.02
+		if not game.depth_enabled:
+			var diamond := PackedVector2Array()
+			for k in range(4): diamond.append(item.p+Vector2.from_angle(spin+k*TAU/4)*9)
+			game.draw_colored_polygon(diamond,Color(ink,0.35))
+			diamond.append(diamond[0])
+			game.draw_polyline(diamond,ink,1.5,true)
+		# Ground halo: two counter-rotating arcs under the crystal.
+		for k in range(2):
+			var start: float = (spin if k == 0 else -spin*1.3)+k*PI
+			game.draw_arc(item.p,15,start,start+1.6,12,Color(ink,0.45),1.2,true)
+		if item.kind == Pickups.Kind.SPREAD:
+			for k in [-1.0,0.0,1.0]:
+				var tip: Vector2 = item.p+Vector2.UP.rotated(k*0.5)*23
+				game.draw_line(tip-Vector2.UP.rotated(k*0.5)*4,tip,Color(ink,0.7),1.5,true)
+
+func draw_phase_trail(game) -> void:
+	var trail: Array[Vector2] = game.pickups.trail
+	var ink: Color = Pickups.COLORS[Pickups.Kind.PHASE]
+	for k in range(trail.size()):
+		var fade: float = 1.0-float(k+1)/(trail.size()+1)
+		game.draw_arc(trail[k],12,0,TAU,24,Color(ink,0.32*fade),2,true)
+		game.draw_circle(trail[k],5,Color(ink,0.12*fade))
 
 func draw_buffs(game) -> void:
+	var clock: float = game.presentation.clock
 	var ring := 25.0
 	for kind in range(game.pickups.timers.size()):
 		var left: float = game.pickups.timers[kind]
 		if left <= 0: continue
 		var fraction: float = clampf(left/Pickups.DURATIONS[kind],0,1)
 		var ink: Color = Pickups.COLORS[kind]
-		if left < 2.0 and fmod(left,0.25) < 0.1: ink.a = 0.3
+		if game.pickups.fading(kind): ink.a = 0.25
 		game.draw_arc(game.player,ring,-PI/2,-PI/2+TAU*fraction,40,ink,2,true)
 		ring += 5.0
+	if game.pickups.invincible():
+		var ink: Color = Pickups.COLORS[Pickups.Kind.PHASE]
+		for k in range(4):
+			var a: float = clock*3.2+k*TAU/4
+			game.draw_arc(game.player,19,a,a+0.5,8,Color(ink,0.0 if game.pickups.fading(Pickups.Kind.PHASE) else 0.75),2,true)
+	if game.pickups.spread() and not game.depth_enabled:
+		var aim: Vector2 = game.controls.aim(game)
+		var ink: Color = Pickups.COLORS[Pickups.Kind.SPREAD]
+		for side in [-1.0,1.0]:
+			var splay: Vector2 = aim.rotated(side*Pickups.SPREAD_ANGLE*2.0)
+			var root: Vector2 = game.player+aim.orthogonal()*side*7.0
+			game.draw_line(root+splay*8,root+splay*16,ink,2)
+	for flash in game.pickups.flashes:
+		var t: float = 1.0-flash.life/0.45
+		var ink: Color = Pickups.COLORS[flash.kind]
+		game.draw_arc(game.player,14+t*46,0,TAU,40,Color(ink,(1.0-t)*0.8),3.0*(1.0-t)+1,true)

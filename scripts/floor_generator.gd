@@ -127,5 +127,5 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 		steps += 1
 	# Budget follows the actual navigable shortest route and current movement speed.
 	data.route_seconds = steps * data.TILE / (data.SPEED + data.move_bonus)
-	data.time_limit = (data.route_seconds * 1.35 + 2.0) * 1.5
+	data.time_limit = (data.route_seconds * 1.35 + 2.0) * 1.2
 	return data

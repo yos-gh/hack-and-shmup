@@ -86,3 +86,18 @@ static func boss_core() -> ArrayMesh:
 		face(s,Vector3(0,0,1),top_a,top_b,Color(0.9,0.94,1))
 		face(s,Vector3.ZERO,lower_b,lower_a,Color(0.25,0.32,0.4))
 	return s.commit()
+
+# Drop item: an upright bipyramid; the camera tilt shows its upper facets.
+static func crystal(sides: int = 4) -> ArrayMesh:
+	var s := SurfaceTool.new()
+	s.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top := Vector3(0,0,1)
+	var bottom := Vector3.ZERO
+	for i in range(sides):
+		var a := Vector2.from_angle(TAU*i/sides)
+		var b := Vector2.from_angle(TAU*(i+1)/sides)
+		var ea := Vector3(a.x,a.y,0.45)
+		var eb := Vector3(b.x,b.y,0.45)
+		face(s,top,ea,eb,Color.WHITE if i%2 == 0 else Color(0.82,0.86,0.91))
+		face(s,bottom,eb,ea,Color(0.3,0.4,0.5))
+	return s.commit()

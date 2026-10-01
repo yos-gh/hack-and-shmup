@@ -5,6 +5,7 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 const MobVisuals = preload("res://scripts/mob_visuals.gd")
 const Background = preload("res://scripts/background_style.gd")
 const Glyph = preload("res://scripts/glyph_meshes.gd")
+const Pickups = preload("res://scripts/pickups.gd")
 
 # Presentation-only orthographic XY scene: one world unit equals one screen pixel.
 # +Z adds depth without moving the projected hit position. No 3D physics nodes.
@@ -85,6 +86,7 @@ func _ready() -> void:
 	make_batch("citadel_gun", preload("res://scripts/citadel_visuals.gd").gun_mesh())
 	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
 	make_batch("actor_core", Glyph.boss_core())
+	make_batch("pickup", Glyph.crystal())
 	sync(get_parent())
 
 func make_batch(key: String, mesh: Mesh) -> void:
@@ -95,7 +97,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 	if key in ["floor", "contact", "wall_mask"]: material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var instance := MultiMeshInstance3D.new()
 	instance.material_override = material
-	if key in ["square","player_barrel","chaser","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("triad_") or key.begins_with("citadel_"):
+	if key in ["square","player_barrel","chaser","flanker","interceptor","pickup"] or key.begins_with("boss_") or key.begins_with("triad_") or key.begins_with("citadel_"):
 		var glyph_surface := ShaderMaterial.new()
 		glyph_surface.shader = preload("res://scripts/glyph_surface.gdshader")
 		instance.material_override = glyph_surface
@@ -139,7 +141,7 @@ func make_batch(key: String, mesh: Mesh) -> void:
 		core_material.vertex_color_use_as_albedo = true
 		core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		instance.material_override = core_material
-	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor"] or key.begins_with("boss_") or key.begins_with("triad_") or key.begins_with("citadel_"):
+	elif key in ["square","chaser","ring","sniper","player_barrel","flanker","interceptor","pickup"] or key.begins_with("boss_") or key.begins_with("triad_") or key.begins_with("citadel_"):
 		var wire := MultiMeshInstance3D.new()
 		var wire_material := ShaderMaterial.new()
 		wire_material.shader = preload("res://scripts/glyph_wire.gdshader")
@@ -373,10 +375,26 @@ func sync(game) -> void:
 			squares.append(chaser_entry(enemy.p, enemy.dir, Vector3(radius*0.88,radius*0.88,5), color, 4))
 	var barrels: Array = []
 	if game.grace <= 0 or fmod(game.grace, 0.16) < 0.1:
-		rings.append(entry(game.player, Vector3(12,12,7), Color("63f5ce"), 7, true))
+		var hull := Color("63f5ce")
+		if game.pickups.invincible() and not game.pickups.fading(Pickups.Kind.PHASE):
+			hull = hull.lerp(Pickups.COLORS[Pickups.Kind.PHASE],0.55+0.25*sin(game.presentation.clock*9.0))
+		rings.append(entry(game.player, Vector3(12,12,7), hull, 7, true))
 		var aim: Vector2 = game.controls.aim(game)
 		for side in [-1.0,1.0]:
 			barrels.append(chaser_entry(game.player+aim*14+aim.orthogonal()*side*3.5,aim,Vector3(5,1.25,2),Color("3ba88f"),7))
+		if game.pickups.spread():
+			# Two splayed side barrels show the three-way fan.
+			var ink: Color = Pickups.COLORS[Pickups.Kind.SPREAD]
+			for side in [-1.0,1.0]:
+				var splay: Vector2 = aim.rotated(side*Pickups.SPREAD_ANGLE*2.0)
+				barrels.append(chaser_entry(game.player+splay*13+aim.orthogonal()*side*7.0,splay,Vector3(4,1.1,2),ink.darkened(0.25),7))
+	var crystals: Array = []
+	for item in game.pickups.items:
+		if not bounds.has_point(item.p) or not item_visible(game,item): continue
+		var spin: float = game.presentation.clock*1.8+item.p.x*0.02
+		var lift: float = 8.0+sin(game.presentation.clock*3.0+item.p.y*0.05)*2.5
+		crystals.append(chaser_entry(item.p,Vector2.from_angle(spin),Vector3(10,10,19),Pickups.COLORS[item.kind],lift))
+	upload("pickup",crystals)
 	upload("actor_core",actor_cores)
 	upload("player_barrel", barrels)
 	upload("square", squares)
@@ -466,3 +484,9 @@ func rebuild_floor(game) -> void:
 				if not floor_updates.has(owner): floor_updates[owner] = []
 				floor_updates[owner].append({"key":key,"index":i,"item":item})
 	last_rebuild_ms = (Time.get_ticks_usec()-started)/1000.0
+
+static func item_visible(game, item: Dictionary) -> bool:
+	if item.pull > 0: return true
+	if item.life > 0 and item.life < Pickups.WARN_TIME and fmod(item.life,0.2) < 0.08: return false
+	var room: int = game.cells.get(game.tile(item.p), -1)
+	return room < 0 or game.discovered.has(room)
