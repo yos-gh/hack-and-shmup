@@ -35,7 +35,10 @@ func run() -> void:
  audio._process(0.1)
  check(audio.voices[0].playing and audio.voices[0].stream == game.sound.clips.triad_charge,"highest-priority laser warning owns reserved voice")
  check(audio.voices.slice(1).filter(func(v): return v.playing).size()==4,"general attack mix bounded to four voices")
- check(is_equal_approx(audio.voices[1].volume_db,audio.levels[1]-6),"laser warning ducks ordinary enemy attacks")
+ var ordinary: int = range(1,audio.voices.size()).filter(func(i): return audio.keys[i] not in audio.UNDUCKED)[0]
+ check(is_equal_approx(audio.voices[ordinary].volume_db,audio.levels[ordinary]-6),"laser warning ducks ordinary enemy attacks")
+ for i in range(1,audio.voices.size()):
+  if audio.keys[i] in audio.UNDUCKED: check(is_equal_approx(audio.voices[i].volume_db,audio.levels[i]),"heavy hammer hits are not ducked")
  check(audio.voices[0].position.x<game.get_viewport_rect().size.x/2,"left attack placed left of listener")
  for voice in audio.voices: check(voice.playback_type==AudioServer.PLAYBACK_TYPE_STREAM,"enemy sounds use streaming mixer")
  game.sound.set_paused(true)

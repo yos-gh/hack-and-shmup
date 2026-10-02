@@ -1,15 +1,18 @@
 extends Node
 
 # One pending cue per attack family; independent of combat and random streams.
-const PRIORITY := {"pearl_fire":0,"sniper_fire":0,"siege_fire":1,"halo_fire":1,"charge":1,"warp":2,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2}
+const PRIORITY := {"pearl_fire":0,"sniper_fire":0,"siege_fire":1,"halo_fire":1,"charge":1,"warp":2,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2,"citadel_hammer_launch":2,"citadel_hammer_impact":3}
 # Levels come from the shared SE mix in sound.gd.
 const WARNINGS := ["hunter_lock","triad_charge","boss_orb_charge","boss_mark"]
+# Heavy boss hits keep full level under a warning; the hammer launch shares its moment with boss_mark.
+const UNDUCKED := ["citadel_hammer_launch","citadel_hammer_impact"]
 const GAP := 0.065
 var pending: Dictionary = {}
 var cooldown: Dictionary = {}
 var voices: Array[AudioStreamPlayer2D] = []
 var ranks: Array[float] = []
 var levels: Array[float] = []
+var keys: Array[String] = []
 var paused := false
 var muted := false
 
@@ -24,6 +27,7 @@ func _ready() -> void:
 		voices.append(voice)
 		ranks.append(-1)
 		levels.append(-16)
+		keys.append("")
 
 func request(game, key: String, point: Vector2) -> void:
 	if muted or paused or not PRIORITY.has(key) or not game.attack_open(point): return
@@ -74,6 +78,7 @@ func _process(delta: float) -> void:
 		voice.position = cue.screen
 		ranks[slot] = cue.score
 		levels[slot] = cue.db
+		keys[slot] = cue.key
 		voice.volume_db = cue.db
 		voice.stream = sound.clips[cue.key]
 		voice.play()
@@ -81,7 +86,7 @@ func _process(delta: float) -> void:
 
 func refresh_mix() -> void:
 	for i in range(voices.size()):
-		var duck := 6.0 if i > 0 and voices[0].playing else 0.0
+		var duck := 6.0 if i > 0 and voices[0].playing and keys[i] not in UNDUCKED else 0.0
 		voices[i].volume_db = levels[i]-duck
 
 func reset() -> void:

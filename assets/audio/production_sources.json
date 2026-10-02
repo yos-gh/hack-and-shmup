@@ -1,1 +1,12 @@
-{}
+{
+  "citadel_hammer_launch.wav": {
+    "sha256": "3118bb2fbbf15a0b41c9ea154841be072f05a81092a989b43a69744c4e4911e7",
+    "source": "tools/audio/reaper_citadel_hammer.lua",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
+  },
+  "citadel_hammer_impact.wav": {
+    "sha256": "d15c29477b0994c7c776ac7811df66ddf73566c78e64b9727f9ba5a28ae2b9b0",
+    "source": "tools/audio/reaper_citadel_hammer.lua",
+    "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
+  }
+}
