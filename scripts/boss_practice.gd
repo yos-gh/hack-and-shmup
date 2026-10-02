@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Catalog = preload("res://scripts/combat_catalog.gd")
+const FloorData = preload("res://scripts/floor_data.gd")
 
 var selecting := false
 var active := false
@@ -8,9 +9,10 @@ var variant := 0
 var depth := 5
 const PRACTICE_UPGRADES := [0,1,6,7,3,2]
 const CAPPED_FALLBACK := [0,1,3,2]
-# Test-play builds stop movement at +400 (MOVE SPEED 645); deep floors otherwise
-# outrun the arena. Cards that would pass it fall back to damage and fire rate.
-const TEST_MOVE_BONUS_CAP := 400.0
+# Test-play builds keep the status-screen MOVE SPEED at or below this; deep
+# floors are otherwise too fast to control. Cards that would pass it fall back
+# to damage and fire rate.
+const TEST_MOVE_SPEED_CAP := 400.0
 
 func open(game) -> void:
 	game.return_to_title()
@@ -36,7 +38,7 @@ static func auto_upgrades(run, count: int, cycle: Array) -> void:
 		run.apply_upgrade(kind)
 
 static func auto_allowed(run, kind: int) -> bool:
-	return run.can_upgrade(kind) and run.move_bonus+Catalog.UPGRADES[kind].move_speed <= TEST_MOVE_BONUS_CAP+0.00001
+	return run.can_upgrade(kind) and FloorData.SPEED+run.move_bonus+Catalog.UPGRADES[kind].move_speed <= TEST_MOVE_SPEED_CAP+0.00001
 
 func button(screen: Vector2, index: int) -> Rect2:
 	var center := screen*0.5-Vector2(0,24)
