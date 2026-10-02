@@ -1,7 +1,7 @@
 extends Node
 
 # One pending cue per attack family; independent of combat and random streams.
-const PRIORITY := {"pearl_fire":0,"sniper_fire":0,"siege_fire":1,"halo_fire":1,"charge":1,"warp":2,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2}
+const PRIORITY := {"pearl_fire":0,"sniper_fire":0,"siege_fire":1,"halo_fire":1,"charge":1,"warp":2,"hunter_fire":2,"hunter_lock":3,"triad_charge":4,"boss_orb_charge":3,"boss_mark":3,"boss_release":2,"citadel_hammer_launch":2,"citadel_hammer_impact":3}
 # Levels come from the shared SE mix in sound.gd.
 const WARNINGS := ["hunter_lock","triad_charge","boss_orb_charge","boss_mark"]
 const GAP := 0.065

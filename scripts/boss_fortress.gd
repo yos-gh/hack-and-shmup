@@ -210,6 +210,7 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 			boss.lasers[-1].merge({"gun":gun,"heading":heading})
 	elif name == "slam":
 		game.enemy_attack_cue("boss_mark",game.player,false)
+		game.enemy_attack_cue("citadel_hammer_launch",e.p,false)
 		# The core lobs a hammer over cover; the target stays fixed while the tank drives on.
 		e.slam.append({"p":game.player,"source":e.p,"radius":lerpf(58.0,68.0,e.low),"time":0.95*e.attack_scale,"warning":0.95*e.attack_scale,"fired":false})
 		if rage:
@@ -226,7 +227,7 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 		if slam.time <= 0 and not slam.fired:
 			slam.fired = true
 			game.burst(slam.p,Color("ff9470"),18)
-			game.enemy_attack_cue("siege_fire",slam.p)
+			game.enemy_attack_cue("citadel_hammer_impact",slam.p)
 			# Lobbed over cover, so hiding behind a pillar is not permanent safety.
 			if game.player.distance_to(slam.p) < slam.radius+game.PLAYER_HIT_RADIUS: game.die()
 	e.slam = e.slam.filter(func(s): return s.time > -0.22)
