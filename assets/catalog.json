@@ -195,12 +195,12 @@
     {
       "path": "assets/audio/citadel_hammer_impact.wav",
       "bytes": 153644,
-      "sha256": "9500b21a64e999f4dbc2fbafeacaee172f422885f2d127bcfbb60b29aa8800ba",
+      "sha256": "d15c29477b0994c7c776ac7811df66ddf73566c78e64b9727f9ba5a28ae2b9b0",
       "kind": "rendered_audio",
       "source": "tools/audio/reaper_citadel_hammer.lua",
-      "source_sha256": "a40aff85a2d3b2df1bd92cf29a9e11109a31d8775c78adffe39cde771f2174a5",
+      "source_sha256": "7399ee3583454b3d1328ea5fc2f1e1fd74063b61a56adb05d26b3906985ebc06",
       "production": {
-        "sha256": "9500b21a64e999f4dbc2fbafeacaee172f422885f2d127bcfbb60b29aa8800ba",
+        "sha256": "d15c29477b0994c7c776ac7811df66ddf73566c78e64b9727f9ba5a28ae2b9b0",
         "source": "tools/audio/reaper_citadel_hammer.lua",
         "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
       },
@@ -212,12 +212,12 @@
     {
       "path": "assets/audio/citadel_hammer_launch.wav",
       "bytes": 92204,
-      "sha256": "3d4ea41c2869b5e0a474f70a00e6da7eaae602e1261595da99cea571917f5896",
+      "sha256": "3118bb2fbbf15a0b41c9ea154841be072f05a81092a989b43a69744c4e4911e7",
       "kind": "rendered_audio",
       "source": "tools/audio/reaper_citadel_hammer.lua",
-      "source_sha256": "a40aff85a2d3b2df1bd92cf29a9e11109a31d8775c78adffe39cde771f2174a5",
+      "source_sha256": "7399ee3583454b3d1328ea5fc2f1e1fd74063b61a56adb05d26b3906985ebc06",
       "production": {
-        "sha256": "3d4ea41c2869b5e0a474f70a00e6da7eaae602e1261595da99cea571917f5896",
+        "sha256": "3118bb2fbbf15a0b41c9ea154841be072f05a81092a989b43a69744c4e4911e7",
         "source": "tools/audio/reaper_citadel_hammer.lua",
         "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
       },
