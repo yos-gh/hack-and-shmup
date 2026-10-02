@@ -1,10 +1,12 @@
 extends RefCounted
 
+const Practice = preload("res://scripts/boss_practice.gd")
+
 # Explicit development entry point; tools/ is excluded from release exports.
 static func configure(game, scenario: String, seed_value: int, weapon: int) -> void:
 	game.start_run()
 	game.floor_number = {"normal11":11,"normal19":19,"citadel5":5,"bastion15":15,"triad45":45}[scenario]
-	for i in range(game.floor_number - 1): game.apply_upgrade([0, 1, 3, 2][i % 4])
+	Practice.auto_upgrades(game.session.run, game.floor_number - 1, [0, 1, 3, 2])
 	game.rng.seed = seed_value
 	game.effects_rng.seed = seed_value ^ 0x5EED
 	game.sub_weapon = weapon
@@ -15,18 +17,13 @@ static func configure(game, scenario: String, seed_value: int, weapon: int) -> v
 	game.build_flow()
 	game.queue_redraw()
 
-# Any depth from its ordinary spawn: one automatic upgrade per cleared floor,
+# Any depth from its ordinary spawn: one automatic upgrade per cleared floor
+# (movement capped like boss practice),
 # normal damage and timer. Boss floors use boss_choice 0..2, or -1 for the seeded pick.
 static func configure_floor(game, depth: int, seed_value: int, weapon: int, boss_choice: int = -1) -> void:
 	game.start_run()
 	game.floor_number = depth
-	var fallback := 0
-	for i in range(depth - 1):
-		var kind: int = [0, 1, 3, 2][i % 4]
-		if not game.session.run.can_upgrade(kind):
-			kind = [0, 1, 3, 2][fallback % 4]
-			fallback += 1
-		game.apply_upgrade(kind)
+	Practice.auto_upgrades(game.session.run, depth - 1, [0, 1, 3, 2])
 	game.rng.seed = seed_value
 	game.effects_rng.seed = seed_value ^ 0x5EED
 	game.sub_weapon = weapon
