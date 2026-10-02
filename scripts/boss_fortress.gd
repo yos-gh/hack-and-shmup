@@ -11,6 +11,8 @@ var motion = preload("res://scripts/fortress_motion.gd").new()
 const BossFx = preload("res://scripts/boss_fx.gd")
 const CitadelVisual = preload("res://scripts/citadel_visuals.gd")
 const SHIELD_INK := Color("ffb07a")
+# The impact clip opens with the hammer's fall; its landing hit sits this far in.
+const HAMMER_LANDING_LEAD := 0.30
 
 func setup(data, e: Dictionary) -> void:
 	var dps: float = Balance.primary_dps(data.power,data.fire_rate,data.physics_ticks)
@@ -224,10 +226,13 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 		if plate.timer == 0: plate.hp = plate.max_hp
 	for slam in e.slam:
 		slam.time -= delta
+		if slam.time <= HAMMER_LANDING_LEAD and not slam.get("cued",false):
+			slam.cued = true
+			game.enemy_attack_cue("citadel_hammer_impact",slam.p,false)
 		if slam.time <= 0 and not slam.fired:
 			slam.fired = true
 			game.burst(slam.p,Color("ff9470"),18)
-			game.enemy_attack_cue("citadel_hammer_impact",slam.p)
+			if game.attack_open(slam.p): game.effects.append({"kind":4,"p":slam.p,"life":0.16})
 			# Lobbed over cover, so hiding behind a pillar is not permanent safety.
 			if game.player.distance_to(slam.p) < slam.radius+game.PLAYER_HIT_RADIUS: game.die()
 	e.slam = e.slam.filter(func(s): return s.time > -0.22)

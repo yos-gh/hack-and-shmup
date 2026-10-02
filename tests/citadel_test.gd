@@ -70,6 +70,8 @@ func run() -> void:
 	e.cd = 100
 	fortress.pattern(game.boss,game,e,"slam",false)
 	check(e.slam[-1].source == e.p,"hammer launches from the core")
+	fortress.advance(game.boss,game,e,e.slam[-1].time-fortress.HAMMER_LANDING_LEAD+0.01,Vector2.LEFT)
+	check(e.slam[-1].get("cued",false) and not e.slam[-1].fired,"impact clip starts before landing so its hit lines up")
 	fortress.advance(game.boss,game,e,e.slam[-1].time+0.01,Vector2.LEFT)
 	check(game.deaths == deaths+1,"lobbed hammer clears the pillar and hits")
 	game.pending_respawn = false

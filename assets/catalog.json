@@ -194,30 +194,30 @@
     },
     {
       "path": "assets/audio/citadel_hammer_impact.wav",
-      "bytes": 111404,
-      "sha256": "263473bd465ad946feceea82502bf7020e9687ce85865e9cd02efe323c94c10e",
+      "bytes": 153644,
+      "sha256": "9500b21a64e999f4dbc2fbafeacaee172f422885f2d127bcfbb60b29aa8800ba",
       "kind": "rendered_audio",
       "source": "tools/audio/reaper_citadel_hammer.lua",
-      "source_sha256": "533239f852a6b46dbdd10ac58ad89902c3157faf8e7d42c09ede2ef919d50a94",
+      "source_sha256": "a40aff85a2d3b2df1bd92cf29a9e11109a31d8775c78adffe39cde771f2174a5",
       "production": {
-        "sha256": "263473bd465ad946feceea82502bf7020e9687ce85865e9cd02efe323c94c10e",
+        "sha256": "9500b21a64e999f4dbc2fbafeacaee172f422885f2d127bcfbb60b29aa8800ba",
         "source": "tools/audio/reaper_citadel_hammer.lua",
         "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
       },
       "channels": 2,
       "sample_bytes": 2,
       "sample_rate": 48000,
-      "frames": 27840
+      "frames": 38400
     },
     {
       "path": "assets/audio/citadel_hammer_launch.wav",
       "bytes": 92204,
-      "sha256": "e0ea15e5fc0a6aec1c3152a988cb420caca61be26a47e29ef93d52761de02c1f",
+      "sha256": "3d4ea41c2869b5e0a474f70a00e6da7eaae602e1261595da99cea571917f5896",
       "kind": "rendered_audio",
       "source": "tools/audio/reaper_citadel_hammer.lua",
-      "source_sha256": "533239f852a6b46dbdd10ac58ad89902c3157faf8e7d42c09ede2ef919d50a94",
+      "source_sha256": "a40aff85a2d3b2df1bd92cf29a9e11109a31d8775c78adffe39cde771f2174a5",
       "production": {
-        "sha256": "e0ea15e5fc0a6aec1c3152a988cb420caca61be26a47e29ef93d52761de02c1f",
+        "sha256": "3d4ea41c2869b5e0a474f70a00e6da7eaae602e1261595da99cea571917f5896",
         "source": "tools/audio/reaper_citadel_hammer.lua",
         "method": "REAPER Magical 8bit Plug 2 and stock effects via reaper_engine.lua; leveled to -16 dB short-term; 48 kHz stereo 16-bit PCM"
       },
