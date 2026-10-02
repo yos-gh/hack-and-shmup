@@ -12,7 +12,7 @@ const CAPPED_FALLBACK := [0,1,3,2]
 # Test-play builds keep the status-screen MOVE SPEED at or below this; deep
 # floors are otherwise too fast to control. Cards that would pass it fall back
 # to damage and fire rate.
-const TEST_MOVE_SPEED_CAP := 400.0
+const TEST_MOVE_SPEED_CAP := 635.0
 
 func open(game) -> void:
 	game.return_to_title()

@@ -60,8 +60,8 @@ func run() -> void:
 		check(game.session.run.upgrade_counts.values().reduce(func(total,count): return total+count,0) == depth-1,"retry retains practice build")
 	game.practice.depth = 100
 	game.practice.start(game)
-	check(game.SPEED+game.move_bonus <= 400.0 and is_equal_approx(game.move_bonus,150.0),"practice MOVE SPEED stays at or below 400")
-	check(is_equal_approx(game.power,16.0) and is_equal_approx(game.fire_rate,8.8),"speed beyond the cap becomes damage and fire rate")
+	check(is_equal_approx(game.SPEED+game.move_bonus,635.0),"practice MOVE SPEED stops at 635")
+	check(is_equal_approx(game.power,14.8) and is_equal_approx(game.fire_rate,7.2),"speed beyond the cap becomes damage and fire rate")
 	if failures == 0: print("PASS: debug input, upgrades, retry and record isolation")
 	game.free()
 	quit(1 if failures else 0)
