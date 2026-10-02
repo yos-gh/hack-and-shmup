@@ -31,7 +31,8 @@ const MIX := {
 	"sniper_fire": -11.0, "siege_fire": -10.0, "halo_fire": -10.0, "pearl_fire": -14.0, "hunter_fire": -9.0,
 	"hunter_lock": -5.0, "boss_mark": -4.0, "triad_charge": -5.0, "boss_orb_charge": -6.0, "boss_release": -7.0,
 	"charge": -8.0, "warp": -10.0, "triad_beam": -12.0,
-	"citadel_hammer_launch": -8.0, "citadel_hammer_impact": -6.0,
+	# Sub-bass heavy clips: about 10 dB quieter A-weighted than siege_fire at equal RMS.
+	"citadel_hammer_launch": 0.0, "citadel_hammer_impact": 2.0,
 }
 const DUCK := 6.0
 const BURST_GAPS := {"kill": 0.045, "shield": 0.045, "armor": 0.05, "armor_break": 0.08, "select": 0.05}
