@@ -1,11 +1,18 @@
 extends RefCounted
 
+const Catalog = preload("res://scripts/combat_catalog.gd")
+const FloorData = preload("res://scripts/floor_data.gd")
+
 var selecting := false
 var active := false
 var variant := 0
 var depth := 5
 const PRACTICE_UPGRADES := [0,1,6,7,3,2]
 const CAPPED_FALLBACK := [0,1,3,2]
+# Test-play builds keep the status-screen MOVE SPEED at or below this; deep
+# floors are otherwise too fast to control. Cards that would pass it fall back
+# to damage and fire rate.
+const TEST_MOVE_SPEED_CAP := 635.0
 
 func open(game) -> void:
 	game.return_to_title()
@@ -16,15 +23,22 @@ func start(game) -> void:
 	game.start_run()
 	active = true
 	game.floor_number = depth
-	# Spend exactly one legal card per cleared floor, including capped sub upgrades.
+	auto_upgrades(game.session.run,depth-1,PRACTICE_UPGRADES)
+	game.new_floor(variant)
+
+# Spend exactly one legal card per cleared floor. Capped sub upgrades and speed
+# past the test cap take the next allowed fallback card instead.
+static func auto_upgrades(run, count: int, cycle: Array) -> void:
 	var fallback_index := 0
-	for i in range(depth-1):
-		var kind: int = PRACTICE_UPGRADES[i%PRACTICE_UPGRADES.size()]
-		if not game.session.run.can_upgrade(kind):
+	for i in range(count):
+		var kind: int = cycle[i%cycle.size()]
+		while not auto_allowed(run,kind):
 			kind = CAPPED_FALLBACK[fallback_index%CAPPED_FALLBACK.size()]
 			fallback_index += 1
-		game.apply_upgrade(kind)
-	game.new_floor(variant)
+		run.apply_upgrade(kind)
+
+static func auto_allowed(run, kind: int) -> bool:
+	return run.can_upgrade(kind) and FloorData.SPEED+run.move_bonus+Catalog.UPGRADES[kind].move_speed <= TEST_MOVE_SPEED_CAP+0.00001
 
 func button(screen: Vector2, index: int) -> Rect2:
 	var center := screen*0.5-Vector2(0,24)

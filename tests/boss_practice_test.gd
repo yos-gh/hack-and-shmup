@@ -58,6 +58,10 @@ func run() -> void:
 			check(is_equal_approx(game.LANCE_WIDTH,78.0),"high-floor practice has double lance width")
 		game.restart_attempt()
 		check(game.session.run.upgrade_counts.values().reduce(func(total,count): return total+count,0) == depth-1,"retry retains practice build")
+	game.practice.depth = 100
+	game.practice.start(game)
+	check(is_equal_approx(game.SPEED+game.move_bonus,635.0),"practice MOVE SPEED stops at 635")
+	check(is_equal_approx(game.power,14.8) and is_equal_approx(game.fire_rate,7.2),"speed beyond the cap becomes damage and fire rate")
 	if failures == 0: print("PASS: debug input, upgrades, retry and record isolation")
 	game.free()
 	quit(1 if failures else 0)

@@ -47,6 +47,8 @@ func run() -> void:
 		check(game.floor_number == depth and game.player == game.spawn_point and game.sub_weapon == 2,"floor %d starts at the normal spawn" % depth)
 		check(game.session.run.upgrade_counts.values().reduce(func(a,b): return a+b,0) == depth-1,"floor %d spends one upgrade per cleared floor" % depth)
 		check(game.walkable(game.player, game.PLAYER_HIT_RADIUS) and game.replay_input.is_empty(),"floor %d is interactive on walkable ground" % depth)
+	Scenario.configure_floor(game,100,19045,1)
+	check(is_equal_approx(game.SPEED+game.move_bonus,635.0) and is_equal_approx(game.power,16.55) and is_equal_approx(game.fire_rate,8.2),"floor start caps movement and spends the rest on firepower")
 	for variant in range(3):
 		Scenario.configure_floor(game,35,19045,1,variant)
 		check(game.boss_floor and game.boss_variant == variant,"boss floor honors requested boss %d" % variant)
