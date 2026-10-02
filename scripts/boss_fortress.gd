@@ -210,11 +210,11 @@ func pattern(boss, game, e: Dictionary, name: String, rage: bool) -> void:
 			boss.lasers[-1].merge({"gun":gun,"heading":heading})
 	elif name == "slam":
 		game.enemy_attack_cue("boss_mark",game.player,false)
-		# Hammer targets stay fixed while the tank drives on. Cover blocks impact.
-		e.slam.append({"p":game.player,"radius":lerpf(58.0,68.0,e.low),"time":0.95*e.attack_scale,"warning":0.95*e.attack_scale,"fired":false})
+		# The core lobs a hammer over cover; the target stays fixed while the tank drives on.
+		e.slam.append({"p":game.player,"source":e.p,"radius":lerpf(58.0,68.0,e.low),"time":0.95*e.attack_scale,"warning":0.95*e.attack_scale,"fired":false})
 		if rage:
 			var side: Vector2 = e.p.direction_to(game.player).orthogonal()*145
-			e.slam.append({"p":game.player+side,"radius":lerpf(58.0,68.0,e.low),"time":1.25*e.attack_scale,"warning":1.25*e.attack_scale,"fired":false})
+			e.slam.append({"p":game.player+side,"source":e.p,"radius":lerpf(58.0,68.0,e.low),"time":1.25*e.attack_scale,"warning":1.25*e.attack_scale,"fired":false})
 
 func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vector2:
 	for plate in e.plates:
@@ -227,7 +227,8 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 			slam.fired = true
 			game.burst(slam.p,Color("ff9470"),18)
 			game.enemy_attack_cue("siege_fire",slam.p)
-			if game.player.distance_to(slam.p) < slam.radius+game.PLAYER_HIT_RADIUS and game.attack_reaches(e.p,game.player): game.die()
+			# Lobbed over cover, so hiding behind a pillar is not permanent safety.
+			if game.player.distance_to(slam.p) < slam.radius+game.PLAYER_HIT_RADIUS: game.die()
 	e.slam = e.slam.filter(func(s): return s.time > -0.22)
 	var rage: bool = e.hp <= e.max_hp*0.5
 	e.machine_cd -= delta
@@ -276,21 +277,34 @@ func draw(game) -> void:
 				BossFx.impact(game,slam.p,slam.radius,-slam.time,ink)
 				continue
 			var progress: float = clampf(1-slam.time/slam.warning,0,1)
-			BossFx.dashed(game,e.p,slam.p,Color(ink,0.3),clock)
 			BossFx.target_mark(game,slam.p,slam.radius,progress,ink,clock)
-			# The hammer falls from above; its shadow tightens as it lands.
-			var height: float = maxf(0,slam.time)*65
-			var hammer: Vector2 = slam.p+Vector2(0,-height)
-			game.draw_circle(slam.p,lerpf(34,20,progress),Color(0,0,0,0.3))
+			# Launch: the core flashes and puffs smoke as the hammer leaves it.
+			if progress < 0.22:
+				var kick: float = 1-progress/0.22
+				BossFx.glow(game,slam.source,30+kick*26,Color(ink.lerp(Color.WHITE,0.4),0.8*kick))
+				game.draw_arc(slam.source,CORE*0.5+progress*160,0,TAU,32,Color(0.75,0.78,0.85,0.5*kick),2,true)
+			# Faint arc for the rest of the flight, then the hammer itself, swelling with height.
+			var trail := PackedVector2Array()
+			for k in range(13): trail.append(hammer_arc(slam,lerpf(progress,1,k/12.0)))
+			for k in range(0,12,2): game.draw_line(trail[k],trail[k+1],Color(ink,0.35),1.5,true)
+			var hammer: Vector2 = hammer_arc(slam,progress)
+			var lift: float = 4*progress*(1-progress)
+			game.draw_circle(slam.p,lerpf(16,34,progress),Color(0,0,0,0.12+0.25*progress))
 			for k in range(3):
-				var x: float = (k-1)*14.0
-				game.draw_line(hammer+Vector2(x,-24),hammer+Vector2(x,-24-18-height*0.25),Color(ink,0.35),1.2,true)
-			var head := PackedVector2Array([hammer+Vector2(-26,-12),hammer+Vector2(-18,-20),hammer+Vector2(18,-20),hammer+Vector2(26,-12),hammer+Vector2(26,12),hammer+Vector2(18,20),hammer+Vector2(-18,20),hammer+Vector2(-26,12)])
+				var behind: Vector2 = hammer_arc(slam,maxf(0,progress-0.035*(k+1)))
+				game.draw_circle(behind,6-k*1.5,Color(ink,0.35-k*0.1))
+			var spin := Transform2D(progress*TAU*1.25,Vector2.ONE*(1+0.45*lift),0,hammer)
+			var head := spin*PackedVector2Array([Vector2(-26,-12),Vector2(-18,-20),Vector2(18,-20),Vector2(26,-12),Vector2(26,12),Vector2(18,20),Vector2(-18,20),Vector2(-26,12)])
+			BossFx.glow(game,hammer,22+lift*12,Color(ink,0.3+progress*0.35))
 			game.draw_colored_polygon(head,Color(ink.darkened(0.65),0.9))
 			head.append(head[0])
 			game.draw_polyline(head,ink,2,true)
-			game.draw_line(hammer+Vector2(-18,6),hammer+Vector2(18,6),Color(ink,0.6),1.2,true)
-			BossFx.glow(game,hammer+Vector2(0,20),22+progress*14,Color(ink,0.25+progress*0.4))
+			game.draw_line(spin*Vector2(-18,6),spin*Vector2(18,6),Color(ink,0.6),1.2,true)
+
+# Ballistic path from the launching core to the target, high enough to clear cover.
+func hammer_arc(slam: Dictionary, t: float) -> Vector2:
+	var apex: float = maxf(150,slam.source.distance_to(slam.p)*0.45)
+	return slam.source.lerp(slam.p,t)+Vector2(0,-4*apex*t*(1-t))
 
 func draw_depth(view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink := Color("ff9470") if e.hp > e.max_hp*0.5 else Color("ff496a")

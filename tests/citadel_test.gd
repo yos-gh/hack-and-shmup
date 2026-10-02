@@ -61,6 +61,20 @@ func run() -> void:
 	fortress.lance(game,e,game.LanceTrace.lanes(game,game.player,Vector2.RIGHT),Vector2.RIGHT,1)
 	check(e.plates[5].hp < before,"off-center lance damages the panel it crosses")
 
+	# The hammer is lobbed over cover: a pillar between core and player does not block it.
+	var pillar: Vector2 = game.center(Vector2i(7,-11))
+	game.player = pillar+e.p.direction_to(pillar)*60
+	check(not game.attack_reaches(e.p,game.player),"player is shielded from direct fire by the pillar")
+	game.grace = 0
+	var deaths: int = game.deaths
+	e.cd = 100
+	fortress.pattern(game.boss,game,e,"slam",false)
+	check(e.slam[-1].source == e.p,"hammer launches from the core")
+	fortress.advance(game.boss,game,e,e.slam[-1].time+0.01,Vector2.LEFT)
+	check(game.deaths == deaths+1,"lobbed hammer clears the pillar and hits")
+	game.pending_respawn = false
+	e.slam.clear()
+
 	# Enrage adds volume; retry restores the armour snapshot.
 	game.boss.reset()
 	e.slam.clear()
