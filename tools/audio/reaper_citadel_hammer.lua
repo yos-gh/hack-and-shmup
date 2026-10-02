@@ -17,18 +17,20 @@ local engine = dofile(root .. '/tools/audio/reaper_engine.lua')(out, log)
 local LANDING = .30
 local cues = {
   {'citadel_hammer_launch', .48, {
-    {'body', 'shock_body', 33, -8, 0, {bend=19, bendtime=.06, decay=.22, filter=1400}},
-    {'boom', 'kick', 36, -11, 0, {decay=.16, filter=1400}},
-    {'thump', 'shock_noise', 40, -14, 0, {algorithm=.5, bend=12, bendtime=.05, decay=.10, filter=1600}},
+    {'body', 'shock_body', 45, -8, 0, {bend=19, bendtime=.06, decay=.22, filter=1400}},
+    {'boom', 'kick', 43, -11, 0, {decay=.16, filter=1400}},
+    {'body_edge', 'kill_tone', 45, -10, 0, {duty=1, bend=19, bendtime=.06, decay=.16, filter=1800}},
+    {'thump', 'shock_noise', 52, -11, 0, {algorithm=.5, bend=12, bendtime=.05, decay=.10, filter=1600}},
     {'whoosh', 'scatter_noise', 86, -24, .05, {bend=-24, bendtime=.30, attack=.08, decay=.22, filter=2600}},
     {'flight', 'lance_tone', 76, -31, .06, {bend=-19, bendtime=.30, attack=.06, decay=.22, filter=2200}},
   }},
   {'citadel_hammer_impact', LANDING + .50, {
     {'fall_air', 'scatter_noise', 74, -21, 0, {bend=12, bendtime=LANDING, attack=.20, decay=.6, filter=2600}, LANDING},
     {'fall_tone', 'lance_tone', 67, -24, 0, {bend=14, bendtime=LANDING, attack=.20, decay=.6, filter=2400}, LANDING},
-    {'body', 'shock_body', 28, -9, LANDING, {bend=24, bendtime=.10, decay=.26, filter=1400}},
-    {'boom', 'kick', 33, -11, LANDING, {decay=.16, filter=1400}},
-    {'punch', 'kill_tone', 40, -17, LANDING, {duty=1, bend=14, bendtime=.08, decay=.10, filter=2000}},
+    {'body', 'shock_body', 40, -9, LANDING, {bend=24, bendtime=.10, decay=.26, filter=1400}},
+    {'boom', 'kick', 40, -11, LANDING, {decay=.16, filter=1400}},
+    {'punch', 'kill_tone', 40, -10, LANDING, {duty=1, bend=24, bendtime=.10, decay=.20, filter=1800}},
+    {'punch_hi', 'kill_tone', 52, -14, LANDING, {duty=1, bend=14, bendtime=.08, decay=.10, filter=2000}},
     {'clank', 'hit_tone', 79, -8, LANDING, {duty=.5, bend=2, bendtime=.015, decay=.12, filter=4200}},
     {'clank_hi', 'hit_tone', 85, -13, LANDING, {duty=0, decay=.08, filter=4200}},
     {'bounce', 'hit_tone', 79, -16, LANDING + .15, {duty=.5, decay=.06, filter=3800}},
