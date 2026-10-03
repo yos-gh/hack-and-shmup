@@ -14,6 +14,7 @@ class FakeGame:
 	var title_screen := false
 	var choosing := false
 	var boss_floor := false
+	var stairs_unlocked := false
 	var boss_variant := 0
 	var floor_revision := 0
 
@@ -34,7 +35,7 @@ func run() -> void:
 	quit(1 if failures else 0)
 
 func check_tracks() -> void:
-	var keys: Array = Music.STAGE + Music.BOSS + [Music.TITLE, Music.CARDS] + Music.RESERVED.values()
+	var keys: Array = Music.STAGE + Music.BOSS + [Music.TITLE, Music.CARDS, Music.COOLING] + Music.RESERVED.values()
 	check(keys.size() == Music.LOOP_OFFSETS.size(), "every track has exactly one loop point")
 	for key in keys:
 		var stream: AudioStreamOggVorbis = Music.stream(key)
@@ -58,6 +59,9 @@ func check_selection() -> void:
 	for variant in range(3):
 		game.boss_variant = variant
 		check(music.track_for(game) == Music.BOSS[variant], "each boss has its own track")
+	game.stairs_unlocked = true
+	check(music.track_for(game) == Music.COOLING, "a defeated boss gives way to the cooling loop until the stairs")
+	game.stairs_unlocked = false
 	game.boss_floor = false
 	var previous := ""
 	var block: Dictionary = {}
@@ -125,6 +129,9 @@ func check_game_wiring() -> void:
 		if game.boss_floor:
 			bosses += 1
 			check(game.sound.music_key == Music.BOSS[game.boss_variant], "boss floors play their boss's track")
+			game.stairs_unlocked = true
+			game.sound.update_music(game)
+			check(game.sound.music_key == Music.COOLING, "the cooling loop follows the boss's defeat")
 			check(game.boss_variant != previous_boss, "consecutive boss floors bring a different boss")
 			previous_boss = game.boss_variant
 		else:

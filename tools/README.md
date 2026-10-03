@@ -61,7 +61,9 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## Background music
 
-`scripts/music.gd` maps screens to tracks: title, card select (intermission), one track per boss, and a stage track for every newly generated normal floor. Stage tracks come from a shuffle bag, so all fourteen play before any repeats and the same song never plays on two floors in a row; a retry keeps the floor's track because selection follows `floor_revision`, not the attempt. Selection uses its own RNG, never the gameplay stream. `Sound.update_music` runs every physics tick and fades the old track out (0.4 s) before switching; music plays only in AUDIO: ALL, at `MUSIC_DB`. The final boss forms and an ending theme are imported but not yet used (`Music.RESERVED`). Boss floors also avoid repeating the previous boss of the run (`FloorSettings.previous_boss`); explicit picks (practice, `-Boss`) are unchanged. `music_test.gd` covers loading, loop points, selection, retry continuity and the boss rotation.
+`scripts/music.gd` maps screens to tracks: title, card select (intermission), one track per boss, and a stage track for every newly generated normal floor. Stage tracks come from a shuffle bag, so all fourteen play before any repeats and the same song never plays on two floors in a row; a retry keeps the floor's track because selection follows `floor_revision`, not the attempt. Selection uses its own RNG, never the gameplay stream. `Sound.update_music` runs every physics tick and fades the old track out (0.4 s) before switching; music plays while AUDIO is ON, at `MUSIC_DB`. After a boss falls, the quiet `intermission_cooling` loop replaces the boss track until the stairs. Music keeps playing on the pause screen (including a focus-loss pause); effects freeze. The final boss forms and an ending theme are imported but not yet used (`Music.RESERVED`). Boss floors also avoid repeating the previous boss of the run (`FloorSettings.previous_boss`); explicit picks (practice, `-Boss`) are unchanged. `music_test.gd` covers loading, loop points, selection, retry continuity and the boss rotation.
+
+There is no volume setting, so music and effects share a final output bus with `OUTPUT_GAIN_DB` (+6 dB) of makeup gain into a hard limiter at -1 dBFS. `tools/mix_level_review.gd` records the real mixer in four moments (title, a normal floor under fire, a Triad fight, death and boss destruction) to `docs/validation/mix-*.wav`; run it with `--audio-driver Dummy` to keep it silent and measure the files with ffmpeg's `ebur128`. At the current settings combat measures about -18 LUFS, a boss fight about -17 LUFS with peaks touching the ceiling, and the title about -25 LUFS.
 
 ## Publication workflow
 
@@ -95,7 +97,7 @@ For an x86-64 Windows package, run `./tools/build.ps1 -Target Windows -Ref HEAD`
 
 ## Session controls
 
-Controls use the fixed project InputMap. Audio modes and fullscreen can be changed for the current session; startup uses SE ONLY. There is no settings screen, preference file, or persistent record.
+Controls use the fixed project InputMap. Sound (a simple ON/OFF toggle: M or the AUDIO button) and fullscreen can be changed for the current session; sound starts ON. There is no settings screen, preference file, or persistent record.
 
 GameMenus owns title, pause, practice and upgrade Controls. Card rectangles share the pointer helper, keyboard focus survives refresh, and guarded callbacks prevent duplicate transitions. Pause and card screens show all seven player stats, including sub range, radius, width and recharge caps.
 

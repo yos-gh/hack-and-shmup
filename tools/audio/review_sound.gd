@@ -12,8 +12,8 @@ func _ready() -> void:
 	assert(loop != null, "Missing review music")
 	loop.loop = true
 	music.stream = loop
-	set_audio_mode(0)
+	set_audio_on(true)
 	if not headless: music.play()
 
 func _refresh_music_level() -> void:
-	music.volume_db = -2 if audio_mode == 0 else -80
+	music.volume_db = -2 if audio_on else -80

@@ -19,7 +19,7 @@ func run() -> void:
 	root.add_child(game)
 	game.set_physics_process(false)
 	var sound = game.sound
-	check(game.audio_mode == 1 and sound.audio_mode == 1 and sound.music.volume_db <= -80, "startup defaults to effects only with music muted")
+	check(game.audio_on and sound.audio_on and sound.music.volume_db == sound.MUSIC_DB, "startup has sound on with music at its level")
 	check(game.combat_events.enemy_hit.is_connected(sound.hear_hit), "combat hit event is connected to approved sound")
 	game.combat_events.enemy_hit.emit(Vector2.ZERO, 0.0, true, false)
 	game.combat_events.enemy_hit.emit(Vector2.ZERO, 1.0, false, true)
@@ -40,7 +40,7 @@ func run() -> void:
 	check(sound.shot_voice.playing and sound.shot_voice.volume_db == sound.MIX.shot - sound.DUCK, "new shots are quieter under critical feedback")
 	sound.play_sfx("shot")
 	check(sound.voices.slice(2).all(func(v): return v.stream != sound.clips.shot), "rapid fire retriggers its own voice instead of stacking")
-	sound.set_audio_mode(2)
+	sound.set_audio_on(false)
 	check(not sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.playing), "mute stops every reserved and ordinary voice")
 	sound.reset_time_warning()
 	check(not sound.update_time_warning(5.1), "no warning above five seconds")

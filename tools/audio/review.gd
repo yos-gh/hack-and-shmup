@@ -15,7 +15,7 @@ func run() -> void:
 	game.sound.queue_free()
 	game.sound = ReviewSound.new()
 	game.add_child(game.sound)
-	game.audio_mode = 0
+	game.audio_on = true
 	game.combat_events.enemy_hit.connect(game.sound.hear_hit)
 	game.set_view_pitch(25.0)
 	game.set_depth_view(true)

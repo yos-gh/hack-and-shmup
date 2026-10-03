@@ -9,7 +9,7 @@ func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
-	check(game.title_screen and game.audio_mode == 1,"arcade startup")
+	check(game.title_screen and game.audio_on,"arcade startup")
 	game.start_run()
 	game.replay_input = {"movement":Vector2.RIGHT,"aim":Vector2.RIGHT,"primary":false,"secondary":false}
 	game._physics_process(1.0/60)

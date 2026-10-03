@@ -15,6 +15,8 @@ const STAGE := [
 const BOSS := ["boss_red_alert", "boss_dread_engine", "boss_triad_lattice"]
 const TITLE := "title_gate_of_the_deep"
 const CARDS := "intermission_card_select"
+# After a boss falls, until the player takes the stairs: a quiet, beatless loop instead of the boss track.
+const COOLING := "intermission_cooling"
 # Ready for content that does not exist yet: the final boss's two forms and an ending theme.
 const RESERVED := {"final_boss_1": "boss_abyss_core", "final_boss_2": "boss_recca_dark_v2", "theme": "theme_recca_style_bgm"}
 const LOOP_OFFSETS := {
@@ -23,7 +25,7 @@ const LOOP_OFFSETS := {
 	"stage_dub_depth": 14.7692, "stage_electro_pulse": 7.0588, "stage_starfall_run": 6.4865, "stage_origin_drive": 6.3158,
 	"stage_afterimage": 0.0, "stage_reverse_city": 6.8571,
 	"boss_red_alert": 11.1628, "boss_dread_engine": 8.0, "boss_triad_lattice": 6.5753, "boss_abyss_core": 13.3333,
-	"boss_recca_dark_v2": 13.7143, "title_gate_of_the_deep": 64.0, "intermission_card_select": 40.0,
+	"boss_recca_dark_v2": 13.7143, "title_gate_of_the_deep": 64.0, "intermission_card_select": 40.0, "intermission_cooling": 48.0,
 	"theme_recca_style_bgm": 12.8,
 }
 
@@ -60,7 +62,7 @@ func next_stage() -> String:
 func track_for(game) -> String:
 	if game.title_screen: return TITLE
 	if game.choosing: return CARDS
-	if game.boss_floor: return BOSS[clampi(game.boss_variant, 0, BOSS.size() - 1)]
+	if game.boss_floor: return COOLING if game.stairs_unlocked else BOSS[clampi(game.boss_variant, 0, BOSS.size() - 1)]
 	if game.floor_revision != floor_key:
 		floor_key = game.floor_revision
 		floor_track = next_stage()

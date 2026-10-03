@@ -15,7 +15,7 @@ func run():
 	check(buttons.size() == 4, "title has start, practice, audio and fullscreen controls")
 	buttons[2].grab_focus()
 	buttons[2].pressed.emit()
-	check(game.audio_mode == 2 and game.title_screen, "audio button does not start run")
+	check(not game.audio_on and game.title_screen, "audio button does not start run")
 	check(root.gui_get_focus_owner() != null and root.gui_get_focus_owner().text == "AUDIO: OFF", "refresh retains keyboard focus")
 	buttons = menus.surface.get_children().filter(func(node): return node is Button)
 	buttons[0].pressed.emit()
@@ -51,10 +51,10 @@ func run():
 	menus.sync()
 	buttons = menus._buttons()
 	check(buttons.size() == 4 and buttons[2].text.begins_with("AUDIO:") and buttons[3].text in ["FULLSCREEN","WINDOWED"],"pause exposes both session settings")
-	var pause_audio: int = game.audio_mode
+	var pause_audio: bool = game.audio_on
 	buttons[2].grab_focus()
 	buttons[2].pressed.emit()
-	check(game.paused and game.audio_mode == (pause_audio+1)%3,"pause sound setting changes without resuming")
+	check(game.paused and game.audio_on == not pause_audio,"pause sound setting changes without resuming")
 	check(root.gui_get_focus_owner() != null and root.gui_get_focus_owner().text.begins_with("AUDIO:"),"pause setting retains focus after refresh")
 	game.cycle_audio()
 	game.cycle_audio()
@@ -70,8 +70,8 @@ func run():
 	check(buttons[7].text.begins_with("AUDIO:") and buttons[8].text in ["FULLSCREEN","WINDOWED"],"practice exposes both session settings")
 	buttons[7].grab_focus()
 	buttons[7].pressed.emit()
-	check(game.practice.selecting and game.audio_mode == 0,"practice sound setting changes without launching a fight")
-	check(root.gui_get_focus_owner().text == "AUDIO: ALL","practice setting retains focus after refresh")
+	check(game.practice.selecting and not game.audio_on,"practice sound setting changes without launching a fight")
+	check(root.gui_get_focus_owner().text == "AUDIO: OFF","practice setting retains focus after refresh")
 	buttons = menus._buttons()
 	for i in range(buttons.size()):
 		check(buttons[i].focus_next == buttons[i].get_path_to(buttons[(i+1)%buttons.size()]),"Tab reaches every practice control including settings")

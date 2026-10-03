@@ -29,7 +29,7 @@ var goal_room := 0
 var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
-var audio_mode := 1
+var audio_on := true
 var menus: CanvasLayer
 var SUB_NAMES: Array:
 	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
@@ -352,9 +352,10 @@ func bullet_target(p: Vector2) -> Dictionary:
 			return e
 	return {}
 
+# Sound is a simple ON/OFF toggle (M, the AUDIO button); it starts ON.
 func cycle_audio() -> void:
-	audio_mode = (audio_mode + 1) % 3
-	sound.set_audio_mode(audio_mode)
+	audio_on = not audio_on
+	sound.set_audio_on(audio_on)
 	queue_redraw()
 
 func audio_button_rect() -> Rect2:
