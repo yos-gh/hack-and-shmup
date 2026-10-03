@@ -3,6 +3,11 @@ extends Node
 var enemy_audio = preload("res://scripts/enemy_audio.gd").new()
 
 var music := AudioStreamPlayer.new()
+var music_lib = preload("res://scripts/music.gd").new()
+# Track now loaded in the music player, and the one it is fading out toward.
+var music_key := ""
+var pending_music := ""
+var music_fade := 1.0
 var voices: Array[AudioStreamPlayer] = []
 var clips: Dictionary = {}
 var audio_mode := 1
@@ -37,6 +42,9 @@ const MIX := {
 	"citadel_hammer_launch": 1.0, "citadel_hammer_impact": 3.0,
 }
 const DUCK := 6.0
+# Tracks are mastered to about -16 LUFS (titles and the card screen quieter); this places them under the effects.
+const MUSIC_DB := -12.0
+const MUSIC_FADE := 0.4
 const BURST_GAPS := {"kill": 0.045, "shield": 0.045, "armor": 0.05, "armor_break": 0.08, "select": 0.05}
 
 func _ready() -> void:
@@ -53,11 +61,8 @@ func _ready() -> void:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
-	var loop: AudioStreamWAV = load("res://assets/audio/descent.wav").duplicate()
-	loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	loop.loop_begin = 0
-	loop.loop_end = int(round(loop.get_length() * loop.mix_rate))
-	music.stream = loop
+	music_key = music_lib.TITLE
+	music.stream = music_lib.stream(music_key)
 	_refresh_music_level()
 	for i in range(12):
 		var voice := AudioStreamPlayer.new()
@@ -90,6 +95,7 @@ func _process(delta: float) -> void:
 	hit_gap = maxf(0, hit_gap - delta)
 	for key in burst_gaps: burst_gaps[key] = maxf(0, burst_gaps[key] - delta)
 	if paused_state: return
+	_advance_music_fade(delta)
 	if after_critical != "" and not voices[0].playing:
 		var key := after_critical
 		after_critical = ""
@@ -209,8 +215,32 @@ func set_audio_mode(value: int) -> void:
 		for voice in voices: voice.stop()
 		shot_voice.stop()
 
+# Called every physics tick by Game: follows the screen (title, floor, boss, card select) without restarting the
+# track on a retry. Switching fades the old track out first when it is audible.
+func update_music(game) -> void:
+	var wanted: String = music_lib.track_for(game)
+	if wanted == (pending_music if pending_music != "" else music_key): return
+	if music.playing and not paused_state:
+		pending_music = wanted
+	else:
+		_switch_music(wanted)
+
+func _advance_music_fade(delta: float) -> void:
+	if pending_music == "": return
+	music_fade = move_toward(music_fade, 0.0, delta / MUSIC_FADE)
+	if audio_mode == 0: music.volume_db = MUSIC_DB + linear_to_db(maxf(music_fade, 0.001))
+	if music_fade <= 0.0: _switch_music(pending_music)
+
+func _switch_music(key: String) -> void:
+	pending_music = ""
+	music_fade = 1.0
+	music_key = key
+	music.stop()
+	music.stream = music_lib.stream(key)
+	_refresh_music_level()
+
 func _refresh_music_level() -> void:
-	music.volume_db = -10 if audio_mode == 0 else -80
+	music.volume_db = MUSIC_DB if audio_mode == 0 else -80
 	# Muting alone still decodes and mixes the looping track on Web.
 	if audio_mode != 0:
 		music.stop()

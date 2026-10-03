@@ -16,6 +16,8 @@ var power: float = 1.0
 var fire_rate: float = 1.0
 var move_bonus: float = 0.0
 var choices: Array[int] = []
+# Boss variant met most recently in this run (-1 before the first boss floor).
+var last_boss: int = -1
 
 func reset() -> void:
 	expansion = 0.0
@@ -29,6 +31,7 @@ func reset() -> void:
 	fire_rate = 1.0
 	move_bonus = 0.0
 	choices.clear()
+	last_boss = -1
 
 func apply_upgrade(kind: int) -> void:
 	if not can_upgrade(kind): return

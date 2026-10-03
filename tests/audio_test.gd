@@ -15,8 +15,8 @@ func run() -> void:
 	for key in ["shot","scatter","shock","lance","hit","kill","hunter_lock","death"]:
 		check(sound.clips[key].mix_rate == 48000 and sound.clips[key].stereo, "approved 48 kHz stereo effect: " + key)
 	check(sound.music.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "use the Godot mixer on Web")
-	check(sound.music.stream.format == AudioStreamWAV.FORMAT_16_BITS, "BGM uses PCM")
-	check(sound.music.stream.loop_end == sound.music.stream.data.size() / 2, "full PCM loop")
+	check(sound.music.stream is AudioStreamOggVorbis and sound.music_key == sound.music_lib.TITLE, "BGM starts on the title track")
+	check(sound.music.stream.loop and sound.music.stream.loop_offset == sound.music_lib.LOOP_OFFSETS[sound.music_key], "BGM loops from its loop point")
 	for voice in sound.voices:
 		check(voice.playback_type == AudioServer.PLAYBACK_TYPE_STREAM, "SE uses the Godot mixer")
 		check(voice.bus == sound.effects_bus_name, "SE routes through its dedicated limiter")
@@ -50,7 +50,7 @@ func run() -> void:
 	sound.set_audio_mode(2)
 	check(sound.music.volume_db == -80 and not sound.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing), "mute audio")
 	sound.set_audio_mode(0)
-	check(sound.music.volume_db == -10 and sound.music.playing, "restore music")
+	check(sound.music.volume_db == sound.MUSIC_DB and sound.music.playing, "restore music")
 	if failures == 0: print("PASS: BGM, SE clips, pause, mute and restore")
 	sound.music.stop()
 	for voice in sound.voices: voice.stop()

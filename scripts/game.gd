@@ -180,6 +180,7 @@ func new_floor(boss_choice: int = -1) -> void:
 	settings.recharge = session.run.recharge
 	settings.physics_ticks = float(Engine.physics_ticks_per_second)
 	settings.boss_choice = boss_choice
+	settings.previous_boss = session.run.last_boss
 	var generated = floor_generator.generate_from_state(settings,rng.state)
 	floor_revision += 1
 	cells = generated.cells
@@ -196,6 +197,7 @@ func new_floor(boss_choice: int = -1) -> void:
 	boss_floor = generated.boss_floor
 	if boss_floor:
 		boss_variant = generated.boss_variant
+		session.run.last_boss = boss_variant
 		boss_max_hp = generated.boss_max_hp
 	route_seconds = generated.route_seconds
 	time_limit = generated.time_limit
@@ -432,6 +434,7 @@ func die(reason: String = "HIT") -> void:
 
 func _physics_process(delta: float) -> void:
 	sound.set_paused(paused)
+	sound.update_music(self)
 	if not paused: presentation.advance(self,delta)
 	if title_screen or paused or choosing:
 		queue_redraw()
