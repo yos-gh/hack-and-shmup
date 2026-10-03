@@ -45,9 +45,9 @@ const MIX := {
 }
 const DUCK := 6.0
 # Tracks are mastered to about -16 LUFS (titles and the card screen quieter); this places them under the effects.
-const MUSIC_DB := -10.0
+const MUSIC_DB := -8.0
 # Measured with tools/mix_level_review.gd: combat sits around -17 LUFS and boss attacks peak just into the limiter.
-const OUTPUT_GAIN_DB := 6.0
+const OUTPUT_GAIN_DB := 4.0
 const OUTPUT_CEILING_DB := -1.0
 const MUSIC_FADE := 0.4
 const BURST_GAPS := {"kill": 0.045, "shield": 0.045, "armor": 0.05, "armor_break": 0.08, "select": 0.05}
