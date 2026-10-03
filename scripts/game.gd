@@ -29,7 +29,7 @@ var goal_room := 0
 var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
-var audio_mode := 1
+var audio_on := true
 var menus: CanvasLayer
 var SUB_NAMES: Array:
 	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
@@ -180,6 +180,7 @@ func new_floor(boss_choice: int = -1) -> void:
 	settings.recharge = session.run.recharge
 	settings.physics_ticks = float(Engine.physics_ticks_per_second)
 	settings.boss_choice = boss_choice
+	settings.previous_boss = session.run.last_boss
 	var generated = floor_generator.generate_from_state(settings,rng.state)
 	floor_revision += 1
 	cells = generated.cells
@@ -196,6 +197,7 @@ func new_floor(boss_choice: int = -1) -> void:
 	boss_floor = generated.boss_floor
 	if boss_floor:
 		boss_variant = generated.boss_variant
+		session.run.last_boss = boss_variant
 		boss_max_hp = generated.boss_max_hp
 	route_seconds = generated.route_seconds
 	time_limit = generated.time_limit
@@ -350,9 +352,10 @@ func bullet_target(p: Vector2) -> Dictionary:
 			return e
 	return {}
 
+# Sound is a simple ON/OFF toggle (M, the AUDIO button); it starts ON.
 func cycle_audio() -> void:
-	audio_mode = (audio_mode + 1) % 3
-	sound.set_audio_mode(audio_mode)
+	audio_on = not audio_on
+	sound.set_audio_on(audio_on)
 	queue_redraw()
 
 func audio_button_rect() -> Rect2:
@@ -432,6 +435,7 @@ func die(reason: String = "HIT") -> void:
 
 func _physics_process(delta: float) -> void:
 	sound.set_paused(paused)
+	sound.update_music(self)
 	if not paused: presentation.advance(self,delta)
 	if title_screen or paused or choosing:
 		queue_redraw()

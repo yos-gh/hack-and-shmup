@@ -3,9 +3,14 @@ extends Node
 var enemy_audio = preload("res://scripts/enemy_audio.gd").new()
 
 var music := AudioStreamPlayer.new()
+var music_lib = preload("res://scripts/music.gd").new()
+# Track now loaded in the music player, and the one it is fading out toward.
+var music_key := ""
+var pending_music := ""
+var music_fade := 1.0
 var voices: Array[AudioStreamPlayer] = []
 var clips: Dictionary = {}
-var audio_mode := 1
+var audio_on := true
 var headless := false
 var paused_state := false
 var warning_step := 6
@@ -13,6 +18,8 @@ var critical_priority := 0
 var hit_gap := 0.0
 var burst_gaps: Dictionary = {}
 var effects_bus_name := ""
+# Final stage for music and effects: makeup gain and a ceiling below full scale (there is no in-game volume setting).
+var output_bus_name := ""
 var boss_beam := AudioStreamPlayer2D.new()
 # Primary fire retriggers one mono voice, like a sound-driver channel, so rapid fire never smears.
 var shot_voice := AudioStreamPlayer.new()
@@ -37,14 +44,30 @@ const MIX := {
 	"citadel_hammer_launch": 1.0, "citadel_hammer_impact": 3.0,
 }
 const DUCK := 6.0
+# Tracks are mastered to about -16 LUFS (titles and the card screen quieter); this places them under the effects.
+const MUSIC_DB := -10.0
+# Measured with tools/mix_level_review.gd: combat sits around -17 LUFS and boss attacks peak just into the limiter.
+const OUTPUT_GAIN_DB := 6.0
+const OUTPUT_CEILING_DB := -1.0
+const MUSIC_FADE := 0.4
 const BURST_GAPS := {"kill": 0.045, "shield": 0.045, "armor": 0.05, "armor_break": 0.08, "select": 0.05}
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
+	# Buses only send to buses before them, so the output stage is created first.
+	output_bus_name = "GameOutput_%s" % get_instance_id()
+	AudioServer.add_bus()
+	var output_index := AudioServer.bus_count - 1
+	AudioServer.set_bus_name(output_index, output_bus_name)
+	var output_limiter := AudioEffectHardLimiter.new()
+	output_limiter.pre_gain_db = OUTPUT_GAIN_DB
+	output_limiter.ceiling_db = OUTPUT_CEILING_DB
+	AudioServer.add_bus_effect(output_index, output_limiter)
 	effects_bus_name = "GameEffects_%s" % get_instance_id()
 	AudioServer.add_bus()
 	var bus_index := AudioServer.bus_count - 1
 	AudioServer.set_bus_name(bus_index, effects_bus_name)
+	AudioServer.set_bus_send(bus_index, output_bus_name)
 	var limiter := AudioEffectHardLimiter.new()
 	limiter.ceiling_db = -2.5
 	limiter.pre_gain_db = -2.0
@@ -52,12 +75,10 @@ func _ready() -> void:
 	for key in MIX:
 		clips[key] = load("res://assets/audio/" + key + ".wav")
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	music.bus = output_bus_name
 	add_child(music)
-	var loop: AudioStreamWAV = load("res://assets/audio/descent.wav").duplicate()
-	loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	loop.loop_begin = 0
-	loop.loop_end = int(round(loop.get_length() * loop.mix_rate))
-	music.stream = loop
+	music_key = music_lib.TITLE
+	music.stream = music_lib.stream(music_key)
 	_refresh_music_level()
 	for i in range(12):
 		var voice := AudioStreamPlayer.new()
@@ -89,6 +110,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	hit_gap = maxf(0, hit_gap - delta)
 	for key in burst_gaps: burst_gaps[key] = maxf(0, burst_gaps[key] - delta)
+	# Music keeps playing on the pause screen (and keeps fading between tracks); effects freeze.
+	_advance_music_fade(delta)
 	if paused_state: return
 	if after_critical != "" and not voices[0].playing:
 		var key := after_critical
@@ -101,7 +124,7 @@ func _process(delta: float) -> void:
 	if not boss_beam_active and boss_beam_level <= -60: boss_beam.stop()
 
 func set_boss_beam(game, active: bool, point: Vector2 = Vector2.ZERO) -> void:
-	boss_beam_active = active and audio_mode != 2 and not game.pending_respawn and not game.title_screen
+	boss_beam_active = active and audio_on and not game.pending_respawn and not game.title_screen
 	if not boss_beam_active: return
 	boss_beam.position = game.world_to_screen(point)
 	if not headless and not boss_beam.playing:
@@ -132,11 +155,12 @@ func stop_boss_destruction() -> void:
 	if voices[0].stream == clips.boss_destroy: voices[0].stop()
 
 func _exit_tree() -> void:
-	var bus_index := AudioServer.get_bus_index(effects_bus_name)
-	if bus_index > 0: AudioServer.remove_bus(bus_index)
+	for bus_name in [effects_bus_name, output_bus_name]:
+		var bus_index := AudioServer.get_bus_index(bus_name)
+		if bus_index > 0: AudioServer.remove_bus(bus_index)
 
 func play_sfx(key: String) -> void:
-	if audio_mode == 2 or headless: return
+	if not audio_on or headless: return
 	if BURST_GAPS.has(key):
 		if burst_gaps.get(key, 0.0) > 0: return
 		burst_gaps[key] = BURST_GAPS[key]
@@ -193,30 +217,52 @@ func set_paused(value: bool) -> void:
 	if value == paused_state: return
 	paused_state = value
 	enemy_audio.set_paused(value)
-	music.stream_paused = value
 	for voice in voices: voice.stream_paused = value
 	shot_voice.stream_paused = value
 	boss_beam.stream_paused = value
 
-func set_audio_mode(value: int) -> void:
-	audio_mode = posmod(value,3)
-	enemy_audio.muted = audio_mode == 2
+func set_audio_on(value: bool) -> void:
+	audio_on = value
+	enemy_audio.muted = not audio_on
 	if enemy_audio.muted: enemy_audio.reset()
 	_refresh_music_level()
-	if audio_mode == 2:
+	if not audio_on:
 		after_critical = ""
 		stop_boss_beam()
 		for voice in voices: voice.stop()
 		shot_voice.stop()
 
+# Called every physics tick by Game: follows the screen (title, floor, boss, card select) without restarting the
+# track on a retry. Switching fades the old track out first when it is audible.
+func update_music(game) -> void:
+	var wanted: String = music_lib.track_for(game)
+	if wanted == (pending_music if pending_music != "" else music_key): return
+	if music.playing:
+		pending_music = wanted
+	else:
+		_switch_music(wanted)
+
+func _advance_music_fade(delta: float) -> void:
+	if pending_music == "": return
+	music_fade = move_toward(music_fade, 0.0, delta / MUSIC_FADE)
+	if audio_on: music.volume_db = MUSIC_DB + linear_to_db(maxf(music_fade, 0.001))
+	if music_fade <= 0.0: _switch_music(pending_music)
+
+func _switch_music(key: String) -> void:
+	pending_music = ""
+	music_fade = 1.0
+	music_key = key
+	music.stop()
+	music.stream = music_lib.stream(key)
+	_refresh_music_level()
+
 func _refresh_music_level() -> void:
-	music.volume_db = -10 if audio_mode == 0 else -80
+	music.volume_db = MUSIC_DB if audio_on else -80
 	# Muting alone still decodes and mixes the looping track on Web.
-	if audio_mode != 0:
+	if not audio_on:
 		music.stop()
 	elif not headless and music.is_inside_tree() and not music.playing:
 		music.play()
-		music.stream_paused = paused_state
 
 func _set_voice_level(index: int, baseline: float) -> void:
 	voices[index].volume_db = baseline

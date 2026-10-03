@@ -24,10 +24,10 @@ func run() -> void:
 	var buttons: Array = game.menus._buttons()
 	check(buttons.size() == 9,"three bosses, four actions and both settings")
 	buttons[7].pressed.emit()
-	check(game.audio_mode == 2 and game.practice.selecting,"sound changes in selector without starting")
+	check(not game.audio_on and game.practice.selecting,"sound changes in selector without starting")
 	game.menus._buttons()[7].pressed.emit()
 	game.menus._buttons()[7].pressed.emit()
-	check(game.audio_mode == 1,"sound cycles back to SE only")
+	check(not game.audio_on,"two more presses come back to OFF")
 	game.menus._buttons()[8].pressed.emit()
 	await create_timer(0.3).timeout
 	check(DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN,DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN],"selector enters fullscreen")

@@ -1,5 +1,5 @@
 extends SceneTree
-## Record the real native SE-only mixer, including normal weapon masking.
+## Record the real native mixer, including normal weapon masking.
 func _initialize() -> void: call_deferred("run")
 func save_mix(samples: PackedVector2Array, name: String) -> void:
 	var pcm := PackedByteArray()

@@ -22,7 +22,14 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 	data.physics_ticks = settings.physics_ticks
 	data.boss_floor = settings.depth % 5 == 0
 	if data.boss_floor:
-		data.boss_variant = data.rng.randi_range(0,2) if settings.boss_choice < 0 else clampi(settings.boss_choice,0,2)
+		if settings.boss_choice >= 0:
+			data.boss_variant = clampi(settings.boss_choice,0,2)
+		elif settings.previous_boss < 0:
+			data.boss_variant = data.rng.randi_range(0,2)
+		else:
+			# A single pick among the other two bosses, just as the unrestricted pick draws once among all three.
+			var others := [0,1,2].filter(func(v: int) -> bool: return v != settings.previous_boss)
+			data.boss_variant = others[data.rng.randi_range(0,others.size()-1)]
 		Boss.new().build_layout(data)
 		Pickups.plan_floor(data,random_state)
 		return data

@@ -8,3 +8,5 @@ extends Resource
 @export var recharge := 0.0
 @export var physics_ticks := 60.0
 @export_range(-1,2) var boss_choice := -1
+# The run's previous boss; a seeded pick avoids meeting the same boss twice in a row.
+@export_range(-1,2) var previous_boss := -1
