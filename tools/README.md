@@ -105,7 +105,7 @@ For an x86-64 Windows package, run `./tools/build.ps1 -Target Windows -Ref HEAD`
 
 Controls use the fixed project InputMap. Sound (a simple ON/OFF toggle: M or the AUDIO button) and fullscreen can be changed for the current session; sound starts ON. There is no settings screen, preference file, or persistent record.
 
-GameMenus owns title, pause, practice and upgrade Controls. Card rectangles share the pointer helper, keyboard focus survives refresh, and guarded callbacks prevent duplicate transitions. Pause and card screens show all seven player stats, including sub range, radius, width and recharge caps.
+GameMenus owns title, pause, practice, CONTINUE and upgrade Controls. Boss practice is no longer on the title; debug builds still open it with B, and the review tools call `BossPractice.start` directly. `scripts/run_password.gd` encodes the resume password: the floor, its generator state, the previous boss, card counts, sub weapon, deaths and floor-start kills, behind a salted 24-bit checksum that also scrambles the body. Decoding rejects edits and impossible runs (card caps, one card per cleared floor, stat floors). `password_test.gd` checks that resumed floors rebuild identically, including boss floors. Card rectangles share the pointer helper, keyboard focus survives refresh, and guarded callbacks prevent duplicate transitions. Pause and card screens show all seven player stats, including sub range, radius, width and recharge caps.
 
 ## Manual CI
 

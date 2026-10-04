@@ -148,6 +148,7 @@ var boss_max_hp := 0.0
 var boss_variant := 0
 var practice = preload("res://scripts/boss_practice.gd").new()
 var sound_mode = preload("res://scripts/sound_mode.gd").new()
+var password_entry = preload("res://scripts/password_entry.gd").new()
 
 func _ready() -> void:
 	Input.joy_connection_changed.connect(controls.joy_connection_changed.bind(self))
@@ -184,6 +185,9 @@ func new_floor(boss_choice: int = -1) -> void:
 	settings.physics_ticks = float(Engine.physics_ticks_per_second)
 	settings.boss_choice = boss_choice
 	settings.previous_boss = session.run.last_boss
+	session.run.floor_state = rng.state
+	session.run.floor_previous_boss = session.run.last_boss
+	session.run.floor_kills = kills
 	var generated = floor_generator.generate_from_state(settings,rng.state)
 	floor_revision += 1
 	cells = generated.cells
@@ -676,10 +680,13 @@ func set_depth_view(enabled: bool) -> void:
 
 
 
+# Pause pushes the stats down to make room for the resume password.
+const PAUSE_STATS_SHIFT := 52.0
+
 func menu_origin_y(screen: Vector2, is_pause: bool) -> float:
 	var top := -65.0 if is_pause else -165.0
 	# Include both rows of player stats when centering the complete menu.
-	var bottom := 362.0
+	var bottom := 362.0+PAUSE_STATS_SHIFT if is_pause else 362.0
 	return (screen.y - top - bottom) * 0.5
 
 func upgrade_card_rect(screen: Vector2, index: int) -> Rect2:

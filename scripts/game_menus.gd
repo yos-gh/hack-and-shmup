@@ -5,6 +5,7 @@ var game: Node
 var surface: Control
 var signature: Array = []
 var cards: Array[Button] = []
+var password_copied := false
 
 func setup(host: Node) -> void:
 	game = host
@@ -22,10 +23,12 @@ func sync() -> void:
 	var state := "title" if game.title_screen else ("pause" if game.paused else ("cards" if game.choosing else ""))
 	if game.practice.selecting: state = "practice"
 	if game.sound_mode.selecting: state = "sound"
+	if game.password_entry.selecting: state = "continue"
+	if state != "pause": password_copied = false
 	if state.is_empty() and signature == [""]: return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	var focus_index := focused.get_index() if focused != null and focused.get_parent() == surface and signature.size() > 1 and signature[1] == state else -1
-	var next: Array = [screen,state,game.audio_on,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad,game.sound_mode.track]
+	var next: Array = [screen,state,game.audio_on,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad,game.sound_mode.track,game.password_entry.error,password_copied]
 	if state.is_empty(): next = [""]
 	if next == signature:
 		if not state.is_empty() and game.controls.using_gamepad:
@@ -47,6 +50,7 @@ func sync() -> void:
 	if state == "title": _title(screen)
 	elif state == "practice": _practice(screen)
 	elif state == "sound": _sound_mode(screen)
+	elif state == "continue": _continue(screen)
 	else: _battle_menu(screen,state == "pause")
 	if focus_index >= 0 and focus_index < surface.get_child_count():
 		surface.get_child(focus_index).grab_focus()
@@ -61,6 +65,7 @@ func _default_focus(state: String) -> void:
 	if buttons.is_empty(): return
 	if state == "practice": buttons[game.practice.variant].grab_focus()
 	elif state == "sound": buttons[maxi(game.sound_mode.index_of(game.sound_mode.track),0)].grab_focus()
+	elif state == "continue": _password_field().grab_focus()
 	else: buttons[0].grab_focus()
 
 func _move_focus(direction: Vector2i) -> void:
@@ -126,8 +131,8 @@ func _title(screen: Vector2) -> void:
 	_label(Rect2(24,y+0,screen.x-48,40),"DEEPEST CLEARED  %02d" % game.best_cleared,24,Color("ffb95e"))
 	_button(Rect2(screen.x*0.5-190,y+64,380,46),"START (A / LB)" if game.controls.using_gamepad else "START (Enter)",func():
 		if game.title_screen: game.start_run(); sync())
-	_button(Rect2(screen.x*0.5-190,y+122,380,42),"BOSS PRACTICE" if game.controls.using_gamepad else "BOSS PRACTICE (B)",func():
-		if game.title_screen: game.practice.open(game); sync())
+	_button(Rect2(screen.x*0.5-190,y+122,380,42),"CONTINUE" if game.controls.using_gamepad else "CONTINUE (C)",func():
+		if game.title_screen: game.password_entry.open(game); sync())
 	_label(Rect2(24,y+185,screen.x-48,45),"LEFT STICK / DPAD MOVE / RIGHT STICK AIM" if game.controls.using_gamepad else "WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
 	var hint := "LEFT STICK / DPAD SELECT / A / LB CONFIRM" if game.controls.using_gamepad else "M AUDIO / RECORD LASTS UNTIL YOU QUIT"
 	if not OS.has_feature("web"): hint += " / B QUIT" if game.controls.using_gamepad else " / ESC QUIT"
@@ -152,6 +157,7 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 		_button(Rect2(screen.x*0.5-170,y+45,340,44),"TITLE (B)" if game.controls.using_gamepad else "TITLE (Esc)",func():
 			if game.paused: game.return_to_title(); sync())
 		_settings()
+		_password(screen,y)
 	else:
 		_label(Rect2(24,y-165,screen.x-48,45),"FLOOR CLEARED — CHOOSE AN UPGRADE",28,Color("63f5ce"))
 		_label(Rect2(24,y-115,screen.x-48,35),"LEFT STICK / DPAD: SELECT     A / LB: CONFIRM" if game.controls.using_gamepad else "CLICK / 1 / 2 / 3 / TAB + ENTER",16,Color("8194aa"))
@@ -182,12 +188,60 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 		var column := i if i < 3 else i-3
 		var width := minf(230.0,(screen.x-48.0-(columns-1)*12)/columns)
 		var x := (screen.x-columns*width-(columns-1)*12)*0.5+column*(width+12)
-		var top: float = y+170 if i < 3 else y+278
+		var top: float = (y+170 if i < 3 else y+278)+(game.PAUSE_STATS_SHIFT if is_pause else 0.0)
 		var height := 100.0 if i < 3 else 84.0
 		_plate(Rect2(x,top,width,height))
 		_label(Rect2(x+6,top+5,width-12,22),stats[i].name,12,Color("8194aa"))
 		_label(Rect2(x+6,top+28,width-12,30),stats[i].value,27 if i < 3 else 23,Color("d9e8ed"))
 		_label(Rect2(x+4,top+height-30,width-8,26),stats[i].detail,13 if i < 3 else 11,Color("91aaaf"))
+
+# The resume password for the floor in progress; clicking it copies the text.
+func _password(screen: Vector2, y: float) -> void:
+	if game.practice.active:
+		_label(Rect2(24,y+132,screen.x-48,40),"PRACTICE RUNS HAVE NO PASSWORD",14,Color("8194aa"))
+		return
+	var password: String = preload("res://scripts/run_password.gd").encode(game.session.run)
+	_label(Rect2(24,y+117,screen.x-48,20),"COPIED TO CLIPBOARD" if password_copied else "PASSWORD FOR THIS FLOOR / CLICK TO COPY",12,Color("63f5ce") if password_copied else Color("8194aa"))
+	var width := minf(640.0,screen.x-48.0)
+	var button := _button(Rect2((screen.x-width)*0.5,y+140,width,42),password,func():
+		DisplayServer.clipboard_set(password)
+		password_copied = true
+		sync())
+	button.add_theme_font_override("font",game.font)
+	button.add_theme_font_size_override("font_size",20)
+	button.tooltip_text = "Enter this from CONTINUE on the title screen to restart this floor."
+
+func _password_field() -> LineEdit:
+	for child in surface.get_children():
+		if child is LineEdit: return child
+	return null
+
+func _continue(screen: Vector2) -> void:
+	var entry = game.password_entry
+	var y := screen.y*0.5-24
+	_label(Rect2(24,y-150,screen.x-48,48),"CONTINUE",30,Color("63f5ce"))
+	_label(Rect2(24,y-102,screen.x-48,40),"ENTER THE PASSWORD FROM THE PAUSE SCREEN   ENTER: RESUME   ESC: BACK",15,Color("8194aa"))
+	var width := minf(640.0,screen.x-48.0)
+	var field := LineEdit.new()
+	field.position = Vector2((screen.x-width)*0.5,y-44)
+	field.size = Vector2(width,52)
+	field.text = entry.text
+	field.placeholder_text = "XXXXX-XXXXX-XXXXX-..."
+	field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	field.add_theme_font_override("font",game.font)
+	field.add_theme_font_size_override("font_size",22)
+	field.caret_column = entry.text.length()
+	field.text_changed.connect(func(value: String):
+		entry.text = value
+		if not entry.error.is_empty():
+			entry.error = ""
+			sync())
+	field.text_submitted.connect(func(_value: String): entry.submit(game); sync())
+	surface.add_child(field)
+	_label(Rect2(24,y+14,screen.x-48,28),entry.error,16,Color("ff647c"))
+	_button(Rect2(screen.x*0.5-170,y+52,340,46),"RESUME",func(): entry.submit(game); sync())
+	_button(Rect2(screen.x*0.5-170,y+108,340,40),"BACK (B)" if game.controls.using_gamepad else "BACK (Esc)",func(): entry.close(game); sync())
+	_settings()
 
 func choose(index: int) -> void:
 	if not game.choosing or game.paused or game.title_screen: return

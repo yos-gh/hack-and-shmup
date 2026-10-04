@@ -12,7 +12,7 @@ func run():
 	var menus = game.menus
 	menus.sync()
 	var buttons: Array = menus.surface.get_children().filter(func(node): return node is Button)
-	check(buttons.size() == 4, "title has start, practice, audio and fullscreen controls")
+	check(buttons.size() == 4, "title has start, continue, audio and fullscreen controls")
 	buttons[2].grab_focus()
 	buttons[2].pressed.emit()
 	check(not game.audio_on and game.title_screen, "audio button does not start run")
@@ -50,7 +50,8 @@ func run():
 	game.paused = true
 	menus.sync()
 	buttons = menus._buttons()
-	check(buttons.size() == 4 and buttons[2].text.begins_with("AUDIO:") and buttons[3].text in ["FULLSCREEN","WINDOWED"],"pause exposes both session settings")
+	check(buttons.size() == 5 and buttons[2].text.begins_with("AUDIO:") and buttons[3].text in ["FULLSCREEN","WINDOWED"],"pause exposes both session settings")
+	check(buttons[4].text == preload("res://scripts/run_password.gd").encode(game.session.run),"pause shows this floor's password")
 	var pause_audio: bool = game.audio_on
 	buttons[2].grab_focus()
 	buttons[2].pressed.emit()

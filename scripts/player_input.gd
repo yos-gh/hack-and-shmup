@@ -146,13 +146,19 @@ func handle_event(game, event: InputEvent) -> void:
 	if game.sound_mode.selecting:
 		game.sound_mode.input(game,event)
 		return
+	if game.password_entry.selecting:
+		if (event is InputEventKey or event is InputEventJoypadButton) and event.pressed and event.is_action_pressed("back"): game.password_entry.close(game)
+		elif event is InputEventKey and event.pressed and event.is_action_pressed("confirm"): game.password_entry.submit(game)
+		return
 	if (event is InputEventKey or event is InputEventJoypadButton) and event.pressed and not (event is InputEventKey and event.echo):
 		if event is InputEventKey and event.is_action_pressed("cycle_audio"):
 			game.cycle_audio()
 			return
 		if game.title_screen:
 			if event.is_action_pressed("confirm"): game.start_run()
-			elif event.is_action_pressed("boss_practice"): game.practice.open(game)
+			elif event is InputEventKey and event.is_action_pressed("continue_run"): game.password_entry.open(game)
+			# Boss practice left the title; development builds keep its B shortcut.
+			elif OS.is_debug_build() and event.is_action_pressed("boss_practice"): game.practice.open(game)
 			elif event.is_action_pressed("back") and not OS.has_feature("web"): game.get_tree().quit()
 			return
 		if game.practice.active and event is InputEventKey and event.is_action_pressed("boss_practice"):
