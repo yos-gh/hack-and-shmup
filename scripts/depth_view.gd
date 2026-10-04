@@ -88,6 +88,7 @@ func _ready() -> void:
 	make_batch("wyrm_head", preload("res://scripts/wyrm_visuals.gd").head_mesh())
 	make_batch("wyrm_segment", preload("res://scripts/wyrm_visuals.gd").segment_mesh())
 	make_batch("wyrm_tail", preload("res://scripts/wyrm_visuals.gd").tail_mesh())
+	make_batch("wyrm_plate", preload("res://scripts/wyrm_visuals.gd").plate_mesh())
 	make_batch("pit", preload("res://scripts/wyrm_visuals.gd").pit_mesh())
 	make_batch("ring", Glyph.annulus(5.0/12.0,48,true))
 	make_batch("actor_core", Glyph.boss_core())
@@ -266,7 +267,7 @@ func boss_part(enemy: Dictionary, facing: Vector2, offset: Vector2, size: Vector
 	return chaser_entry(enemy.p+offset.rotated(facing.angle()),facing,size,color,height)
 
 func sync_bosses(game) -> void:
-	var parts := {"boss_base":[],"boss_armor":[],"boss_barrel":[],"boss_core":[],"triad_body":[],"triad_gantry":[],"triad_carriage":[],"citadel_chassis":[],"citadel_frame":[],"citadel_brace":[],"citadel_keep":[],"citadel_gun":[],"wyrm_head":[],"wyrm_segment":[],"wyrm_tail":[],"pit":[]}
+	var parts := {"boss_base":[],"boss_armor":[],"boss_barrel":[],"boss_core":[],"triad_body":[],"triad_gantry":[],"triad_carriage":[],"citadel_chassis":[],"citadel_frame":[],"citadel_brace":[],"citadel_keep":[],"citadel_gun":[],"wyrm_head":[],"wyrm_segment":[],"wyrm_tail":[],"wyrm_plate":[],"pit":[]}
 	if game.boss_floor:
 		for enemy in game.enemies:
 			if enemy.kind != Catalog.Enemy.BOSS or enemy.hp <= 0 or not game.attack_open(enemy.p): continue

@@ -203,11 +203,23 @@ func core_ink(e: Dictionary) -> Color:
 func head_lift(e: Dictionary) -> Vector2:
 	return Vector2(0,-REAR_LIFT*e.get("rear",0.0))
 
-# The mouth while rearing: the snout tips up, so on screen the mouth sits
-# above the head (0.47 world units per unit of height at the 25-degree view).
-func rear_mouth(e: Dictionary) -> Vector2:
+# Where a point on the head's centre line (`along` ahead of the core) is drawn
+# while the head rears: the snout tips up, so on screen it climbs above the
+# head (0.47 world units per unit of height at the 25-degree view).
+func head_point(e: Dictionary, along: float, side: float = 0.0) -> Vector2:
 	var pitch: float = REAR_PITCH*e.get("rear",0.0)
-	return e.p+head_lift(e)+e.face*MUZZLE*cos(pitch)+Vector2(0,-0.47*MUZZLE*sin(pitch))
+	return e.p+head_lift(e)+e.face*along*cos(pitch)+e.face.orthogonal()*side+Vector2(0,-0.47*along*sin(pitch))
+
+func rear_mouth(e: Dictionary) -> Vector2:
+	return head_point(e,MUZZLE)
+
+# The core seat on the crown, `height` above the head's origin, tipped back with
+# a rearing head: [screen anchor, height above the floor, pitch].
+func crown(e: Dictionary, height: float) -> Array:
+	var pitch: float = REAR_PITCH*e.get("rear",0.0)
+	var lift: Vector2 = head_lift(e)
+	var anchor: Vector2 = e.p+lift-e.face*height*sin(pitch)+Vector2(0,0.47*height*(1.0-cos(pitch)))
+	return [anchor,e.head_z-lift.y*0.5+height*cos(pitch),pitch]
 
 func muzzle(e: Dictionary) -> Vector2:
 	return e.p+e.face*MUZZLE

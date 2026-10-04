@@ -67,6 +67,22 @@ static func tail_mesh() -> ArrayMesh:
 	return s.commit()
 
 # Flat, unlit pit floor; opaque, so links below the floor vanish into it.
+# One shield plate: a thick, chamfered trapezoid of the ring around the core,
+# centred on local +X, with a raised rib. Twelve of them make the ring.
+static func plate_mesh() -> ArrayMesh:
+	var s := SurfaceTool.new()
+	s.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half: float = 0.44*TAU/12
+	var outline := []
+	for corner in [[68.0,-half],[92.0,-half],[92.0,half],[68.0,half]]:
+		outline.append(Vector2.from_angle(corner[1])*corner[0])
+	Citadel.slab(s,outline,0,24,4)
+	var rib := []
+	for corner in [[74.0,-half*0.7],[86.0,-half*0.7],[86.0,half*0.7],[74.0,half*0.7]]:
+		rib.append(Vector2.from_angle(corner[1])*corner[0])
+	Citadel.slab(s,rib,24,31,2)
+	return s.commit()
+
 static func pit_mesh() -> ArrayMesh:
 	var s := SurfaceTool.new()
 	s.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -276,23 +292,27 @@ static func draw(boss, game) -> void:
 		if e.submerged: continue
 		# The weak point: the core and its plates. Visor lamps and the throat
 		# brighten while the head is charging a beam.
-		# The core and plates ride up with a rearing head (out of reach meanwhile).
-		var lift: Vector2 = boss.head_lift(e)
-		var raised: Dictionary = e
-		if lift != Vector2.ZERO:
-			raised = e.duplicate()
-			raised.p = e.p+lift
-		draw_shields(boss,game,raised,boss.core_ink(e))
-		BossFx.energy_core(game,e.p+lift,22,boss.core_ink(e),clock,angry)
+		# At rest the core and plates are the flat rings of the other bosses. As
+		# the head rears they hand over to the thick 3D plates, which tip back
+		# with the head (the core is out of reach meanwhile).
+		var flat: float = 1.0-boss.smooth(clampf(e.rear*4.0,0,1))
+		if flat > 0.01:
+			var raised: Dictionary = e
+			if e.rear > 0:
+				raised = e.duplicate()
+				raised.p = boss.crown(e,0.0)[0]
+			draw_shields(boss,game,raised,Color(boss.core_ink(e),flat))
+			if flat > 0.5: BossFx.energy_core(game,raised.p,22,boss.core_ink(e),clock,angry)
+		if e.rear > 0: BossFx.glow(game,boss.crown(e,56.0)[0],34,Color(boss.core_ink(e),0.45*(1.0-flat)))
 		var face: Vector2 = e.face
 		var heat: float = 0.0
 		for beam in game.boss.lasers:
 			if beam.owner == e and beam.get("triad",false): heat = 1.0 if beam.warning <= 0 else 1.0-beam.warning/beam.warning_total
 		for k in range(5):
-			var lamp: Vector2 = e.p+lift+face*130+face.orthogonal()*(-36+k*18)
+			var lamp: Vector2 = boss.head_point(e,130.0,-36+k*18)
 			BossFx.glow(game,lamp,8+heat*6,Color(ink.lerp(Color.WHITE,0.3),0.45+0.4*heat))
 			game.draw_circle(lamp,2.2,Color(BossFx.WHITE_HOT,0.8))
-		BossFx.glow(game,e.p+lift+face*196,16+heat*22,Color(ink,0.3+0.5*heat))
+		BossFx.glow(game,boss.head_point(e,196.0),16+heat*22,Color(ink,0.3+0.5*heat))
 
 # A link's rise while the head rears: [screen offset, extra height, pitch].
 # Each link's pitch follows the slope between its neighbours, so the neck
@@ -362,4 +382,22 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 		# Rearing tips the snout up toward the ceiling.
 		pitch_up(head,e.face,boss.REAR_PITCH*e.rear,Vector3.ONE)
 		parts.wyrm_head.append(view.weight(head,0.9))
-		parts.boss_core.append(view.chaser_entry(e.p+lift,e.face,Vector3(24,24,14),boss.core_ink(e),e.head_z+56+rear))
+		# The core crystal sits on the crown and tips back with the head; the
+		# plates turn up in 3D with the head while it rears.
+		var seat: Array = boss.crown(e,56.0)
+		var core: Dictionary = view.chaser_entry(seat[0],e.face,Vector3(24,24,14),boss.core_ink(e),seat[1])
+		pitch_up(core,e.face,seat[2],Vector3(24,24,14))
+		parts.boss_core.append(core)
+		if e.rear > 0:
+			var ring: Array = boss.crown(e,48.0)
+			for k in range(boss.SLOTS):
+				var plate: Dictionary = e.plates[k]
+				if plate.hp <= 0: continue
+				var bearing: float = k*TAU/boss.SLOTS
+				var tone: Color = boss.core_ink(e).lerp(BossFx.DANGER,1.0-clampf(plate.hp/plate.max_hp,0,1))
+				var item: Dictionary = view.chaser_entry(ring[0],Vector2.from_angle(bearing),Vector3.ONE,tone,ring[1])
+				var transform: Transform3D = item.transform
+				# Turn to the plate's bearing within the ring, tip the ring with the head.
+				transform.basis = Basis(Vector3.BACK,-e.face.angle())*Basis(Vector3.UP,-ring[2])*Basis(Vector3.BACK,-(bearing-e.face.angle()))
+				item.transform = transform
+				parts.wyrm_plate.append(view.weight(item,0.85))
