@@ -63,7 +63,10 @@ const BEAM_GAP := 1.0
 # How far the head rears up off the floor (drawn up the screen) to spit at the ceiling.
 const REAR_LIFT := 170.0
 # ...and how far it tips its snout up toward the ceiling (radians).
-const REAR_PITCH := 1.05
+const REAR_PITCH := 1.48
+# How high each of the first links rises with a rearing head, as a share of
+# the head's lift: together they bend into one continuous raised neck.
+const NECK_RISE := [0.86,0.66,0.45,0.26,0.1]
 # Shock cage: a closed double ring of shots that shrinks onto the player. Only
 # a Shockwave (which clears shots) or a gap behind cover gets through it.
 const CAGE_WARNING := 0.9

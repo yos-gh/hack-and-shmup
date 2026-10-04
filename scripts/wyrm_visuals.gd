@@ -293,6 +293,19 @@ static func draw(boss, game) -> void:
 			game.draw_circle(lamp,2.2,Color(BossFx.WHITE_HOT,0.8))
 		BossFx.glow(game,e.p+lift+face*196,16+heat*22,Color(ink,0.3+0.5*heat))
 
+# A link's rise while the head rears: [screen offset, extra height, pitch].
+# Each link's pitch follows the slope between its neighbours, so the neck
+# reads as one continuous curve up to the head.
+static func neck_pose(boss, e: Dictionary, segment: Dictionary) -> Array:
+	var rise: Array = boss.NECK_RISE
+	var n: int = segment.index
+	if e.rear <= 0.0 or segment.kind != "body" or n < 0 or n >= rise.size(): return [Vector2.ZERO,0.0,0.0]
+	var lift: float = boss.REAR_LIFT*e.rear
+	var ahead: float = 1.0 if n == 0 else rise[n-1]
+	var behind: float = rise[n+1] if n+1 < rise.size() else 0.0
+	var pitch: float = atan2((ahead-behind)*lift*1.6,2.0*boss.SPACING)
+	return [Vector2(0,-lift*rise[n]),lift*rise[n]*0.5,pitch]
+
 # Tip a mesh entry's local +X (its nose) up out of the floor plane by `pitch`.
 static func pitch_up(item: Dictionary, heading: Vector2, pitch: float, scale: Vector3) -> void:
 	if pitch <= 0.0: return
@@ -311,28 +324,31 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 			var size: float = 12.0+7.0*absf(sin(i*1.9+center.y*0.05))
 			parts.boss_armor.append(view.weight(view.chaser_entry(center+Vector2.from_angle(angle)*radius*1.02,Vector2.from_angle(angle+0.6),Vector3(size,size*0.7,6),RUBBLE,0),0.6))
 	var previous: Dictionary = {}
+	var raised: Dictionary = {}
 	for segment in e.segments:
 		if segment.z < -40:
 			previous = {}
 			continue
+		raised[segment.index] = neck_pose(boss,e,segment)
 		var scale: float = segment.radius/LINK_RADIUS
 		var tint := BODY_TINT.lerp(ink,0.08) if segment.index%2 == 0 else BODY_TINT.darkened(0.08)
-		# The first links rise with a rearing head into a raised neck.
-		var neck: float = maxf(0.0,1.0-segment.index/3.0) if segment.kind == "body" else 0.0
-		var raise: Vector2 = boss.head_lift(e)*neck
-		var link: Dictionary = view.chaser_entry(segment.p+raise,segment.dir,Vector3(scale,scale,scale),tint,segment.z-raise.y*0.4)
-		pitch_up(link,segment.dir,boss.REAR_PITCH*e.rear*neck*0.6,Vector3(scale,scale,scale))
+		# The first links rise with a rearing head into one raised, sloping neck.
+		var pose: Array = raised[segment.index]
+		var link: Dictionary = view.chaser_entry(segment.p+pose[0],segment.dir,Vector3(scale,scale,scale),tint,segment.z+pose[1])
+		pitch_up(link,segment.dir,pose[2],Vector3(scale,scale,scale))
 		parts.wyrm_segment.append(view.weight(link,0.8))
 		if segment.kind == "body" and segment.index in boss.TURRETS and segment.z > -10:
 			var aim: Vector2 = segment.p.direction_to(game.player)
 			parts.citadel_gun.append(view.weight(view.chaser_entry(segment.p,aim,Vector3(1.5,1.5,1.5),TURRET_TINT.lerp(ink,0.15),segment.z+44*scale),0.9))
 		# Hydraulic rams across each joint of the chain.
 		if not previous.is_empty() and segment.kind in ["body","joint"] and previous.kind == "body":
-			var axis: Vector2 = segment.p.direction_to(previous.p)
+			var here: Vector2 = segment.p+pose[0]
+			var there: Vector2 = previous.p+raised[previous.index][0]
+			var axis: Vector2 = here.direction_to(there)
 			for side in [-1.0,1.0]:
-				var a: Vector2 = segment.p+axis.orthogonal()*side*segment.radius*0.62
-				var b: Vector2 = previous.p+axis.orthogonal()*side*minf(previous.radius,segment.radius)*0.62
-				parts.boss_barrel.append(view.weight(view.chaser_entry((a+b)*0.5,a.direction_to(b),Vector3(a.distance_to(b)*0.5,5,6),RAM_TINT,(segment.z+previous.z)*0.5+20),0.6))
+				var a: Vector2 = here+axis.orthogonal()*side*segment.radius*0.62
+				var b: Vector2 = there+axis.orthogonal()*side*minf(previous.radius,segment.radius)*0.62
+				parts.boss_barrel.append(view.weight(view.chaser_entry((a+b)*0.5,a.direction_to(b),Vector3(a.distance_to(b)*0.5,5,6),RAM_TINT,(segment.z+pose[1]+previous.z+raised[previous.index][1])*0.5+20),0.6))
 		previous = segment
 	if e.tail_z > -40:
 		parts.wyrm_tail.append(view.weight(view.chaser_entry(e.tail,e.tail_heading,Vector3.ONE,BODY_TINT,e.tail_z),0.85))
