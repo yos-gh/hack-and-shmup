@@ -25,7 +25,7 @@ func reset() -> void:
 	salvos.clear()
 
 func build_layout(data) -> void:
-	var arenas := [Rect2i(0,-17,48,36),Rect2i(0,-20,32,42),Rect2i(0,-19,40,40),Rect2i(0,-22,56,44)]
+	var arenas := [Rect2i(0,-17,48,36),Rect2i(0,-20,32,42),Rect2i(0,-19,40,40),Rect2i(0,-26,64,52)]
 	data.rooms.assign([Rect2i(-12,-4,9,9),arenas[data.boss_variant]])
 	data.room_shapes.assign([0,0])
 	for i in range(2):

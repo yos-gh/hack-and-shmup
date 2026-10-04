@@ -4,13 +4,14 @@ extends SceneTree
 # --frames=0 enables ordinary interactive play; otherwise fixed 60 Hz input.
 # --floor=23 starts any depth from its normal spawn instead of a named scenario;
 # --boss=0..3 picks Citadel/Bastion/Triad/Wyrm on boss floors (default: seeded pick).
+# --form=2 starts the Abyss Wyrm at its second form.
 const Scenario = preload("res://tools/dev_scenario.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "25", "floor": "", "boss": "-1"}
+	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "25", "floor": "", "boss": "-1", "form": "1"}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=", true, 1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -30,6 +31,7 @@ func run() -> void:
 	root.add_child(game)
 	if options.floor.is_empty(): Scenario.configure(game, options.scenario, int(options.seed), int(options.weapon))
 	else: Scenario.configure_floor(game, int(options.floor), int(options.seed), int(options.weapon), int(options.boss))
+	if options.form == "2" and game.boss_floor and game.boss_variant == 3: game.boss.wyrm.skip_form(game)
 	game.view_comparison = true
 	game.set_view_pitch(float(options.tilt))
 	game.set_depth_view(options.view == "3d")

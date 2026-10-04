@@ -82,7 +82,7 @@ func return_to_title(game) -> void:
 
 
 func die(game, reason: String = "HIT") -> void:
-	if game.pending_respawn or ((game.grace > 0 or game.pickups.invincible()) and reason != "TIME UP"): return
+	if game.pending_respawn or ((game.grace > 0 or game.pickups.invincible() or game.debug_invincible) and reason != "TIME UP"): return
 	game.deaths += 1
 	game.death_reason = reason
 	game.pending_respawn = true

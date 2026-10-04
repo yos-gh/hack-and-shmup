@@ -49,7 +49,9 @@ Determinism is scoped to the same engine, fixture, seed, weapon and frame count.
 
 ## Abyss Wyrm review
 
-`Godot_console.exe --path . --script res://tools/wyrm_review.gd -- --fire=0.5` plays the 25th-floor boss with a protected player who circles the arena and fires the primary at the head for the given share of each second while it is out. It saves captures of the breach warnings, both first-form patterns, the second-form breach, body beams, charge lane and tail burst to `docs/validation/wyrm-*.png` and prints how long each form lasted. Add `--floor=50` for the expert tier, or `--headless --no-capture` to measure only. `tests/wyrm_test.gd` covers placement, cover, warnings, the alternating patterns, head-only damage, the form split, the body and the charge.
+`Godot_console.exe --path . --script res://tools/wyrm_review.gd -- --fire=0.5` plays the 25th-floor boss with a protected player who circles the arena and fires the primary at the head's core for the given share of each second while it is out. It saves captures of the breach warning, the three first-form patterns (beam, rings, bombardment), a dive, the second-form breach, body beams, the charge lane and the second-form bombardment to `docs/validation/wyrm-*.png` (framed on the boss) and prints how long each form lasted and the longest stop while prowling. Add `--floor=50` for the expert tier, `--form=2` to start at the second form, or `--headless --no-capture` to measure only. `tests/wyrm_test.gd` covers placement, cover, warnings, the crawling patterns, the shielded core, the form split, unstuck movement next to a pillar, the charge, body beams, the bombardment and the debug shortcuts.
+
+In debug builds (the editor and debug exports, never release exports) F8 toggles invincibility and F9 sends the Abyss Wyrm to its second form. `./tools/play_study.ps1 -Floor 25 -Boss 3 -Form 2` starts a study at the second form.
 
 ## Lance cost profile
 

@@ -73,6 +73,8 @@ var floor_revision := 0
 var depth_view: Node
 var depth_enabled := false
 var view_comparison := false
+# Debug builds only: F8 makes the player ignore hits (see PlayerInput).
+var debug_invincible := false
 var view_pitch_degrees := 25.0
 var rooms: Array[Rect2i] = []
 var discovered: Dictionary = {}

@@ -58,6 +58,7 @@ func draw(game, screen: Vector2) -> void:
 		meter(game, Rect2(0,76,bar_width,4), clampf(game.time_left / maxf(game.time_limit, 0.01),0,1), time_ink, clock)
 	draw_buffs(game)
 	draw_help(game, screen)
+	if game.debug_invincible: label_at(game, Vector2(screen.x*0.5-110,screen.y-42), "DEBUG: INVINCIBLE (F8)", 13, Color("ff91b1"))
 	if game.practice.active: label_at(game, Vector2(screen.x-240,screen.y-14),"PRACTICE" if game.controls.using_gamepad else "PRACTICE / R RETRY / B SELECT",12,CYAN)
 	if game.banner > 0: draw_banner(game, screen)
 	if game.hit_flash > 0:
