@@ -246,6 +246,10 @@ func update_music(game) -> void:
 	else:
 		_switch_music(wanted)
 
+# Sound mode: picking the track that is already playing starts it over.
+func restart_music() -> void:
+	if pending_music == "" and audio_on and not headless and music.is_inside_tree(): music.play()
+
 func _advance_music_fade(delta: float) -> void:
 	if pending_music == "": return
 	music_fade = move_toward(music_fade, 0.0, delta / MUSIC_FADE)

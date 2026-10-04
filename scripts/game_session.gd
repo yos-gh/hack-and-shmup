@@ -47,6 +47,7 @@ func start_run(game) -> void:
 	game.replay_input.clear()
 	game.practice.active = false
 	game.practice.selecting = false
+	game.sound_mode.selecting = false
 	run.reset()
 	game.title_screen = false
 	game.paused = false
@@ -71,6 +72,7 @@ func return_to_title(game) -> void:
 	game.damage_labels.clear()
 	game.practice.active = false
 	game.practice.selecting = false
+	game.sound_mode.selecting = false
 	game.title_screen = true
 	game.paused = false
 	game.choosing = false
