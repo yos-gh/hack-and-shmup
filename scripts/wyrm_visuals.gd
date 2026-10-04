@@ -179,6 +179,8 @@ static func draw_charge_lane(boss, game, e: Dictionary) -> void:
 
 # Shield plates around the core; the ring keeps its bearing as the head turns.
 static func draw_shields(boss, game, e: Dictionary, ink: Color) -> void:
+	var fade: float = ink.a
+	ink.a = 1.0
 	var inner: float = boss.RING-12.0
 	var outer: float = boss.RING+12.0
 	for k in range(boss.SLOTS):
@@ -189,16 +191,16 @@ static func draw_shields(boss, game, e: Dictionary, ink: Color) -> void:
 			var health: float = clampf(plate.hp/plate.max_hp,0,1)
 			var tone := ink.lerp(BossFx.DANGER,1.0-health)
 			var panel := BossFx.arc_band(e.p,a,b,inner,outer)
-			game.draw_colored_polygon(panel,Color(tone.darkened(0.6),0.66))
+			game.draw_colored_polygon(panel,Color(tone.darkened(0.6),0.66*fade))
 			panel.append(panel[0])
-			game.draw_polyline(panel,Color(tone,0.95),1.8,true)
-			game.draw_arc(e.p,outer-4,a+0.05,b-0.05,6,Color(tone.lightened(0.35),0.55),1,true)
+			game.draw_polyline(panel,Color(tone,0.95*fade),1.8,true)
+			game.draw_arc(e.p,outer-4,a+0.05,b-0.05,6,Color(tone.lightened(0.35),0.55*fade),1,true)
 		else:
 			var refill: float = clampf(1.0-plate.timer/maxf(boss.REBUILD,0.001),0,1)
 			var ghost := BossFx.arc_band(e.p,a,b,inner,outer)
 			ghost.append(ghost[0])
-			game.draw_polyline(ghost,Color(ink,0.16),1,true)
-			game.draw_arc(e.p,outer,a,lerpf(a,b,refill),8,Color(ink,0.6),2,true)
+			game.draw_polyline(ghost,Color(ink,0.16*fade),1,true)
+			game.draw_arc(e.p,outer,a,lerpf(a,b,refill),8,Color(ink,0.6*fade),2,true)
 
 static func draw(boss, game) -> void:
 	var clock: float = game.presentation.clock
@@ -241,7 +243,7 @@ static func draw(boss, game) -> void:
 		if e.windup > 0 and not e.submerged:
 			# The head rears and gathers heat in its throat before it spits.
 			var gather: float = 1.0-e.windup/boss.WINDUP
-			var throat: Vector2 = boss.muzzle(e)+boss.head_lift(e)
+			var throat: Vector2 = boss.rear_mouth(e)
 			BossFx.charge(game,throat,gather,Color("ff9a5c"),60)
 			for i in range(6):
 				var t: float = fmod(clock*1.4+i/6.0,1.0)
@@ -250,7 +252,7 @@ static func draw(boss, game) -> void:
 		if e.launch_flash > 0:
 			# The slag column: a burning plume from the throat up off the screen.
 			var k: float = e.launch_flash/0.8
-			var throat: Vector2 = boss.muzzle(e)+boss.head_lift(e)
+			var throat: Vector2 = boss.rear_mouth(e)
 			var top: Vector2 = throat+Vector2(0,-1400)
 			game.draw_line(throat,top,Color(1.0,0.45,0.2,0.25*k),90*k+20,true)
 			game.draw_line(throat,top,Color(1.0,0.7,0.4,0.6*k),40*k+8,true)
@@ -275,13 +277,12 @@ static func draw(boss, game) -> void:
 		# The weak point: the core and its plates. Visor lamps and the throat
 		# brighten while the head is charging a beam.
 		var lift: Vector2 = boss.head_lift(e)
-		if lift != Vector2.ZERO:
-			# The reared neck: a ghost of the core's ground position stays as a reminder.
-			game.draw_arc(e.p,boss.RING,0,TAU,48,Color(boss.core_ink(e),0.25),1.5,true)
-		var shifted: Dictionary = e.duplicate()
-		shifted.p = e.p+lift
-		draw_shields(boss,game,shifted,boss.core_ink(e))
-		BossFx.energy_core(game,e.p+lift,22,boss.core_ink(e),clock,angry)
+		# While the head rears, the core and plates stay where shots still find
+		# them, dimmed so the raised head reads clearly above.
+		var dim: float = 1.0-0.65*e.rear
+		draw_shields(boss,game,e,Color(boss.core_ink(e),dim))
+		if dim > 0.6: BossFx.energy_core(game,e.p,22,boss.core_ink(e),clock,angry)
+		else: game.draw_arc(e.p,boss.CORE,0,TAU,32,Color(boss.core_ink(e),0.5),2,true)
 		var face: Vector2 = e.face
 		var heat: float = 0.0
 		for beam in game.boss.lasers:
@@ -291,6 +292,13 @@ static func draw(boss, game) -> void:
 			BossFx.glow(game,lamp,8+heat*6,Color(ink.lerp(Color.WHITE,0.3),0.45+0.4*heat))
 			game.draw_circle(lamp,2.2,Color(BossFx.WHITE_HOT,0.8))
 		BossFx.glow(game,e.p+lift+face*196,16+heat*22,Color(ink,0.3+0.5*heat))
+
+# Tip a mesh entry's local +X (its nose) up out of the floor plane by `pitch`.
+static func pitch_up(item: Dictionary, heading: Vector2, pitch: float, scale: Vector3) -> void:
+	if pitch <= 0.0: return
+	var transform: Transform3D = item.transform
+	transform.basis = Basis(Vector3.BACK,-heading.angle())*Basis(Vector3.UP,-pitch)*Basis.from_scale(scale)
+	item.transform = transform
 
 static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink: Color = boss.ink(e)
@@ -312,7 +320,9 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 		# The first links rise with a rearing head into a raised neck.
 		var neck: float = maxf(0.0,1.0-segment.index/3.0) if segment.kind == "body" else 0.0
 		var raise: Vector2 = boss.head_lift(e)*neck
-		parts.wyrm_segment.append(view.weight(view.chaser_entry(segment.p+raise,segment.dir,Vector3(scale,scale,scale),tint,segment.z-raise.y*0.4),0.8))
+		var link: Dictionary = view.chaser_entry(segment.p+raise,segment.dir,Vector3(scale,scale,scale),tint,segment.z-raise.y*0.4)
+		pitch_up(link,segment.dir,boss.REAR_PITCH*e.rear*neck*0.6,Vector3(scale,scale,scale))
+		parts.wyrm_segment.append(view.weight(link,0.8))
 		if segment.kind == "body" and segment.index in boss.TURRETS and segment.z > -10:
 			var aim: Vector2 = segment.p.direction_to(game.player)
 			parts.citadel_gun.append(view.weight(view.chaser_entry(segment.p,aim,Vector3(1.5,1.5,1.5),TURRET_TINT.lerp(ink,0.15),segment.z+44*scale),0.9))
@@ -331,5 +341,8 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 		# Rearing for the bombardment lifts the head.
 		var lift: Vector2 = boss.head_lift(e)
 		var rear: float = -lift.y*0.5
-		parts.wyrm_head.append(view.weight(view.chaser_entry(e.p+lift,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z+rear),0.9))
+		var head: Dictionary = view.chaser_entry(e.p+lift,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z+rear)
+		# Rearing tips the snout up toward the ceiling.
+		pitch_up(head,e.face,boss.REAR_PITCH*e.rear,Vector3.ONE)
+		parts.wyrm_head.append(view.weight(head,0.9))
 		parts.boss_core.append(view.chaser_entry(e.p+lift,e.face,Vector3(24,24,14),boss.core_ink(e),e.head_z+56+rear))

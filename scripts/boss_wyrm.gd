@@ -62,6 +62,8 @@ const WINDUP := 1.2
 const BEAM_GAP := 1.0
 # How far the head rears up off the floor (drawn up the screen) to spit at the ceiling.
 const REAR_LIFT := 170.0
+# ...and how far it tips its snout up toward the ceiling (radians).
+const REAR_PITCH := 1.05
 # Shock cage: a closed double ring of shots that shrinks onto the player. Only
 # a Shockwave (which clears shots) or a gap behind cover gets through it.
 const CAGE_WARNING := 0.9
@@ -195,6 +197,12 @@ func core_ink(e: Dictionary) -> Color:
 # Where the head is drawn: lifted up the screen while it rears for the bombardment.
 func head_lift(e: Dictionary) -> Vector2:
 	return Vector2(0,-REAR_LIFT*e.get("rear",0.0))
+
+# The mouth while rearing: the snout tips up, so on screen the mouth sits
+# above the head (0.47 world units per unit of height at the 25-degree view).
+func rear_mouth(e: Dictionary) -> Vector2:
+	var pitch: float = REAR_PITCH*e.get("rear",0.0)
+	return e.p+head_lift(e)+e.face*MUZZLE*cos(pitch)+Vector2(0,-0.47*MUZZLE*sin(pitch))
 
 func muzzle(e: Dictionary) -> Vector2:
 	return e.p+e.face*MUZZLE
