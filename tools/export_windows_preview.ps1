@@ -13,7 +13,7 @@ if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Ref m
 $buildRoot = Join-Path $projectPath ('docs/builds/windows-preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $revision.Substring(0, 8))
 $sourceZip = Join-Path $buildRoot 'source.zip'
 $sourcePath = Join-Path $buildRoot 'source'
-$outputPath = Join-Path $buildRoot 'HACK-AND-SHMUP-preview.exe'
+$outputPath = Join-Path $buildRoot 'HACK-AND-SHMUP.exe'
 New-Item -ItemType Directory -Path $buildRoot | Out-Null
 & git -C $projectPath archive --format=zip "--output=$sourceZip" $revision
 if ($LASTEXITCODE -ne 0) { throw 'Cannot archive source commit' }
@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Preview import failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Windows Preview export failed' }
 
 $files = @(Get-ChildItem -LiteralPath $buildRoot -File)
-if ($files.Name -notcontains 'HACK-AND-SHMUP-preview.exe' -or $files.Count -ne 4) { throw 'Preview package must contain one executable plus build logs and source archive only' }
+if ($files.Name -notcontains 'HACK-AND-SHMUP.exe' -or $files.Count -ne 4) { throw 'Preview package must contain one executable plus build logs and source archive only' }
 if ((Get-Item -LiteralPath $outputPath).Length -eq 0) { throw 'Preview executable is empty' }
 
 Push-Location $buildRoot
