@@ -241,7 +241,7 @@ static func draw(boss, game) -> void:
 		if e.windup > 0 and not e.submerged:
 			# The head rears and gathers heat in its throat before it spits.
 			var gather: float = 1.0-e.windup/boss.WINDUP
-			var throat: Vector2 = boss.muzzle(e)
+			var throat: Vector2 = boss.muzzle(e)+boss.head_lift(e)
 			BossFx.charge(game,throat,gather,Color("ff9a5c"),60)
 			for i in range(6):
 				var t: float = fmod(clock*1.4+i/6.0,1.0)
@@ -250,7 +250,7 @@ static func draw(boss, game) -> void:
 		if e.launch_flash > 0:
 			# The slag column: a burning plume from the throat up off the screen.
 			var k: float = e.launch_flash/0.8
-			var throat: Vector2 = boss.muzzle(e)
+			var throat: Vector2 = boss.muzzle(e)+boss.head_lift(e)
 			var top: Vector2 = throat+Vector2(0,-1400)
 			game.draw_line(throat,top,Color(1.0,0.45,0.2,0.25*k),90*k+20,true)
 			game.draw_line(throat,top,Color(1.0,0.7,0.4,0.6*k),40*k+8,true)
@@ -274,17 +274,23 @@ static func draw(boss, game) -> void:
 		if e.submerged: continue
 		# The weak point: the core and its plates. Visor lamps and the throat
 		# brighten while the head is charging a beam.
-		draw_shields(boss,game,e,boss.core_ink(e))
-		BossFx.energy_core(game,e.p,22,boss.core_ink(e),clock,angry)
+		var lift: Vector2 = boss.head_lift(e)
+		if lift != Vector2.ZERO:
+			# The reared neck: a ghost of the core's ground position stays as a reminder.
+			game.draw_arc(e.p,boss.RING,0,TAU,48,Color(boss.core_ink(e),0.25),1.5,true)
+		var shifted: Dictionary = e.duplicate()
+		shifted.p = e.p+lift
+		draw_shields(boss,game,shifted,boss.core_ink(e))
+		BossFx.energy_core(game,e.p+lift,22,boss.core_ink(e),clock,angry)
 		var face: Vector2 = e.face
 		var heat: float = 0.0
 		for beam in game.boss.lasers:
 			if beam.owner == e and beam.get("triad",false): heat = 1.0 if beam.warning <= 0 else 1.0-beam.warning/beam.warning_total
 		for k in range(5):
-			var lamp: Vector2 = e.p+face*130+face.orthogonal()*(-36+k*18)
+			var lamp: Vector2 = e.p+lift+face*130+face.orthogonal()*(-36+k*18)
 			BossFx.glow(game,lamp,8+heat*6,Color(ink.lerp(Color.WHITE,0.3),0.45+0.4*heat))
 			game.draw_circle(lamp,2.2,Color(BossFx.WHITE_HOT,0.8))
-		BossFx.glow(game,e.p+face*196,16+heat*22,Color(ink,0.3+0.5*heat))
+		BossFx.glow(game,e.p+lift+face*196,16+heat*22,Color(ink,0.3+0.5*heat))
 
 static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> void:
 	var ink: Color = boss.ink(e)
@@ -303,7 +309,10 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 			continue
 		var scale: float = segment.radius/LINK_RADIUS
 		var tint := BODY_TINT.lerp(ink,0.08) if segment.index%2 == 0 else BODY_TINT.darkened(0.08)
-		parts.wyrm_segment.append(view.weight(view.chaser_entry(segment.p,segment.dir,Vector3(scale,scale,scale),tint,segment.z),0.8))
+		# The first links rise with a rearing head into a raised neck.
+		var neck: float = maxf(0.0,1.0-segment.index/3.0) if segment.kind == "body" else 0.0
+		var raise: Vector2 = boss.head_lift(e)*neck
+		parts.wyrm_segment.append(view.weight(view.chaser_entry(segment.p+raise,segment.dir,Vector3(scale,scale,scale),tint,segment.z-raise.y*0.4),0.8))
 		if segment.kind == "body" and segment.index in boss.TURRETS and segment.z > -10:
 			var aim: Vector2 = segment.p.direction_to(game.player)
 			parts.citadel_gun.append(view.weight(view.chaser_entry(segment.p,aim,Vector3(1.5,1.5,1.5),TURRET_TINT.lerp(ink,0.15),segment.z+44*scale),0.9))
@@ -320,6 +329,7 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 		parts.boss_core.append(view.chaser_entry(e.tail+e.tail_heading*4,e.tail_heading,Vector3(10,10,8),ink,e.tail_z+40))
 	if e.head_z > -40:
 		# Rearing for the bombardment lifts the head.
-		var rear: float = 30.0*sin(clampf(1.0-e.windup/boss.WINDUP,0,1)*PI) if e.windup > 0 else 0.0
-		parts.wyrm_head.append(view.weight(view.chaser_entry(e.p,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z+rear),0.9))
-		parts.boss_core.append(view.chaser_entry(e.p,e.face,Vector3(24,24,14),boss.core_ink(e),e.head_z+56+rear))
+		var lift: Vector2 = boss.head_lift(e)
+		var rear: float = -lift.y*0.5
+		parts.wyrm_head.append(view.weight(view.chaser_entry(e.p+lift,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z+rear),0.9))
+		parts.boss_core.append(view.chaser_entry(e.p+lift,e.face,Vector3(24,24,14),boss.core_ink(e),e.head_z+56+rear))

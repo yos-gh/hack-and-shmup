@@ -81,6 +81,7 @@ func run() -> void:
 		var key := ""
 		var beam_live: bool = game.boss.lasers.any(func(beam): return beam.get("triad",false) and beam.warning <= 0 and beam.duration < beam.peak_duration-0.6)
 		if e.windup > 0 and e.windup < 0.3: key = "windup-%d" % e.phase
+		elif e.beam_gap > 0.6: key = "rear-%d" % e.phase
 		elif e.launch_flash > 0.4: key = "plume-%d" % e.phase
 		elif not e.cages.is_empty() and e.cages[0].t < 0.3: key = "cage-%d" % e.phase
 		elif e.closing.any(func(c): return c.t < c.total*0.5): key = "closing"

@@ -101,7 +101,9 @@ func run() -> void:
 	var row: int = int(floor((game.player.y-e.shell_origin.y)/wyrm.SHELL_CELL))
 	check(first_wave.all(func(s): return int(floor((s.p.y-24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row or int(floor((s.p.y+24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row),"the first wave leaves the player's row open to run along")
 	check(shells.all(func(s): return s.impact >= s.warn-0.001 or s.wave == 0) and first_wave.all(func(s): return s.impact >= 1.9),"every shell is marked before it lands")
-	check(game.boss.lasers.any(func(b): return b.get("chase",false) and b.turn_rate >= 0.38),"a chasing beam joins the bombardment")
+	check(e.rear > 0.9 and not game.boss.lasers.any(func(b): return b.get("chase",false)),"the head rears to spit, and rests before the chasing beam")
+	step(game,wyrm.BEAM_GAP+0.05)
+	check(e.rear < 0.05 and game.boss.lasers.any(func(b): return b.get("chase",false) and b.turn_rate <= 0.45),"a chasing beam joins the bombardment once the head is down")
 
 	# The form cannot be skipped by one large hit; the breach follows.
 	game.hurt_enemy(e,e.max_hp,Vector2.RIGHT,0,true)

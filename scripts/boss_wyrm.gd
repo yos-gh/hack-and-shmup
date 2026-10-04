@@ -57,7 +57,11 @@ const SHELL_CELL := 180.0
 const SHELL_WARNING := 2.0
 const SHELL_FOLLOW := 1.3
 # The head rears and spits a column of slag at the ceiling before the shells fall.
-const WINDUP := 1.0
+const WINDUP := 1.2
+# After the column the head sinks back before the chasing beam: a beat of rest.
+const BEAM_GAP := 1.0
+# How far the head rears up off the floor (drawn up the screen) to spit at the ceiling.
+const REAR_LIFT := 170.0
 # Shock cage: a closed double ring of shots that shrinks onto the player. Only
 # a Shockwave (which clears shots) or a gap behind cover gets through it.
 const CAGE_WARNING := 0.9
@@ -129,6 +133,8 @@ func setup(data, e: Dictionary) -> void:
 	e["shells"] = []
 	e["launch_flash"] = 0.0
 	e["windup"] = 0.0
+	e["beam_gap"] = 0.0
+	e["rear"] = 0.0
 	e["barrage_queue"] = []
 	e["shell_cells"] = []
 	e["shell_grid"] = []
@@ -185,6 +191,10 @@ func ink(e: Dictionary) -> Color:
 
 func core_ink(e: Dictionary) -> Color:
 	return CORE_INK.lerp(RAGE_INK,0.35) if frenzied(e) else CORE_INK
+
+# Where the head is drawn: lifted up the screen while it rears for the bombardment.
+func head_lift(e: Dictionary) -> Vector2:
+	return Vector2(0,-REAR_LIFT*e.get("rear",0.0))
 
 func muzzle(e: Dictionary) -> Vector2:
 	return e.p+e.face*MUZZLE
@@ -503,13 +513,13 @@ func start_head_beam(boss, game, e: Dictionary, chase: bool) -> void:
 	else: game.enemy_attack_cue("triad_charge",e.p,false)
 	var warning: float = CHASE_WARNING if chase else LASER_WARNING
 	var duration: float = CHASE_DURATION if chase else beam_duration(e)
-	var turn: float = ((0.38+0.05*e.tier)*(1.12 if rage(e) else 1.0)) if chase else ((0.31+0.06*e.tier)*(1.2 if rage(e) else 1.0))
+	var turn: float = ((0.28+0.04*e.tier)*(1.1 if rage(e) else 1.0)) if chase else ((0.31+0.06*e.tier)*(1.2 if rage(e) else 1.0))
 	var origin: Vector2 = e.p+heading*MUZZLE
 	boss.lasers.append({"owner":e,"a":origin,"b":game.attack_end(origin,heading,1800),"heading":heading,
 		"warning":warning,"warning_total":warning,"duration":duration,"peak_duration":duration,"triad":true,"chase":chase,
 		"turn_rate":turn,"width":46.0 if chase else 110.0,"muzzle":MUZZLE,"hue":Color("ffb3c4") if chase else Color("bfe2ff"),"charge_radius":34.0,
 		# While charging, the beam swings onto the player before it locks and fires.
-		"pre_track":0.6 if chase else 0.8})
+		"pre_track":0.3 if chase else 0.8})
 
 func end_lasers(boss, e: Dictionary) -> void:
 	for beam in boss.lasers:
@@ -570,15 +580,23 @@ func plan_wave(game, e: Dictionary, wave: int, warn: float) -> void:
 	if wave > 0: game.enemy_attack_cue("boss_mark",game.player,false)
 
 func advance_shells(boss, game, e: Dictionary, delta: float) -> void:
+	e.rear = 0.0
 	if e.windup > 0:
 		e.windup -= delta
+		e.rear = smooth(clampf(1.0-e.windup/WINDUP,0,1))
 		if e.windup <= 0:
-			# The slag column leaves the head; the chasing beam follows it.
+			# The reared head spits the slag column at the ceiling.
 			e.launch_flash = 0.8
+			e.beam_gap = BEAM_GAP
+			e.rear = 1.0
 			game.presentation.kick(0.6)
 			game.presentation.ripple(e.p,2.0)
 			game.enemy_attack_cue("wyrm_plume",e.p,false)
-			start_head_beam(boss,game,e,true)
+	elif e.beam_gap > 0:
+		# Hold the pose a moment, lower the head, then the chasing beam.
+		e.beam_gap -= delta
+		e.rear = smooth(clampf(e.beam_gap/BEAM_GAP*1.6,0,1))
+		if e.beam_gap <= 0: start_head_beam(boss,game,e,true)
 	for item in e.barrage_queue:
 		item.t -= delta
 		if item.t <= 0: plan_wave(game,e,item.wave,item.warn)
@@ -734,7 +752,7 @@ func begin_exposed(e: Dictionary) -> void:
 		"barrage":
 			e.tail_cd = 0.8
 			e.turret_cd = 1.5
-			e.state_time = 1.4+WINDUP+CHASE_WARNING+CHASE_DURATION+0.5
+			e.state_time = 1.4+WINDUP+BEAM_GAP+CHASE_WARNING+CHASE_DURATION+0.5
 
 func advance_burrow(boss, game, e: Dictionary, delta: float) -> void:
 	if e.head_hole == Vector2.INF: pick_holes(game,e)
@@ -837,6 +855,8 @@ func begin_breach(boss, game, e: Dictionary) -> void:
 	e.barrage_queue.clear()
 	e.cages.clear()
 	e.windup = 0.0
+	e.beam_gap = 0.0
+	e.rear = 0.0
 	end_lasers(boss,e)
 	# The beast drops every shot in flight as it tears loose; a clean start.
 	for b in game.bullets:
@@ -932,7 +952,7 @@ func enter_mode(boss, game, e: Dictionary, mode: String) -> void:
 		"barrage":
 			end_lasers(boss,e)
 			plan_barrage(game,e)
-			e.move_time = WINDUP+CHASE_WARNING+CHASE_DURATION+0.4
+			e.move_time = WINDUP+BEAM_GAP+CHASE_WARNING+CHASE_DURATION+0.4
 			e.barrage_cd = (10.0 if frenzied(e) else (14.0 if rage(e) else 17.0))*e.attack_scale
 
 func charge_speed(e: Dictionary) -> float:
