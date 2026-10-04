@@ -680,10 +680,13 @@ func set_depth_view(enabled: bool) -> void:
 
 
 
+# Pause pushes the stats down to make room for the resume password.
+const PAUSE_STATS_SHIFT := 52.0
+
 func menu_origin_y(screen: Vector2, is_pause: bool) -> float:
 	var top := -65.0 if is_pause else -165.0
 	# Include both rows of player stats when centering the complete menu.
-	var bottom := 362.0
+	var bottom := 362.0+PAUSE_STATS_SHIFT if is_pause else 362.0
 	return (screen.y - top - bottom) * 0.5
 
 func upgrade_card_rect(screen: Vector2, index: int) -> Rect2:

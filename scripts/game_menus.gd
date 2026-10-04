@@ -188,7 +188,7 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 		var column := i if i < 3 else i-3
 		var width := minf(230.0,(screen.x-48.0-(columns-1)*12)/columns)
 		var x := (screen.x-columns*width-(columns-1)*12)*0.5+column*(width+12)
-		var top: float = y+170 if i < 3 else y+278
+		var top: float = (y+170 if i < 3 else y+278)+(game.PAUSE_STATS_SHIFT if is_pause else 0.0)
 		var height := 100.0 if i < 3 else 84.0
 		_plate(Rect2(x,top,width,height))
 		_label(Rect2(x+6,top+5,width-12,22),stats[i].name,12,Color("8194aa"))
@@ -198,12 +198,12 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 # The resume password for the floor in progress; clicking it copies the text.
 func _password(screen: Vector2, y: float) -> void:
 	if game.practice.active:
-		_label(Rect2(24,y+104,screen.x-48,40),"PRACTICE RUNS HAVE NO PASSWORD",14,Color("8194aa"))
+		_label(Rect2(24,y+132,screen.x-48,40),"PRACTICE RUNS HAVE NO PASSWORD",14,Color("8194aa"))
 		return
 	var password: String = preload("res://scripts/run_password.gd").encode(game.session.run)
-	_label(Rect2(24,y+96,screen.x-48,20),"COPIED TO CLIPBOARD" if password_copied else "PASSWORD FOR THIS FLOOR / CLICK TO COPY",12,Color("63f5ce") if password_copied else Color("8194aa"))
+	_label(Rect2(24,y+117,screen.x-48,20),"COPIED TO CLIPBOARD" if password_copied else "PASSWORD FOR THIS FLOOR / CLICK TO COPY",12,Color("63f5ce") if password_copied else Color("8194aa"))
 	var width := minf(640.0,screen.x-48.0)
-	var button := _button(Rect2((screen.x-width)*0.5,y+118,width,42),password,func():
+	var button := _button(Rect2((screen.x-width)*0.5,y+140,width,42),password,func():
 		DisplayServer.clipboard_set(password)
 		password_copied = true
 		sync())
