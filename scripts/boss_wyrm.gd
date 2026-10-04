@@ -503,13 +503,13 @@ func start_head_beam(boss, game, e: Dictionary, chase: bool) -> void:
 	else: game.enemy_attack_cue("triad_charge",e.p,false)
 	var warning: float = CHASE_WARNING if chase else LASER_WARNING
 	var duration: float = CHASE_DURATION if chase else beam_duration(e)
-	var turn: float = ((0.38+0.05*e.tier)*(1.12 if rage(e) else 1.0)) if chase else ((0.34+0.06*e.tier)*(1.2 if rage(e) else 1.0))
+	var turn: float = ((0.38+0.05*e.tier)*(1.12 if rage(e) else 1.0)) if chase else ((0.31+0.06*e.tier)*(1.2 if rage(e) else 1.0))
 	var origin: Vector2 = e.p+heading*MUZZLE
 	boss.lasers.append({"owner":e,"a":origin,"b":game.attack_end(origin,heading,1800),"heading":heading,
 		"warning":warning,"warning_total":warning,"duration":duration,"peak_duration":duration,"triad":true,"chase":chase,
 		"turn_rate":turn,"width":46.0 if chase else 110.0,"muzzle":MUZZLE,"hue":Color("ffb3c4") if chase else Color("bfe2ff"),"charge_radius":34.0,
 		# While charging, the beam swings onto the player before it locks and fires.
-		"pre_track":1.2 if chase else 1.6})
+		"pre_track":0.6 if chase else 0.8})
 
 func end_lasers(boss, e: Dictionary) -> void:
 	for beam in boss.lasers:
