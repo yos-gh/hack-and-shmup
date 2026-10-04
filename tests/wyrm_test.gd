@@ -78,8 +78,14 @@ func run() -> void:
 	var link: Dictionary = e.segments.filter(func(s): return s.z >= 0)[0]
 	check(wyrm.intercept_bullet(game,{"p":link.p,"damage":1.0,"hostile":false}),"armoured links stop player shots")
 	check(not wyrm.intercept_bullet(game,{"p":e.p,"damage":1.0,"hostile":false}),"shots reach the core")
+	check(wyrm.touches(e,e.hole+Vector2(0,20),game.PLAYER_HIT_RADIUS) or e.segments.any(func(s): return s.z >= 0 and s.p.distance_to(e.hole) < s.radius),"an open hole is deadly to step into")
 	check(until(game,func(): return e.state == "dive",12.0),"the wyrm dives after its pattern")
-	check(until(game,func(): return e.state == "under",6.0) and e.rise == 1 and e.segments.all(func(s): return s.z < 0),"the whole body sinks before the next breach")
+	check(until(game,func(): return e.state == "under",6.0) and not e.closing.is_empty() and wyrm.touches(e,e.closing[0].p,game.PLAYER_HIT_RADIUS),"a hole stays deadly while it fills in")
+	var filled: Vector2 = e.closing[0].p
+	for pit in e.closing: pit.t = 0.001
+	wyrm.advance_closing(e,0.01)
+	check(e.state == "under" and not wyrm.touches(e,filled,game.PLAYER_HIT_RADIUS),"a filled hole is safe ground again")
+	check(e.state == "under" and e.rise == 1 and e.segments.all(func(s): return s.z < 0),"the whole body sinks before the next breach")
 	check(until(game,func(): return e.state == "exposed",4.0) and e.pattern == "rings","the second breach fires drifting rings")
 	step(game,2.0)
 	check(e.volleys.any(func(v): return v.kind == "ring") or game.bullets.size() > 60,"rings fill the arena")
@@ -102,6 +108,9 @@ func run() -> void:
 	check(first_wave.all(func(s): return int(floor((s.p.y-24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row or int(floor((s.p.y+24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row),"the first wave leaves the player's row open to run along")
 	check(shells.all(func(s): return s.impact >= s.warn-0.001 or s.wave == 0) and first_wave.all(func(s): return s.impact >= 1.9),"every shell is marked before it lands")
 	check(e.rear > 0.9 and not game.boss.lasers.any(func(b): return b.get("chase",false)),"the head rears to spit, and rests before the chasing beam")
+	var guarded_hp: float = e.hp
+	game.hurt_enemy(e,1,Vector2.LEFT)
+	check(e.guarded and game.enemy_bullet_radius(e) == 0.0 and e.hp == guarded_hp,"the reared core is out of reach")
 	step(game,wyrm.BEAM_GAP+0.05)
 	check(e.rear < 0.05 and game.boss.lasers.any(func(b): return b.get("chase",false) and b.turn_rate <= 0.45),"a chasing beam joins the bombardment once the head is down")
 

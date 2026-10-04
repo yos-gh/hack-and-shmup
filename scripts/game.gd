@@ -326,7 +326,7 @@ func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
 
 func enemy_bullet_radius(e: Dictionary) -> float:
-	if e.get("submerged",false): return 0.0
+	if e.get("submerged",false) or e.get("guarded",false): return 0.0
 	return boss.controller(boss_variant).CORE if e.get("kind",0) == Catalog.Enemy.BOSS else BULLET_HIT_RADIUS
 
 func rebuild_enemy_buckets() -> void:

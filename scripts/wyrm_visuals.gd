@@ -276,13 +276,14 @@ static func draw(boss, game) -> void:
 		if e.submerged: continue
 		# The weak point: the core and its plates. Visor lamps and the throat
 		# brighten while the head is charging a beam.
+		# The core and plates ride up with a rearing head (out of reach meanwhile).
 		var lift: Vector2 = boss.head_lift(e)
-		# While the head rears, the core and plates stay where shots still find
-		# them, dimmed so the raised head reads clearly above.
-		var dim: float = 1.0-0.65*e.rear
-		draw_shields(boss,game,e,Color(boss.core_ink(e),dim))
-		if dim > 0.6: BossFx.energy_core(game,e.p,22,boss.core_ink(e),clock,angry)
-		else: game.draw_arc(e.p,boss.CORE,0,TAU,32,Color(boss.core_ink(e),0.5),2,true)
+		var raised: Dictionary = e
+		if lift != Vector2.ZERO:
+			raised = e.duplicate()
+			raised.p = e.p+lift
+		draw_shields(boss,game,raised,boss.core_ink(e))
+		BossFx.energy_core(game,e.p+lift,22,boss.core_ink(e),clock,angry)
 		var face: Vector2 = e.face
 		var heat: float = 0.0
 		for beam in game.boss.lasers:

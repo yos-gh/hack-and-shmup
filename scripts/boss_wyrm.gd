@@ -140,6 +140,8 @@ func setup(data, e: Dictionary) -> void:
 	e["windup"] = 0.0
 	e["beam_gap"] = 0.0
 	e["rear"] = 0.0
+	# While the head rears, the core rides up with it out of reach.
+	e["guarded"] = false
 	e["barrage_queue"] = []
 	e["shell_cells"] = []
 	e["shell_grid"] = []
@@ -250,6 +252,9 @@ func head_outline(e: Dictionary) -> PackedVector2Array:
 	return outline
 
 func touches(e: Dictionary, player: Vector2, radius: float) -> bool:
+	# Open holes are deadly until they have filled back in.
+	for pit in Visual.pits(self,e):
+		if player.distance_to(pit[0]) < pit[1]*0.85+radius: return true
 	if e.head_v >= 0.5 and e.p.distance_to(player) < 240+radius:
 		var outline := head_outline(e)
 		if Geometry2D.is_point_in_polygon(player,outline): return true
@@ -282,7 +287,7 @@ func damage_plate(game, e: Dictionary, k: int, damage: float) -> void:
 func intercept_bullet(game, bullet: Dictionary) -> bool:
 	for e in game.enemies:
 		if not e.has("segments") or e.hp <= 0: continue
-		if not e.submerged:
+		if not e.submerged and not e.guarded:
 			var offset: Vector2 = bullet.p-e.p
 			if absf(offset.length()-RING) <= 12:
 				var k := plate_slot(e,offset)
@@ -297,13 +302,14 @@ func intercept_bullet(game, bullet: Dictionary) -> bool:
 	return false
 
 func block_damage(game, e: Dictionary, damage: float, direction: Vector2) -> bool:
+	if e.guarded: return true
 	var k := plate_slot(e,-direction)
 	if not plate_up(e,k): return false
 	damage_plate(game,e,k,damage)
 	return true
 
 func shock(game, e: Dictionary, damage: float) -> void:
-	if e.submerged: return
+	if e.submerged or e.guarded: return
 	var incoming: Vector2 = game.player.direction_to(e.p)
 	var exposed: bool = not plate_up(e,plate_slot(e,-incoming))
 	for k in range(SLOTS):
@@ -315,7 +321,7 @@ func shock(game, e: Dictionary, damage: float) -> void:
 		game.hurt_enemy(e,damage,incoming,0,true)
 
 func lance(game, e: Dictionary, rays: Array, direction: Vector2, damage: float) -> void:
-	if e.submerged: return
+	if e.submerged or e.guarded: return
 	var touched := {}
 	var core_hit := false
 	# Like the Citadel: every lane resolves against the pre-shot plates, so one
@@ -1132,6 +1138,7 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 	advance_volleys(game,e,delta)
 	advance_shells(boss,game,e,delta)
 	advance_cages(game,e,delta)
+	e.guarded = e.rear > 0.0
 	e.dir = e.face
 	return Vector2.ZERO
 
