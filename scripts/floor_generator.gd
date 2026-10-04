@@ -23,7 +23,10 @@ func generate_from_state(settings: Settings, random_state: int) -> Data:
 	data.boss_floor = settings.depth % 5 == 0
 	if data.boss_floor:
 		if settings.boss_choice >= 0:
-			data.boss_variant = clampi(settings.boss_choice,0,2)
+			data.boss_variant = clampi(settings.boss_choice,0,3)
+		elif settings.depth % 25 == 0:
+			# Every 25th floor belongs to the Abyss Wyrm instead of a regular boss.
+			data.boss_variant = 3
 		elif settings.previous_boss < 0:
 			data.boss_variant = data.rng.randi_range(0,2)
 		else:

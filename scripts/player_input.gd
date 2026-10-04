@@ -122,6 +122,16 @@ func gamepad_accept(event: InputEvent) -> bool:
 
 # Event routing keeps the original context priority and one-shot semantics.
 func handle_event(game, event: InputEvent) -> void:
+	# Debug builds only (the editor and debug exports; release exports ignore
+	# these): F8 toggles invincibility, F9 sends the Abyss Wyrm to its second form.
+	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo and not game.title_screen:
+		if event.keycode == KEY_F8:
+			game.debug_invincible = not game.debug_invincible
+			game.queue_redraw()
+			return
+		if event.keycode == KEY_F9 and game.boss_floor and game.boss_variant == 3:
+			game.boss.wyrm.skip_form(game)
+			return
 	if game.view_comparison and event is InputEventKey and event.pressed and not event.echo and event.is_action_pressed("compare_view"):
 		game.set_depth_view(not game.depth_enabled)
 		return

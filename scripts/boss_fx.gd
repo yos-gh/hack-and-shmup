@@ -92,7 +92,7 @@ static func impact(game, p: Vector2, radius: float, age: float, ink: Color, dura
 
 # Hostile beam: a hollow, flickering lane while charging, then a layered
 # hot beam with muzzle flare and a sparking contact point.
-static func beam(game, a: Vector2, b: Vector2, width: float, ink: Color, charging: float, flash: float, clock: float) -> void:
+static func beam(game, a: Vector2, b: Vector2, width: float, ink: Color, charging: float, flash: float, clock: float, charge_radius: float = -1.0) -> void:
 	var direction := a.direction_to(b)
 	if direction.is_zero_approx(): return
 	var side := direction.orthogonal()*width*0.5
@@ -107,7 +107,7 @@ static func beam(game, a: Vector2, b: Vector2, width: float, ink: Color, chargin
 		while d < length:
 			game.draw_line(a+direction*d,a+direction*minf(d+16,length),Color(ink.lerp(Color.WHITE,0.4),0.25+0.4*t),1.2,true)
 			d += 40.0
-		charge(game,a,t,ink,maxf(22,width))
+		charge(game,a,t,ink,charge_radius if charge_radius > 0 else maxf(22,width))
 		return
 	var shimmer := 0.85+0.15*sin(clock*47.0)
 	# Broad beams stay translucent so bullets and the player remain readable.

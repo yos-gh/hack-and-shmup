@@ -42,6 +42,10 @@ const MIX := {
 	# 3 dB with distance. The hammer is the boss's signature hit: the impact sits near kill, and the launch
 	# rises over the boss_mark it shares a moment with.
 	"citadel_hammer_launch": 1.0, "citadel_hammer_impact": 3.0,
+	# Abyss Wyrm: the rumble warns of the next breach; the breach itself is a heavy hit like the hammer.
+	"wyrm_rumble": -2.0, "wyrm_breach": 2.0,
+	# The bombardment's slag column and landing chunks sit with the hammer; the cage is a warning.
+	"wyrm_plume": 1.0, "wyrm_slag": 0.0, "wyrm_cage": -4.0,
 }
 const DUCK := 6.0
 # Tracks are mastered to about -16 LUFS (titles and the card screen quieter); this places them under the effects.

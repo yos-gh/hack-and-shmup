@@ -73,6 +73,8 @@ var floor_revision := 0
 var depth_view: Node
 var depth_enabled := false
 var view_comparison := false
+# Debug builds only: F8 makes the player ignore hits (see PlayerInput).
+var debug_invincible := false
 var view_pitch_degrees := 25.0
 var rooms: Array[Rect2i] = []
 var discovered: Dictionary = {}
@@ -211,12 +213,7 @@ func enemy_health(kind: int, depth: int) -> float:
 
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.get("arrival",0.0) > 0: return false
-	if e.kind == Catalog.Enemy.BOSS and boss_variant == 0:
-		return boss.fortress.touches(e,player,PLAYER_HIT_RADIUS)
-	if e.kind == Catalog.Enemy.BOSS and boss_variant == 1:
-		return boss.bastion.touches(e,player,PLAYER_HIT_RADIUS)
-	if e.kind == Catalog.Enemy.BOSS and boss_variant == 2:
-		return boss.triad.touches(e,player,PLAYER_HIT_RADIUS)
+	if e.kind == Catalog.Enemy.BOSS: return boss.controller(boss_variant).touches(e,player,PLAYER_HIT_RADIUS)
 	if e.kind == Catalog.Enemy.SNIPER: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
 	var half_size := 12.0 if e.kind == Catalog.Enemy.SHIELD else 10.0
 	var nearest: Vector2 = player.clamp(e.p-Vector2.ONE*half_size,e.p+Vector2.ONE*half_size)
@@ -289,7 +286,7 @@ func fire_sub(aim: Vector2) -> void:
 			for e in enemies:
 				if e.has("plates"):
 					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,radius): continue
-					(boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).shock(self,e,power*definition.damage)
+					boss.controller(boss_variant).shock(self,e,power*definition.damage)
 					continue
 				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
 				if e.p.distance_to(player) <= radius + body_radius and attack_reaches(player, e.p):
@@ -303,7 +300,7 @@ func fire_sub(aim: Vector2) -> void:
 			for e in enemies:
 				if e.has("plates"):
 					if boss_variant == 1 and boss.bastion.orb_absorbs_lance(self,rays): continue
-					(boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).lance(self,e,rays,direction,power*definition.damage)
+					boss.controller(boss_variant).lance(self,e,rays,direction,power*definition.damage)
 					continue
 				if LanceTrace.hits(self,e,rays,direction):
 					hurt_enemy(e,power*definition.damage,direction,definition.knockback)
@@ -329,6 +326,7 @@ func enemy_bucket(p: Vector2) -> Vector2i:
 	return Vector2i(floor(p.x / ENEMY_BUCKET_SIZE), floor(p.y / ENEMY_BUCKET_SIZE))
 
 func enemy_bullet_radius(e: Dictionary) -> float:
+	if e.get("submerged",false) or e.get("guarded",false): return 0.0
 	return boss.controller(boss_variant).CORE if e.get("kind",0) == Catalog.Enemy.BOSS else BULLET_HIT_RADIUS
 
 func rebuild_enemy_buckets() -> void:
@@ -417,17 +415,25 @@ func burst(p: Vector2, color: Color, count: int = 8) -> void:
 
 func hurt_enemy(e: Dictionary, damage: float, direction: Vector2, knockback: float = 180.0, armor_checked: bool = false) -> void:
 	if e.hp <= 0: return
-	if e.kind == Catalog.Enemy.BOSS and not armor_checked and (boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).block_damage(self,e,damage,direction): return
+	if e.kind == Catalog.Enemy.BOSS and not armor_checked and boss.controller(boss_variant).block_damage(self,e,damage,direction): return
 	if e.kind != Catalog.Enemy.BOSS: e.push += direction * knockback
 	if e.kind == Catalog.Enemy.SHIELD and direction.dot(e.dir) < -0.35:
 		combat_events.enemy_hit.emit(e.p,0.0,true,false)
 		return
+	# A multi-form boss cannot be pushed past the end of its current form.
+	if e.has("hp_floor"):
+		damage = minf(damage,maxf(0.0,e.hp-e.hp_floor))
+		if damage <= 0:
+			combat_events.enemy_hit.emit(e.p,0.0,true,false)
+			return
 	e.hp -= damage
 	var killed: bool = e.hp <= 0
 	if killed and not boss_floor and Catalog.is_mob(e.kind):
 		time_left += Catalog.ENEMIES[e.kind].time_bonus
 	combat_events.enemy_hit.emit(e.p,damage,false,killed)
-	if killed and e.kind == Catalog.Enemy.BOSS: combat_events.boss_destroyed.emit(e.p,boss.COLORS[boss_variant])
+	if killed and e.kind == Catalog.Enemy.BOSS:
+		if boss.controller(boss_variant).has_method("on_destroyed"): boss.controller(boss_variant).on_destroyed(self,e)
+		combat_events.boss_destroyed.emit(e.p,boss.COLORS[boss_variant])
 
 
 func die(reason: String = "HIT") -> void:
@@ -575,7 +581,7 @@ func _physics_process(delta: float) -> void:
 						absorbed = true
 						break
 					if absorbed: break
-				if boss_floor and (boss.bastion if boss_variant == 1 else (boss.triad if boss_variant == 2 else boss.fortress)).intercept_bullet(self,b):
+				if boss_floor and boss.controller(boss_variant).intercept_bullet(self,b):
 					b.life = 0
 					break
 				var target := bullet_target(b.p)

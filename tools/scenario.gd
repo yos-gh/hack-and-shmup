@@ -3,14 +3,15 @@ extends SceneTree
 # Run with --script res://tools/scenario.gd -- --scenario=normal19 (or triad45).
 # --frames=0 enables ordinary interactive play; otherwise fixed 60 Hz input.
 # --floor=23 starts any depth from its normal spawn instead of a named scenario;
-# --boss=0..2 picks Citadel/Bastion/Triad on boss floors (default: seeded pick).
+# --boss=0..3 picks Citadel/Bastion/Triad/Wyrm on boss floors (default: seeded pick).
+# --form=2 starts the Abyss Wyrm at its second form.
 const Scenario = preload("res://tools/dev_scenario.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "25", "floor": "", "boss": "-1"}
+	var options := {"scenario": "normal19", "seed": "19045", "weapon": "1", "frames": "3600", "output": "user://scenario-report.json", "capture": "", "view": "2d", "tilt": "25", "floor": "", "boss": "-1", "form": "1"}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=", true, 1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -22,14 +23,15 @@ func run() -> void:
 		printerr("Expected scenario=normal11|normal19|citadel5|bastion15|triad45, integer seed, weapon=0..2, frames>=0, tilt=0..40")
 		quit(2)
 		return
-	if not options.floor.is_empty() and (not options.floor.is_valid_int() or int(options.floor) < 1) or not options.boss.is_valid_int() or int(options.boss) < -1 or int(options.boss) > 2:
-		printerr("Expected floor>=1 and boss=-1..2")
+	if not options.floor.is_empty() and (not options.floor.is_valid_int() or int(options.floor) < 1) or not options.boss.is_valid_int() or int(options.boss) < -1 or int(options.boss) > 3:
+		printerr("Expected floor>=1 and boss=-1..3")
 		quit(2)
 		return
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	if options.floor.is_empty(): Scenario.configure(game, options.scenario, int(options.seed), int(options.weapon))
 	else: Scenario.configure_floor(game, int(options.floor), int(options.seed), int(options.weapon), int(options.boss))
+	if options.form == "2" and game.boss_floor and game.boss_variant == 3: game.boss.wyrm.skip_form(game)
 	game.view_comparison = true
 	game.set_view_pitch(float(options.tilt))
 	game.set_depth_view(options.view == "3d")

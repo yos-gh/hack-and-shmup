@@ -32,7 +32,7 @@ Use the left stick or D-pad to select menu items, then A / Cross or LB to confir
 - **Shockwave** — Push enemies back and clear nearby bullets.
 - **Lance** — A piercing beam.
 
-Face one of three bosses every five floors, with no time limit. Boss practice is available from the title screen, with sound and fullscreen controls.
+Face one of three bosses every five floors, with no time limit. Every 25th floor, the Abyss Wyrm rises from the floor instead. Boss practice is available from the title screen, with sound and fullscreen controls.
 
 ## Run and build
 

@@ -18,10 +18,13 @@ func run() -> void:
 		check(game.boss_floor == (depth%5 == 0),"bosses replace every fifth floor only")
 		if game.boss_floor:
 			seen[game.boss_variant] = true
-			check(game.boss_variant in [0,1,2] and game.enemies.size() == 1 and game.enemies[0].has("plates"),"normal selection contains only shielded large bosses")
-	check(seen.size() == 3,"normal runs select all three large bosses")
-	check(game.boss.NAMES.size() == 3,"catalog has no retired bosses")
-	for variant in range(3):
+			if depth%25 == 0:
+				check(game.boss_variant == 3 and game.enemies.size() == 1 and game.enemies[0].has("segments"),"every 25th floor belongs to the Abyss Wyrm")
+			else:
+				check(game.boss_variant in [0,1,2] and game.enemies.size() == 1 and game.enemies[0].has("plates"),"normal selection contains only shielded large bosses")
+	check(seen.size() == 4,"normal runs select all three large bosses and the Abyss Wyrm")
+	check(game.boss.NAMES.size() == 4,"catalog has no retired bosses")
+	for variant in range(4):
 		for depth in [5,25,50,100]:
 			game.floor_number = depth
 			game.new_floor(variant)
@@ -38,6 +41,7 @@ func run() -> void:
 			game.restart_attempt()
 			check(game.enemies == game.initial_enemies and game.bullets.is_empty() and game.boss.lasers.is_empty(),"retry restores core, shields and attacks")
 			var e: Dictionary = game.enemies[0]
+			if e.has("hp_floor"): e.hp_floor = 0.0 # skip straight past the Wyrm's first form
 			game.hurt_enemy(e,e.hp+1,Vector2.RIGHT,0,true)
 			game.grace = 999
 			game._physics_process(1.0/60)
@@ -48,5 +52,5 @@ func run() -> void:
 			game.upgrade(0)
 			check(not game.boss_floor and game.stairs_unlocked and game.time_left > 0,"next floor returns to normal progression")
 	game.free()
-	if failures == 0: print("PASS: three large bosses, five-floor cadence, safe entry, retry, victory and progression at 5/25/50/100F")
+	if failures == 0: print("PASS: three large bosses plus the 25-floor Abyss Wyrm, five-floor cadence, safe entry, retry, victory and progression at 5/25/50/100F")
 	quit(1 if failures else 0)

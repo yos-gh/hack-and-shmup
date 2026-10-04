@@ -90,6 +90,7 @@ func draw(game, screen: Vector2) -> void:
 	if game.boss_floor and game.boss_variant == 0: game.boss.fortress.draw(game)
 	if game.boss_floor and game.boss_variant == 1: game.boss.bastion.draw(game)
 	if game.boss_floor and game.boss_variant == 2: game.boss.triad.draw(game)
+	if game.boss_floor and game.boss_variant == 3: game.boss.wyrm.draw(game)
 	for e in game.enemies:
 		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
 		var p: Vector2 = e.p
@@ -458,11 +459,11 @@ func draw_lasers(game) -> void:
 	for beam in game.boss.lasers:
 		if beam.owner.hp <= 0: continue
 		var triad: bool = game.boss_variant == 2
-		var hue := Color("ffd9a8") if triad else Color("ff5a52")
+		var hue: Color = beam.get("hue",Color("ffd9a8") if triad else Color("ff5a52"))
 		var charging := -1.0
-		if beam.warning > 0: charging = 1.0-beam.warning/(1.15 if triad else 0.95)
+		if beam.warning > 0: charging = 1.0-beam.warning/beam.get("warning_total",1.15 if triad else 0.95)
 		var flash: float = clampf((beam.duration-(beam.peak_duration-0.12))/0.12,0.0,1.0) if beam.warning <= 0 else 0.0
-		BossFx.beam(game,beam.a,beam.b,float(beam.get("width",14.0)),hue,charging,flash,clock)
+		BossFx.beam(game,beam.a,beam.b,float(beam.get("width",14.0)),hue,charging,flash,clock,beam.get("charge_radius",-1.0))
 
 func draw_particles(game) -> void:
 	if particle_batch == null:

@@ -13,6 +13,13 @@ const CAPPED_FALLBACK := [0,1,3,2]
 # floors are otherwise too fast to control. Cards that would pass it fall back
 # to damage and fire rate.
 const TEST_MOVE_SPEED_CAP := 635.0
+# Boss cards: Citadel, Bastion, Triad and the Abyss Wyrm. Buttons after them are
+# FLOOR −, FLOOR +, START and BACK.
+const BOSSES := 4
+const MINUS := BOSSES
+const PLUS := BOSSES+1
+const START := BOSSES+2
+const BACK := BOSSES+3
 
 func open(game) -> void:
 	game.return_to_title()
@@ -42,30 +49,29 @@ static func auto_allowed(run, kind: int) -> bool:
 
 func button(screen: Vector2, index: int) -> Rect2:
 	var center := screen*0.5-Vector2(0,24)
-	var width := minf(300,(screen.x-100)/3)
-	if index in [0,1,2]:
-		var slot: int = index
-		return Rect2(Vector2((screen.x-width*3-32)*0.5+(slot%3)*(width+16),center.y-65),Vector2(width,72))
-	if index == 3: return Rect2(center+Vector2(-180,66),Vector2(64,48))
-	if index == 4: return Rect2(center+Vector2(116,66),Vector2(64,48))
-	if index == 5: return Rect2(center+Vector2(-160,145),Vector2(320,52))
+	var width := minf(260,(screen.x-100-16*(BOSSES-1))/BOSSES)
+	if index < BOSSES:
+		return Rect2(Vector2((screen.x-width*BOSSES-16*(BOSSES-1))*0.5+index*(width+16),center.y-65),Vector2(width,72))
+	if index == MINUS: return Rect2(center+Vector2(-180,66),Vector2(64,48))
+	if index == PLUS: return Rect2(center+Vector2(116,66),Vector2(64,48))
+	if index == START: return Rect2(center+Vector2(-160,145),Vector2(320,52))
 	return Rect2(center+Vector2(-160,212),Vector2(320,40))
 
 func activate(game, index: int) -> void:
 	if not selecting: return
-	if index < 0 or index > 6: return
-	if index < 3: variant = index
-	elif index == 3: depth = maxi(depth-5,5)
-	elif index == 4: depth = mini(depth+5,100)
-	elif index == 5: start(game)
+	if index < 0 or index > BACK: return
+	if index < BOSSES: variant = index
+	elif index == MINUS: depth = maxi(depth-5,5)
+	elif index == PLUS: depth = mini(depth+5,100)
+	elif index == START: start(game)
 	else: game.return_to_title()
 	game.queue_redraw()
 
 func input(game, event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.is_action_pressed("back"): game.return_to_title()
-		elif event.is_action_pressed("practice_left"): variant = (variant+2)%3
-		elif event.is_action_pressed("practice_right"): variant = (variant+1)%3
+		elif event.is_action_pressed("practice_left"): variant = (variant+BOSSES-1)%BOSSES
+		elif event.is_action_pressed("practice_right"): variant = (variant+1)%BOSSES
 		elif event.is_action_pressed("practice_up"): depth = mini(depth+5,100)
 		elif event.is_action_pressed("practice_down"): depth = maxi(depth-5,5)
 		elif event.is_action_pressed("confirm"): start(game)
@@ -74,7 +80,7 @@ func input(game, event: InputEvent) -> void:
 			for i in range(3):
 				if event.is_action_pressed("select_%d" % (i+1)): variant = i
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		for i in range(7):
+		for i in range(BACK+1):
 			if not button(game.get_viewport_rect().size,i).has_point(event.position): continue
 			activate(game,i)
 			break
