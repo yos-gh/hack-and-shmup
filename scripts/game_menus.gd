@@ -21,10 +21,11 @@ func sync() -> void:
 	var screen: Vector2 = game.get_viewport_rect().size
 	var state := "title" if game.title_screen else ("pause" if game.paused else ("cards" if game.choosing else ""))
 	if game.practice.selecting: state = "practice"
+	if game.sound_mode.selecting: state = "sound"
 	if state.is_empty() and signature == [""]: return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	var focus_index := focused.get_index() if focused != null and focused.get_parent() == surface and signature.size() > 1 and signature[1] == state else -1
-	var next: Array = [screen,state,game.audio_on,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad]
+	var next: Array = [screen,state,game.audio_on,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad,game.sound_mode.track]
 	if state.is_empty(): next = [""]
 	if next == signature:
 		if not state.is_empty() and game.controls.using_gamepad:
@@ -45,6 +46,7 @@ func sync() -> void:
 	surface.add_child(background)
 	if state == "title": _title(screen)
 	elif state == "practice": _practice(screen)
+	elif state == "sound": _sound_mode(screen)
 	else: _battle_menu(screen,state == "pause")
 	if focus_index >= 0 and focus_index < surface.get_child_count():
 		surface.get_child(focus_index).grab_focus()
@@ -58,6 +60,7 @@ func _default_focus(state: String) -> void:
 	var buttons := _buttons()
 	if buttons.is_empty(): return
 	if state == "practice": buttons[game.practice.variant].grab_focus()
+	elif state == "sound": buttons[maxi(game.sound_mode.index_of(game.sound_mode.track),0)].grab_focus()
 	else: buttons[0].grab_focus()
 
 func _move_focus(direction: Vector2i) -> void:
@@ -65,7 +68,7 @@ func _move_focus(direction: Vector2i) -> void:
 	if buttons.is_empty(): return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	if focused == null or not buttons.has(focused):
-		_default_focus("practice" if game.practice.selecting else "")
+		_default_focus("practice" if game.practice.selecting else ("sound" if game.sound_mode.selecting else ""))
 		return
 	var side := SIDE_LEFT if direction.x < 0 else (SIDE_RIGHT if direction.x > 0 else (SIDE_TOP if direction.y < 0 else SIDE_BOTTOM))
 	var next: Control = focused.find_valid_focus_neighbor(side)
@@ -75,13 +78,13 @@ func _activate_focused() -> void:
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	if focused is Button and focused.get_parent() == surface: focused.pressed.emit()
 
-func _label(rect: Rect2, text: String, size: int = 18, ink: Color = Color.WHITE) -> Label:
+func _label(rect: Rect2, text: String, size: int = 18, ink: Color = Color.WHITE, align := HORIZONTAL_ALIGNMENT_CENTER) -> Label:
 	var label := Label.new()
 	label.position = rect.position
 	label.size = rect.size
 	label.text = text
 	label.add_theme_font_override("font",game.font if size>=20 else game.body_font)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.horizontal_alignment = align
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -159,15 +162,20 @@ func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 			button.theme_type_variation = "CardButton"
 			button.tooltip_text = definition.title + ": " + definition.description
 			cards.append(button)
+			# Icon and the title/value block sit side by side as one group centred in the card.
+			var value: String = definition.description.split(" ")[0]
+			var text_width := maxf(game.font.get_string_size(definition.title,HORIZONTAL_ALIGNMENT_LEFT,-1,20).x,game.font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,38).x)
+			var group := minf(64+16+ceilf(text_width),rect.size.x-32)
+			var left := rect.position+Vector2((rect.size.x-group)*0.5,0)
 			var icon = preload("res://scripts/menu_art.gd").new()
 			icon.icon = preload("res://scripts/visual_icons.gd").UPGRADES[game.choices[i]]
-			icon.position = rect.position+Vector2(12,32)
+			icon.position = left+Vector2(0,46)
 			icon.size = Vector2(64,64)
 			surface.add_child(icon)
-			_label(Rect2(rect.position+Vector2(78,8),Vector2(rect.size.x-90,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
-			_label(Rect2(rect.position+Vector2(78,34),Vector2(rect.size.x-90,40)),definition.title,20,Color("63f5ce"))
-			_label(Rect2(rect.position+Vector2(78,82),Vector2(rect.size.x-90,48)),definition.description.split(" ")[0],38,Color("ffffff"))
-			_label(Rect2(rect.position+Vector2(16,130),Vector2(rect.size.x-32,54)),definition.description.substr(definition.description.find(" ")+1),12,Color("a4b3c6"))
+			_label(Rect2(rect.position+Vector2(16,8),Vector2(rect.size.x-32,24)),"UPGRADE / 0%d" % (i+1),12,Color("8194aa"))
+			_label(Rect2(left+Vector2(80,42),Vector2(group-80,28)),definition.title,20,Color("63f5ce"),HORIZONTAL_ALIGNMENT_LEFT)
+			_label(Rect2(left+Vector2(80,68),Vector2(group-80,48)),value,38,Color("ffffff"),HORIZONTAL_ALIGNMENT_LEFT)
+			_label(Rect2(rect.position+Vector2(16,128),Vector2(rect.size.x-32,54)),definition.description.substr(definition.description.find(" ")+1),12,Color("a4b3c6"))
 	var stats: Array = game.player_stats()
 	for i in range(stats.size()):
 		var columns := 3 if i < 3 else 4
@@ -209,11 +217,36 @@ func _practice(screen: Vector2) -> void:
 	_label(Rect2(screen.x*0.5-110,y+66,220,48),"FLOOR %02d" % game.practice.depth,25)
 	_label(Rect2(24,y+116,screen.x-48,30),"%d AUTO UPGRADES / NORMAL DAMAGE / NO RECORD" % (game.practice.depth-1),15,Color("8194aa"))
 
+func _sound_mode(screen: Vector2) -> void:
+	var mode = game.sound_mode
+	var top: float = mode.grid_top(screen)
+	_label(Rect2(24,top-90,screen.x-48,44),"SOUND MODE",30,Color("63f5ce"))
+	_label(Rect2(24,top-46,screen.x-48,30),"LEFT STICK / DPAD: SELECT   A / LB: PLAY   B: BACK" if game.controls.using_gamepad else "CLICK OR TAB + ENTER TO PLAY   ESC: BACK",15,Color("8194aa"))
+	var list: Array[Dictionary] = mode.catalog()
+	for i in range(list.size()):
+		var key: String = list[i].key
+		var button := _button(mode.button(screen,i),"%02d   %s" % [i+1,mode.display_name(key)],func(): mode.choose(game,i); sync())
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size",18)
+		if list[i].use == "UNUSED": button.add_theme_color_override("font_color",Color("ffb95e"))
+		if key == mode.track:
+			button.toggle_mode = true
+			button.set_pressed_no_signal(true)
+			button.add_theme_color_override("font_color",Color("63f5ce"))
+	_button(mode.button(screen,list.size()),"BACK (B)" if game.controls.using_gamepad else "BACK (Esc)",func(): mode.close(game); sync())
+	_settings()
+	var playing: int = mode.index_of(mode.track)
+	if playing >= 0:
+		var bar: Rect2 = mode.progress_rect(screen)
+		_label(Rect2(24,bar.position.y-76,screen.x-48,20),"NOW PLAYING  %02d" % (playing+1),12,Color("8194aa"))
+		_label(Rect2(24,bar.position.y-58,screen.x-48,32),mode.display_name(mode.track),24,Color("dffff3"))
+		_label(Rect2(24,bar.position.y-28,screen.x-48,22),list[playing].use,13,Color("ffb95e") if list[playing].use == "UNUSED" else Color("91aaaf"))
+
 func _input(event: InputEvent) -> void:
 	# Observe once, before GUI consumption, including neutral/release events.
 	game.controls.observe_event(game,event)
 	var direction: Vector2i = game.controls.menu_direction(event)
-	if (event is InputEventJoypadButton or event is InputEventJoypadMotion) and (game.title_screen or game.paused or game.choosing or game.practice.selecting):
+	if (event is InputEventJoypadButton or event is InputEventJoypadMotion) and (game.title_screen or game.paused or game.choosing or game.practice.selecting or game.sound_mode.selecting):
 		sync()
 		if direction != Vector2i.ZERO: _move_focus(direction)
 		elif game.controls.gamepad_accept(event): _activate_focused()

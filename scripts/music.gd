@@ -62,6 +62,8 @@ func next_stage() -> String:
 # The track the current screen should play. A floor is identified by its revision, so a retry (same floor,
 # regenerated from its snapshot) keeps its track and only a newly generated floor draws a new one.
 func track_for(game) -> String:
+	var jukebox = game.get("sound_mode")
+	if jukebox != null and jukebox.selecting: return jukebox.track
 	if game.title_screen: return TITLE
 	if game.choosing: return CARDS
 	if game.boss_floor:

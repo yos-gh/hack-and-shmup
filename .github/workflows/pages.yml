@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Godot and export templates
         run: ./tools/ci/install_godot.sh
-      - name: Export Windows Preview executable
+      - name: Export Windows executable
         run: |
           set -euo pipefail
           # The preview build must neither load nor distribute the telemetry SDK
@@ -85,7 +85,7 @@ jobs:
           rm -rf addons/sentry assets/catalog.json assets/README.md
           sed -i '/^\[sentry\]/,/^\[/{/^\[sentry\]/d;/^\[/!d}' project.godot
           mkdir -p export/windows
-          EXE="${PWD}/export/windows/HACK-AND-SHMUP-preview.exe"
+          EXE="${PWD}/export/windows/HACK-AND-SHMUP.exe"
           godot --headless --path . --editor --import 2>&1 | tee import.log
           godot --headless --path . --export-release "Windows Preview" "${EXE}" 2>&1 | tee export.log
           if grep -E 'SCRIPT ERROR|Error loading extension' import.log export.log; then
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ github.sha }}
-          path: export/windows/HACK-AND-SHMUP-preview.exe
+          path: export/windows/HACK-AND-SHMUP.exe
           retention-days: 14
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -120,4 +120,4 @@ jobs:
           else
             args+=(--generate-notes)
           fi
-          gh release create "${GITHUB_REF_NAME}" export/windows/HACK-AND-SHMUP-preview.exe "${args[@]}"
+          gh release create "${GITHUB_REF_NAME}" export/windows/HACK-AND-SHMUP.exe "${args[@]}"

@@ -147,6 +147,7 @@ var stairs_unlocked := true
 var boss_max_hp := 0.0
 var boss_variant := 0
 var practice = preload("res://scripts/boss_practice.gd").new()
+var sound_mode = preload("res://scripts/sound_mode.gd").new()
 
 func _ready() -> void:
 	Input.joy_connection_changed.connect(controls.joy_connection_changed.bind(self))
