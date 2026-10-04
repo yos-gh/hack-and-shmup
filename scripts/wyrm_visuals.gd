@@ -87,9 +87,11 @@ static func pits(boss, e: Dictionary) -> Array:
 			result.append([e.hole,boss.HOLE_RADIUS,1.0])
 			if e.dive_at < INF: result.append([e.dive_point,boss.HOLE_RADIUS*0.9,1.0])
 		if e.tail_lift > 0 and e.tail_hole != Vector2.INF: result.append([e.tail_hole,boss.TAIL_HOLE_RADIUS,1.0])
-	elif e.state == "roam":
-		var fade: float = clampf(1.0-(e.traveled-boss.body_length())/400.0,0,1)
-		if fade > 0: result.append([e.hole,boss.BREACH_RADIUS*0.8,fade])
+	elif e.state == "roam" and not e.get("breach_closed",false): result.append([e.hole,boss.BREACH_RADIUS*0.8,1.0])
+	# Holes the body has left fill back in: they shrink and fade out.
+	for pit in e.closing:
+		var k: float = clampf(pit.t/pit.total,0,1)
+		result.append([pit.p,pit.r*lerpf(0.12,1.0,k*k*(3.0-2.0*k)),k])
 	return result
 
 # Crater rim: a jagged ring that never changes between frames.
@@ -135,12 +137,24 @@ static func draw_shells(game, e: Dictionary, clock: float) -> void:
 		game.draw_arc(shell.p,shell.r,0,TAU,40,Color(SHELL_INK,0.75),1.6,true)
 		game.draw_arc(shell.p,shell.r*(1.0-progress),0,TAU,32,Color(BossFx.WHITE_HOT,0.25+0.5*progress),1.5,true)
 		for axis in [Vector2.RIGHT,Vector2.DOWN]: game.draw_line(shell.p-axis*10,shell.p+axis*10,Color(SHELL_INK,0.8),1.4,true)
-		if progress > 0.7:
-			# The shell drops into its mark.
-			var fall: float = (progress-0.7)/0.3
-			var head: Vector2 = shell.p+Vector2(0,-460*(1.0-fall))
-			game.draw_line(head+Vector2(0,-46),head,Color(SHELL_INK.lerp(Color.WHITE,0.4),0.85),3,true)
-			BossFx.glow(game,head,12,Color(SHELL_INK,0.6))
+		if progress > 0.55:
+			# A burning chunk of the slag column drops into its mark.
+			var fall: float = (progress-0.55)/0.45
+			var chunk: Vector2 = shell.p+Vector2(0,-560*(1.0-fall*fall))
+			draw_slag(game,chunk,14+8*fall,shell.get("spin",1.0)*clock,fall)
+
+# A molten slag chunk: a dark, jagged rock with a burning rim and a trail.
+static func draw_slag(game, p: Vector2, size: float, spin: float, heat: float) -> void:
+	game.draw_line(p+Vector2(0,-size*3.5),p,Color(1.0,0.55,0.3,0.35),size*0.9,true)
+	BossFx.glow(game,p,size*2.2,Color(1.0,0.5,0.25,0.45+0.3*heat))
+	var rock := PackedVector2Array()
+	for i in range(7):
+		var jag: float = 0.7+0.3*absf(sin(i*2.3+size))
+		rock.append(p+Vector2.from_angle(spin+i*TAU/7)*size*jag)
+	game.draw_colored_polygon(rock,Color("2a1a14"))
+	rock.append(rock[0])
+	game.draw_polyline(rock,Color(1.0,0.62,0.32,0.9),2,true)
+	game.draw_circle(p,size*0.3,Color(1.0,0.85,0.55,0.8))
 
 static func draw_charge_lane(boss, game, e: Dictionary) -> void:
 	var direction: Vector2 = e.charge_dir
@@ -224,21 +238,44 @@ static func draw(boss, game) -> void:
 		for beam in game.boss.lasers:
 			if beam.owner != e or not beam.has("mount") or beam.warning <= 0: continue
 			BossFx.charge(game,beam.a,1.0-beam.warning/beam.warning_total,ink,40)
+		if e.windup > 0 and not e.submerged:
+			# The head rears and gathers heat in its throat before it spits.
+			var gather: float = 1.0-e.windup/boss.WINDUP
+			var throat: Vector2 = boss.muzzle(e)
+			BossFx.charge(game,throat,gather,Color("ff9a5c"),60)
+			for i in range(6):
+				var t: float = fmod(clock*1.4+i/6.0,1.0)
+				var spark: Vector2 = throat+Vector2.from_angle(i*TAU/6+clock)*70*(1.0-t)
+				game.draw_circle(spark,3,Color(1.0,0.7,0.4,gather*(1.0-t)))
 		if e.launch_flash > 0:
-			# Shells leave the turrets for the sky.
-			var k: float = e.launch_flash/0.7
-			for segment in e.segments:
-				if not segment.index in boss.TURRETS or segment.z < 0: continue
-				var top: Vector2 = segment.p+Vector2(0,-520*(1.0-k))
-				game.draw_line(segment.p,top,Color(SHELL_INK,0.5*k),4,true)
-				BossFx.glow(game,top,16,Color(SHELL_INK,0.7*k))
+			# The slag column: a burning plume from the throat up off the screen.
+			var k: float = e.launch_flash/0.8
+			var throat: Vector2 = boss.muzzle(e)
+			var top: Vector2 = throat+Vector2(0,-1400)
+			game.draw_line(throat,top,Color(1.0,0.45,0.2,0.25*k),90*k+20,true)
+			game.draw_line(throat,top,Color(1.0,0.7,0.4,0.6*k),40*k+8,true)
+			game.draw_line(throat,top,Color(1.0,0.95,0.8,0.9*k),12*k+3,true)
+			BossFx.glow(game,throat,120*k+30,Color(1.0,0.55,0.3,0.7*k))
+			for i in range(8):
+				var rise: float = fmod(clock*2.0+i/8.0,1.0)
+				draw_slag(game,throat+Vector2(sin(i*1.7)*50,-900*rise),8+4*sin(i),clock*3+i,1.0)
+		for cage in e.cages:
+			# The shock cage closes here: a ring in the Shockwave's colour.
+			var progress: float = clampf(1.0-cage.t/boss.CAGE_WARNING,0,1)
+			var mint := Color("63f5ce")
+			game.draw_arc(cage.p,boss.CAGE_RADIUS,0,TAU,96,Color(mint,0.35+0.4*progress),2.5,true)
+			game.draw_arc(cage.p,boss.CAGE_RADIUS*(1.0-0.25*progress),0,TAU,96,Color(mint,0.25*progress),1.5,true)
+			for i in range(12):
+				var axis := Vector2.from_angle(i*TAU/12+clock*0.4)
+				var tip: Vector2 = cage.p+axis*(boss.CAGE_RADIUS-24-30*progress)
+				game.draw_polyline(PackedVector2Array([tip+axis*14+axis.orthogonal()*9,tip,tip+axis*14-axis.orthogonal()*9]),Color(mint,0.7),2,true)
 		if e.tail_z >= 0: BossFx.glow(game,boss.tail_muzzle(e),16,Color(ink,0.4))
 		draw_shells(game,e,clock)
 		if e.submerged: continue
 		# The weak point: the core and its plates. Visor lamps and the throat
 		# brighten while the head is charging a beam.
-		draw_shields(boss,game,e,ink)
-		BossFx.energy_core(game,e.p,22,ink,clock,angry)
+		draw_shields(boss,game,e,boss.core_ink(e))
+		BossFx.energy_core(game,e.p,22,boss.core_ink(e),clock,angry)
 		var face: Vector2 = e.face
 		var heat: float = 0.0
 		for beam in game.boss.lasers:
@@ -282,5 +319,7 @@ static func draw_depth(boss, view, game, e: Dictionary, parts: Dictionary) -> vo
 		parts.wyrm_tail.append(view.weight(view.chaser_entry(e.tail,e.tail_heading,Vector3.ONE,BODY_TINT,e.tail_z),0.85))
 		parts.boss_core.append(view.chaser_entry(e.tail+e.tail_heading*4,e.tail_heading,Vector3(10,10,8),ink,e.tail_z+40))
 	if e.head_z > -40:
-		parts.wyrm_head.append(view.weight(view.chaser_entry(e.p,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z),0.9))
-		parts.boss_core.append(view.chaser_entry(e.p,e.face,Vector3(24,24,14),ink,e.head_z+56))
+		# Rearing for the bombardment lifts the head.
+		var rear: float = 30.0*sin(clampf(1.0-e.windup/boss.WINDUP,0,1)*PI) if e.windup > 0 else 0.0
+		parts.wyrm_head.append(view.weight(view.chaser_entry(e.p,e.face,Vector3.ONE,HEAD_TINT.lerp(ink,0.1),e.head_z+rear),0.9))
+		parts.boss_core.append(view.chaser_entry(e.p,e.face,Vector3(24,24,14),boss.core_ink(e),e.head_z+56+rear))

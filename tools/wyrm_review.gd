@@ -80,7 +80,11 @@ func run() -> void:
 		last_lead = e.lead
 		var key := ""
 		var beam_live: bool = game.boss.lasers.any(func(beam): return beam.get("triad",false) and beam.warning <= 0 and beam.duration < beam.peak_duration-0.6)
-		if e.phase == 1 and e.state == "under" and e.state_time < 0.4: key = "omen"
+		if e.windup > 0 and e.windup < 0.3: key = "windup-%d" % e.phase
+		elif e.launch_flash > 0.4: key = "plume-%d" % e.phase
+		elif not e.cages.is_empty() and e.cages[0].t < 0.3: key = "cage-%d" % e.phase
+		elif e.closing.any(func(c): return c.t < c.total*0.5): key = "closing"
+		elif e.phase == 1 and e.state == "under" and e.state_time < 0.4: key = "omen"
 		elif e.phase == 1 and e.state == "exposed" and e.pattern == "beam" and beam_live: key = "beam"
 		elif e.phase == 1 and e.state == "exposed" and e.pattern == "rings" and e.exposed_time > 2.5: key = "rings"
 		elif e.phase == 1 and e.state == "exposed" and e.pattern == "barrage" and e.shells.any(func(s): return not s.fired and s.impact < 0.8): key = "barrage-1"

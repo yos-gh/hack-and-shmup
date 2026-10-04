@@ -84,6 +84,8 @@ func run() -> void:
 	step(game,2.0)
 	check(e.volleys.any(func(v): return v.kind == "ring") or game.bullets.size() > 60,"rings fill the arena")
 	check(until(game,func(): return e.state == "exposed" and e.pattern == "barrage" and e.beam_started,25.0),"the third breach calls the bombardment")
+	check(e.windup > 0 and e.shells.is_empty(),"the head rears before any shell is marked")
+	step(game,wyrm.WINDUP+0.05)
 	var shells: Array = e.shells
 	check(shells.size() >= 20,"shells cover the whole arena")
 	var reach := 0.0
@@ -96,6 +98,8 @@ func run() -> void:
 		if not game.walkable(probe): continue
 		if first_wave.all(func(s): return s.p.distance_to(probe) > s.r+game.PLAYER_HIT_RADIUS): open_ground = true
 	check(open_ground,"the first wave leaves open ground beside the player")
+	var row: int = int(floor((game.player.y-e.shell_origin.y)/wyrm.SHELL_CELL))
+	check(first_wave.all(func(s): return int(floor((s.p.y-24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row or int(floor((s.p.y+24-e.shell_origin.y)/wyrm.SHELL_CELL)) != row),"the first wave leaves the player's row open to run along")
 	check(shells.all(func(s): return s.impact >= s.warn-0.001 or s.wave == 0) and first_wave.all(func(s): return s.impact >= 1.9),"every shell is marked before it lands")
 	check(game.boss.lasers.any(func(b): return b.get("chase",false) and b.turn_rate >= 0.38),"a chasing beam joins the bombardment")
 
@@ -133,6 +137,7 @@ func run() -> void:
 	e.traveled = wyrm.body_length()
 	e.charge_cd = 0
 	e.barrage_cd = 99
+	e.cage_cd = 99
 	e.move_mode = "prowl"
 	e.move_time = 0
 	game.player = e.home+Vector2(-600,0)
@@ -146,11 +151,14 @@ func run() -> void:
 	else: check(false,"a ready charge begins with a warning")
 	# Body beams are telegraphed and keep their heading.
 	e.beam_cd = 0
+	e.charge_cd = 99
+	e.cage_cd = 99
 	e.move_mode = "prowl"
 	e.move_time = 5
 	step(game,1.0/60.0)
-	var beams: Array = game.boss.lasers.filter(func(b): return b.has("mount"))
-	check(beams.size() >= 2 and beams.all(func(b): return b.warning > 0.5),"body beams start with a warning")
+	# Only the beams just raised; an older volley may still be firing.
+	var beams: Array = game.boss.lasers.filter(func(b): return b.has("mount") and b.warning > b.warning_total-0.1)
+	check(beams.size() >= 1 and beams.all(func(b): return b.warning > 0.5),"body beams start with a warning")
 	if not beams.is_empty():
 		var heading: Vector2 = beams[0].heading
 		step(game,0.5)
@@ -159,11 +167,32 @@ func run() -> void:
 	e.move_time = 5
 	e.barrage_cd = 0
 	step(game,1.0/60.0)
-	check(e.move_mode == "barrage" and e.shells.size() >= 20,"the second form calls the bombardment too")
+	check(e.move_mode == "barrage" and e.windup > 0,"the second form calls the bombardment too")
+	var neck: float = e.face.angle()
+	step(game,wyrm.WINDUP+0.05)
+	check(e.shells.size() >= 20 and absf(angle_difference(neck,e.face.angle())) < 2.4*(wyrm.WINDUP+0.1),"the bombardment starts without snapping the neck")
+	# The shock cage: a warned ring that a Shockwave clears.
+	e.shells.clear()
+	game.bullets.clear()
+	wyrm.start_cage(game,e)
+	step(game,wyrm.CAGE_WARNING+0.05)
+	var caged: int = game.bullets.filter(func(b): return b.hostile and absf(b.p.distance_to(e.cages[0].p if not e.cages.is_empty() else game.player)-wyrm.CAGE_RADIUS) < 120).size()
+	check(game.bullets.filter(func(b): return b.hostile).size() >= wyrm.CAGE_COUNT*2-20,"the cage closes a double ring around the player")
+	step(game,2.2)
+	game.sub_weapon = 1
+	game.sub_cd = 0
+	var before: int = game.bullets.filter(func(b): return b.hostile and b.p.distance_to(game.player) <= game.SHOCK_RADIUS).size()
+	game.fire_sub(Vector2.RIGHT)
+	check(before > 0 and game.bullets.filter(func(b): return b.hostile and b.p.distance_to(game.player) <= game.SHOCK_RADIUS).is_empty(),"a Shockwave clears the closing cage")
+	# The last stretch of the second form steps the pressure up once more.
+	e.hp = e.phase_hp*wyrm.SECOND_FORM*0.2
+	e.move_mode = "prowl"
+	step(game,1.0/60.0)
+	check(wyrm.frenzied(e) and e.frenzy and e.cage_cd <= 1.5,"low health sends the second form into a frenzy")
 	# Shells kill on open ground, over cover too.
 	game.grace = 0
 	e.shells = [{"p":game.player,"r":wyrm.SHELL_RADIUS,"impact":0.01,"warn":1.0,"fired":false,"wave":0}]
-	wyrm.advance_shells(game,e,0.02)
+	wyrm.advance_shells(game.boss,game,e,0.02)
 	check(game.pending_respawn,"a shell landing on the player kills")
 	game.pending_respawn = false
 	e.hp_floor = 0.0

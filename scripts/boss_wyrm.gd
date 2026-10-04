@@ -8,6 +8,8 @@ const Balance = preload("res://scripts/combat_balance.gd")
 const Visual = preload("res://scripts/wyrm_visuals.gd")
 const INK := Color("8fc8ff")
 const RAGE_INK := Color("ff6a88")
+# The core and its plates share the warm hue of the other bosses' cores.
+const CORE_INK := Color("ffcf73")
 # Head: the core sits at the head's origin, ringed by shield plates. Like the
 # Citadel's, the ring keeps its compass bearing while the head turns, so a hole
 # shot in it stays on the player's side until the plate rebuilds.
@@ -46,7 +48,7 @@ const BREACH_WAIT := 1.7
 const LASER_WARNING := 1.0
 const CHASE_WARNING := 1.1
 const CHASE_DURATION := 4.6
-const HP_FACTOR := 2.5
+const HP_FACTOR := 3.75
 # The second form's share of the first form's health; the HUD marks the split.
 const SECOND_FORM := 1.15
 # Bombardment: a mottled field of shells over the whole arena, in waves.
@@ -54,6 +56,14 @@ const SHELL_RADIUS := 100.0
 const SHELL_CELL := 180.0
 const SHELL_WARNING := 2.0
 const SHELL_FOLLOW := 1.3
+# The head rears and spits a column of slag at the ceiling before the shells fall.
+const WINDUP := 1.0
+# Shock cage: a closed double ring of shots that shrinks onto the player. Only
+# a Shockwave (which clears shots) or a gap behind cover gets through it.
+const CAGE_WARNING := 0.9
+const CAGE_RADIUS := 440.0
+const CAGE_SPEED := 120.0
+const CAGE_COUNT := 48
 # 64×52 arena; pillars line the outer wall. The head keeps inside INNER of
 # home, which holds no cover at all, so it cannot wedge itself on a pillar.
 # Only a charge leaves that box, along a lane checked clear of walls and pillars.
@@ -70,10 +80,15 @@ func setup(data, e: Dictionary) -> void:
 	e["low"] = low
 	e["mid"] = mid
 	e["expert"] = data.floor_number >= 50
-	e["attack_scale"] = lerpf(1.35,1.0,low)
-	e["speed_scale"] = lerpf(0.8,1.0,low)*(1.0+0.001*late)
+	# Tier 0 at floor 25, 1 at 50, 2 at 75, 3 at 100: each step is clearly
+	# tougher, fires more often, with faster shots and extra waves.
+	var tier: float = clampf((data.floor_number-25)/25.0,0.0,3.0)
+	e["tier"] = tier
+	e["attack_scale"] = lerpf(1.35,1.0,low)/(1.0+0.12*tier)
+	e["bullet_scale"] = 1.0+0.07*tier
+	e["speed_scale"] = lerpf(0.8,1.0,low)*(1.0+0.06*tier)
 	var combined_dps: float = dps+Balance.sub_dps(data.power,data.recharge,0,data.physics_ticks)*0.5
-	e["phase_hp"] = combined_dps*HP_FACTOR*lerpf(0.6,1.0,low*low)*(1.0+0.004*late)
+	e["phase_hp"] = combined_dps*HP_FACTOR*lerpf(0.6,1.0,low*low)*(1.0+0.3*tier)*(1.0+0.004*late)
 	e["max_hp"] = e.phase_hp*(1.0+SECOND_FORM)
 	e.hp = e.max_hp
 	e["hp_floor"] = e.phase_hp*SECOND_FORM
@@ -113,6 +128,17 @@ func setup(data, e: Dictionary) -> void:
 	e["volleys"] = []
 	e["shells"] = []
 	e["launch_flash"] = 0.0
+	e["windup"] = 0.0
+	e["barrage_queue"] = []
+	e["shell_cells"] = []
+	e["shell_grid"] = []
+	e["shell_origin"] = Vector2.ZERO
+	e["shell_previous"] = {}
+	e["closing"] = []
+	e["cages"] = []
+	e["cage_cd"] = 6.0
+	e["near_time"] = 0.0
+	e["frenzy"] = false
 	e["age"] = 0.0
 	e["last_player"] = Vector2.INF
 	e["player_velocity"] = Vector2.ZERO
@@ -149,8 +175,16 @@ func setup(data, e: Dictionary) -> void:
 func rage(e: Dictionary) -> bool:
 	return e.hp <= e.phase_hp*(SECOND_FORM+0.5) if e.phase == 1 else e.hp <= e.phase_hp*SECOND_FORM*0.5
 
+# The last stretch of the second form: one more step of pressure.
+func frenzied(e: Dictionary) -> bool:
+	return e.phase == 2 and e.state == "roam" and e.hp <= e.phase_hp*SECOND_FORM*0.25
+
 func ink(e: Dictionary) -> Color:
+	if frenzied(e): return RAGE_INK
 	return INK.lerp(RAGE_INK,0.65) if rage(e) else INK
+
+func core_ink(e: Dictionary) -> Color:
+	return CORE_INK.lerp(RAGE_INK,0.35) if frenzied(e) else CORE_INK
 
 func muzzle(e: Dictionary) -> Vector2:
 	return e.p+e.face*MUZZLE
@@ -399,12 +433,15 @@ func crawl(e: Dictionary, target: Vector2, speed: float, turn_rate: float, delta
 
 # ---------------------------------------------------------------- shots
 
+# Shot speeds scale with the floor tier of the wyrm being updated.
+var shot_scale := 1.0
+
 func emit_field(game, origin: Vector2, direction: Vector2, speed: float, tone: int) -> void:
-	game.emit_shot(origin,direction,speed,1,true,1500)
+	game.emit_shot(origin,direction,speed*shot_scale,1,true,1500)
 	game.bullets[-1].merge({"pattern":"radial","field":true,"pressure":false,"tone":tone})
 
 func emit_needle(game, origin: Vector2, direction: Vector2, speed: float) -> void:
-	game.emit_shot(origin,direction,speed,1,true,1500)
+	game.emit_shot(origin,direction,speed*shot_scale,1,true,1500)
 	game.bullets[-1].merge({"pressure":true,"pattern":"wyrm_aimed"})
 
 # A full ring with `gaps` evenly spaced escape lanes, each `gap_width` wide.
@@ -460,19 +497,19 @@ func fire_broadside(e: Dictionary) -> void:
 	e.broadside_cycle += 1
 
 func start_head_beam(boss, game, e: Dictionary, chase: bool) -> void:
+	# Both beams start along the head's own heading, so the neck never snaps.
 	var heading: Vector2 = e.face
-	if chase:
-		# Starts off to one side so the sweep toward the player is readable.
-		heading = e.p.direction_to(game.player).rotated(0.6*(1.0 if e.tail_cycle%2 == 0 else -1.0))
-		game.enemy_attack_cue("hunter_lock",e.p,false)
+	if chase: game.enemy_attack_cue("hunter_lock",e.p,false)
 	else: game.enemy_attack_cue("triad_charge",e.p,false)
 	var warning: float = CHASE_WARNING if chase else LASER_WARNING
 	var duration: float = CHASE_DURATION if chase else beam_duration(e)
-	var turn: float = ((0.38+0.05*e.mid)*(1.12 if rage(e) else 1.0)) if chase else ((0.28+0.08*e.mid)*(1.2 if rage(e) else 1.0))
+	var turn: float = ((0.38+0.05*e.tier)*(1.12 if rage(e) else 1.0)) if chase else ((0.34+0.06*e.tier)*(1.2 if rage(e) else 1.0))
 	var origin: Vector2 = e.p+heading*MUZZLE
 	boss.lasers.append({"owner":e,"a":origin,"b":game.attack_end(origin,heading,1800),"heading":heading,
 		"warning":warning,"warning_total":warning,"duration":duration,"peak_duration":duration,"triad":true,"chase":chase,
-		"turn_rate":turn,"width":46.0 if chase else 110.0,"muzzle":MUZZLE,"hue":Color("ffb3c4") if chase else Color("bfe2ff"),"charge_radius":34.0})
+		"turn_rate":turn,"width":46.0 if chase else 110.0,"muzzle":MUZZLE,"hue":Color("ffb3c4") if chase else Color("bfe2ff"),"charge_radius":34.0,
+		# While charging, the beam swings onto the player before it locks and fires.
+		"pre_track":1.2 if chase else 1.6})
 
 func end_lasers(boss, e: Dictionary) -> void:
 	for beam in boss.lasers:
@@ -483,54 +520,114 @@ func head_beam(boss, e: Dictionary) -> Dictionary:
 		if beam.owner == e and beam.get("triad",false) and beam.duration > 0: return beam
 	return {}
 
-# Shells over the whole arena, a cell at a time. Later waves fall mostly where
-# the last wave left open ground, so the safe spots move into the fresh craters.
+# The bombardment: the head rears and spits a column of slag at the ceiling,
+# then burning chunks fall over the whole arena, a cell at a time, each one
+# marked on the ground first. Every wave leaves the player's row or column
+# open (alternating), so there is always a lane to run along, and later waves
+# fall mostly where the last wave left open ground.
 func plan_barrage(game, e: Dictionary) -> void:
 	var room: Rect2i = game.rooms[1]
 	var area := Rect2(Vector2(room.position)*game.TILE,Vector2(room.size)*game.TILE)
 	var columns: int = int(area.size.x/SHELL_CELL)
 	var rows: int = int(area.size.y/SHELL_CELL)
 	var origin: Vector2 = area.position+(area.size-Vector2(columns,rows)*SHELL_CELL)*0.5
-	var cells: Array[Vector2] = []
+	e.shell_cells = []
+	e.shell_grid = []
 	for y in range(rows):
 		for x in range(columns):
 			var cell: Vector2 = origin+(Vector2(x,y)+Vector2(0.5,0.5))*SHELL_CELL
-			if game.walkable(cell,20): cells.append(cell)
-	var waves: int = 3 if e.expert or rage(e) else 2
-	var previous := {}
-	var impact := SHELL_WARNING
+			if not game.walkable(cell,20): continue
+			e.shell_cells.append(cell)
+			e.shell_grid.append(Vector2i(x,y))
+	e.shell_origin = origin
+	e.shell_previous = {}
+	var waves: int = mini(4,2+mini(int(e.tier),2)+(1 if rage(e) or frenzied(e) else 0))
+	e.barrage_queue = []
+	var at: float = WINDUP
 	for wave in range(waves):
-		var hit := {}
-		for i in range(cells.size()):
-			var chance: float = 0.44 if wave == 0 else (0.1 if previous.has(i) else 0.6)
-			if game.rng.randf() < chance: hit[i] = true
-		if wave == 0:
-			# Always leave open ground beside the player for the first wave.
-			var order: Array = range(cells.size())
-			order.sort_custom(func(a, b): return cells[a].distance_squared_to(game.player) < cells[b].distance_squared_to(game.player))
-			var near: Array = order.slice(0,5).filter(func(i): return hit.has(i))
-			while near.size() > 3: hit.erase(near.pop_front())
-		for i in hit:
-			var jitter := Vector2(game.rng.randf_range(-28,28),game.rng.randf_range(-28,28))
-			e.shells.append({"p":cells[i]+jitter,"r":SHELL_RADIUS,"impact":impact,"warn":SHELL_WARNING if wave == 0 else SHELL_FOLLOW,"fired":false,"wave":wave})
-		previous = hit
-		impact += SHELL_FOLLOW
-	e.launch_flash = 0.7
-	game.enemy_attack_cue("citadel_hammer_launch",e.p,false)
-	game.enemy_attack_cue("boss_mark",game.player,false)
+		e.barrage_queue.append({"t":at,"wave":wave,"warn":SHELL_WARNING if wave == 0 else SHELL_FOLLOW})
+		at += SHELL_WARNING if wave == 0 else SHELL_FOLLOW
+	e.windup = WINDUP
+	game.enemy_attack_cue("boss_orb_charge",e.p,false)
 
-func advance_shells(game, e: Dictionary, delta: float) -> void:
+func plan_wave(game, e: Dictionary, wave: int, warn: float) -> void:
+	var cells: Array = e.shell_cells
+	var grid: Array = e.shell_grid
+	var previous: Dictionary = e.shell_previous
+	var here := Vector2i(((game.player-e.shell_origin)/SHELL_CELL).floor())
+	var hit := {}
+	for i in range(cells.size()):
+		var chance: float = 0.4 if wave == 0 else (0.1 if previous.has(i) else 0.55)
+		if game.rng.randf() >= chance: continue
+		# The running lane through the player: their row, then their column.
+		if wave%2 == 0 and grid[i].y == here.y: continue
+		if wave%2 == 1 and grid[i].x == here.x: continue
+		hit[i] = true
+	for i in hit:
+		var jitter := Vector2(game.rng.randf_range(-24,24),game.rng.randf_range(-24,24))
+		e.shells.append({"p":cells[i]+jitter,"r":SHELL_RADIUS,"impact":warn,"warn":warn,"fired":false,"wave":wave,"spin":game.rng.randf_range(-4,4)})
+	e.shell_previous = hit
+	if wave > 0: game.enemy_attack_cue("boss_mark",game.player,false)
+
+func advance_shells(boss, game, e: Dictionary, delta: float) -> void:
+	if e.windup > 0:
+		e.windup -= delta
+		if e.windup <= 0:
+			# The slag column leaves the head; the chasing beam follows it.
+			e.launch_flash = 0.8
+			game.presentation.kick(0.6)
+			game.presentation.ripple(e.p,2.0)
+			game.enemy_attack_cue("wyrm_plume",e.p,false)
+			start_head_beam(boss,game,e,true)
+	for item in e.barrage_queue:
+		item.t -= delta
+		if item.t <= 0: plan_wave(game,e,item.wave,item.warn)
+	e.barrage_queue = e.barrage_queue.filter(func(item: Dictionary) -> bool: return item.t > 0)
 	var landed := Vector2.INF
 	for shell in e.shells:
 		shell.impact -= delta
 		if shell.impact > 0 or shell.fired: continue
 		shell.fired = true
-		game.burst(shell.p,RAGE_INK,3)
+		game.burst(shell.p,Color("ff9a5c"),3)
 		if landed == Vector2.INF or shell.p.distance_to(game.player) < landed.distance_to(game.player): landed = shell.p
 		# Shells arc over cover; only open ground between the marks is safe.
 		if game.player.distance_to(shell.p) < shell.r+game.PLAYER_HIT_RADIUS: game.die()
-	if landed != Vector2.INF: game.enemy_attack_cue("citadel_hammer_impact",landed,false)
+	if landed != Vector2.INF:
+		game.enemy_attack_cue("wyrm_slag",landed,false)
+		game.presentation.ripple(landed,1.2)
 	e.shells = e.shells.filter(func(s: Dictionary) -> bool: return s.impact > -0.3)
+
+# The shock cage: a warned double ring around the player that shrinks onto them.
+func start_cage(game, e: Dictionary) -> void:
+	e.cages.append({"p":game.player,"t":CAGE_WARNING,"fired":false})
+	game.enemy_attack_cue("wyrm_cage",game.player,false)
+
+func advance_cages(game, e: Dictionary, delta: float) -> void:
+	for cage in e.cages:
+		cage.t -= delta
+		if cage.t > 0 or cage.fired: continue
+		cage.fired = true
+		var count: int = CAGE_COUNT+4*int(e.tier)
+		var rings: int = 3 if e.tier >= 2 or frenzied(e) else 2
+		for ring in range(rings):
+			var radius: float = CAGE_RADIUS+ring*34.0
+			for i in range(count):
+				var angle: float = (i+0.5*ring)*TAU/count
+				var origin: Vector2 = cage.p+Vector2.from_angle(angle)*radius
+				game.emit_shot(origin,-Vector2.from_angle(angle),CAGE_SPEED*shot_scale,1,true,radius+260)
+				game.bullets[-1].merge({"pattern":"radial","field":true,"pressure":false,"tone":2})
+		game.enemy_attack_cue("halo_fire",cage.p)
+	e.cages = e.cages.filter(func(c: Dictionary) -> bool: return not c.fired)
+
+func advance_closing(e: Dictionary, delta: float) -> void:
+	for pit in e.closing: pit.t -= delta
+	e.closing = e.closing.filter(func(pit: Dictionary) -> bool: return pit.t > 0)
+
+# Open holes fill back in over a second and a half instead of vanishing.
+func close_pits(game, e: Dictionary, pits: Array) -> void:
+	for pit in pits:
+		e.closing.append({"p":pit[0],"r":pit[1],"t":1.5,"total":1.5})
+		game.burst(pit[0],Color("8197b1"),6)
 
 func advance_volleys(game, e: Dictionary, delta: float) -> void:
 	for volley in e.volleys:
@@ -602,6 +699,10 @@ func begin_emerge(game, e: Dictionary) -> void:
 	game.enemy_attack_cue("wyrm_breach",e.head_hole)
 	game.burst(e.head_hole,INK,16)
 	game.burst(e.tail_hole,INK,10)
+	# The floor grid buckles outward as the hull breaks through, like a Shockwave.
+	game.presentation.ripple(e.head_hole,2.6)
+	game.presentation.ripple(e.tail_hole,1.6)
+	game.presentation.kick(0.45)
 	for hole in [[e.head_hole,HOLE_RADIUS],[e.tail_hole,TAIL_HOLE_RADIUS]]:
 		if game.player.distance_to(hole[0]) < hole[1]+game.PLAYER_HIT_RADIUS: game.die()
 
@@ -621,7 +722,7 @@ func begin_exposed(e: Dictionary) -> void:
 		"rings":
 			# Ring after ring with three escape lanes that drift sideways, so the
 			# player keeps running with the gap.
-			var waves: int = 8 if rage(e) else 7
+			var waves: int = (8 if rage(e) else 7)+int(e.tier)
 			var drift: float = (0.21+0.04*e.mid)*(1.0 if (e.rise/3)%2 == 0 else -1.0)
 			var base: float = e.face.angle()+PI/3
 			var gap: float = deg_to_rad(lerpf(52.0,44.0,e.low)-8.0*e.mid)
@@ -633,7 +734,7 @@ func begin_exposed(e: Dictionary) -> void:
 		"barrage":
 			e.tail_cd = 0.8
 			e.turret_cd = 1.5
-			e.state_time = 1.4+CHASE_WARNING+CHASE_DURATION+0.5
+			e.state_time = 1.4+WINDUP+CHASE_WARNING+CHASE_DURATION+0.5
 
 func advance_burrow(boss, game, e: Dictionary, delta: float) -> void:
 	if e.head_hole == Vector2.INF: pick_holes(game,e)
@@ -692,7 +793,6 @@ func advance_burrow(boss, game, e: Dictionary, delta: float) -> void:
 				"barrage":
 					if e.exposed_time < 1.4: crawl(e,e.home,160.0*e.speed_scale,1.2,delta)
 					elif not e.beam_started:
-						start_head_beam(boss,game,e,true)
 						plan_barrage(game,e)
 						e.beam_started = true
 					e.tail_cd -= delta
@@ -705,24 +805,27 @@ func advance_burrow(boss, game, e: Dictionary, delta: float) -> void:
 						e.turret_cd = 3.0*e.attack_scale
 			beam = head_beam(boss,e)
 			if not beam.is_empty():
-				# The head holds still and turns with its beam.
-				e.face = beam.heading
+				# The head holds still and turns with its beam, never faster than a neck can.
+				e.face = Vector2.from_angle(rotate_toward(e.face.angle(),beam.heading.angle(),2.4*delta))
 				e.heading = e.face.angle()
 			if e.state_time <= 0:
 				e.state = "dive"
 				end_lasers(boss,e)
 				begin_dive(e)
+				game.presentation.ripple(e.dive_point,1.8)
 		"dive":
 			e.tail_lift = maxf(0.0,e.tail_lift-delta/0.6)
 			advance_lead(e,Vector2.from_angle(e.heading)*DIVE_SPEED*delta)
 	place_body(e,false)
 	pose_tail(e)
 	if e.state == "dive" and dive_complete(e) and e.tail_lift <= 0:
+		close_pits(game,e,[[e.hole,HOLE_RADIUS],[e.dive_point,HOLE_RADIUS*0.9],[e.tail_hole,TAIL_HOLE_RADIUS]])
 		e.state = "under"
 		e.state_time = UNDER_TIME*e.attack_scale
 		e.rise += 1
 		pick_holes(game,e)
 		game.enemy_attack_cue("wyrm_rumble",e.head_hole,false)
+		game.presentation.ripple(e.head_hole,0.7)
 
 # ---------------------------------------------------------------- transition
 
@@ -731,6 +834,9 @@ func begin_breach(boss, game, e: Dictionary) -> void:
 	e.hp_floor = e.hp
 	e.volleys.clear()
 	e.shells.clear()
+	e.barrage_queue.clear()
+	e.cages.clear()
+	e.windup = 0.0
 	end_lasers(boss,e)
 	# The beast drops every shot in flight as it tears loose; a clean start.
 	for b in game.bullets:
@@ -755,6 +861,7 @@ func advance_breach(boss, game, e: Dictionary, delta: float) -> void:
 		place_body(e,false)
 		pose_tail(e)
 		if dive_complete(e) and e.tail_lift <= 0:
+			close_pits(game,e,[[e.hole,HOLE_RADIUS],[e.dive_point,HOLE_RADIUS*0.9],[e.tail_hole,TAIL_HOLE_RADIUS]])
 			e.state = "breach_wait"
 			e.state_time = BREACH_WAIT
 			game.enemy_attack_cue("wyrm_rumble",e.breach,false)
@@ -771,6 +878,8 @@ func advance_breach(boss, game, e: Dictionary, delta: float) -> void:
 	if game.player.distance_to(e.breach) < BREACH_RADIUS+game.PLAYER_HIT_RADIUS: game.die()
 	game.burst(e.breach,INK,24)
 	game.enemy_attack_cue("wyrm_breach",e.breach)
+	game.presentation.ripple(e.breach,3.0)
+	game.presentation.kick(0.7)
 	e.state = "roam"
 	e.hp_floor = 0.0
 	reset_path(e,e.breach,game.player.angle_to_point(e.breach))
@@ -822,10 +931,9 @@ func enter_mode(boss, game, e: Dictionary, mode: String) -> void:
 			e.charge_cd = (5.0 if rage(e) else 6.5)*e.attack_scale
 		"barrage":
 			end_lasers(boss,e)
-			start_head_beam(boss,game,e,true)
 			plan_barrage(game,e)
-			e.move_time = CHASE_WARNING+CHASE_DURATION+0.4
-			e.barrage_cd = (14.0 if rage(e) else 17.0)*e.attack_scale
+			e.move_time = WINDUP+CHASE_WARNING+CHASE_DURATION+0.4
+			e.barrage_cd = (10.0 if frenzied(e) else (14.0 if rage(e) else 17.0))*e.attack_scale
 
 func charge_speed(e: Dictionary) -> float:
 	return (520.0+60.0*e.mid)*e.speed_scale
@@ -838,7 +946,7 @@ func next_mode(boss, game, e: Dictionary) -> void:
 			if inner(e).has_point(e.lead): enter_mode(boss,game,e,"prowl")
 			else: e.move_time = 0.3
 		_:
-			if e.charge_cd <= 0 and e.p.distance_to(game.player) > 340: enter_mode(boss,game,e,"charge_warning")
+			if e.charge_cd <= 0 and e.lead.distance_to(game.player) > 340: enter_mode(boss,game,e,"charge_warning")
 			elif e.still_time > 1.6 or (e.move_mode == "prowl" and game.rng.randf() < 0.55): enter_mode(boss,game,e,"stalk")
 			else: enter_mode(boss,game,e,"prowl")
 
@@ -849,12 +957,12 @@ func advance_roam(boss, game, e: Dictionary, delta: float) -> void:
 	e.barrage_cd -= delta
 	if e.move_mode in ["prowl","stalk","evade"]:
 		if e.barrage_cd <= 0: enter_mode(boss,game,e,"barrage")
-		elif e.move_mode != "evade" and e.p.distance_to(game.player) < 300: enter_mode(boss,game,e,"evade")
+		elif e.move_mode != "evade" and e.lead.distance_to(game.player) < 300: enter_mode(boss,game,e,"evade")
 	if e.move_time <= 0: next_mode(boss,game,e)
 	var beams_busy := false
 	for beam in boss.lasers:
 		if beam.owner == e and beam.has("mount") and beam.duration > 0: beams_busy = true
-	var speed: float = ((175.0 if angry else 150.0)+20.0*e.mid)*e.speed_scale
+	var speed: float = ((175.0 if angry else 150.0)+20.0*e.mid)*e.speed_scale*(1.2 if frenzied(e) else 1.0)
 	if beams_busy: speed = minf(speed,70.0)
 	match e.move_mode:
 		"prowl", "evade":
@@ -883,7 +991,7 @@ func advance_roam(boss, game, e: Dictionary, delta: float) -> void:
 		"barrage":
 			var beam := head_beam(boss,e)
 			if not beam.is_empty():
-				e.face = beam.heading
+				e.face = Vector2.from_angle(rotate_toward(e.face.angle(),beam.heading.angle(),2.4*delta))
 				e.heading = e.face.angle()
 	# A last guard: a head that has not moved for a while goes back to the middle.
 	e.stuck_time += delta
@@ -892,11 +1000,27 @@ func advance_roam(boss, game, e: Dictionary, delta: float) -> void:
 		e.stuck_time = 0.0
 		e.stuck_from = e.lead
 	place_body(e,true)
+	if not e.get("breach_closed",false) and e.traveled > body_length()+60:
+		e["breach_closed"] = true
+		close_pits(game,e,[[e.hole,BREACH_RADIUS*0.8]])
 	advance_roam_attacks(boss,game,e,delta,angry)
 
 func advance_roam_attacks(boss, game, e: Dictionary, delta: float, angry: bool) -> void:
-	var scale: float = e.attack_scale*(0.8 if angry else 1.0)
+	var frenzy := frenzied(e)
+	if frenzy and not e.frenzy:
+		# Into the last stretch: a roar, and everything comes faster.
+		e.frenzy = true
+		game.enemy_attack_cue("wyrm_breach",e.p)
+		game.presentation.ripple(e.p,2.4)
+		game.presentation.kick(0.5)
+		e.cage_cd = minf(e.cage_cd,1.5)
+		e.barrage_cd = minf(e.barrage_cd,6.0)
+	var scale: float = e.attack_scale*(0.8 if angry else 1.0)*(0.75 if frenzy else 1.0)
 	var busy: bool = e.move_mode == "barrage"
+	e.cage_cd -= delta
+	if e.cage_cd <= 0 and not busy and not e.move_mode in ["charge_warning","charge"]:
+		start_cage(game,e)
+		e.cage_cd = (7.0 if frenzy else 11.0)*e.attack_scale
 	if not busy:
 		# Head: a burst of aimed needles, and now and then a large energy orb.
 		e.aimed_cd -= delta
@@ -947,7 +1071,20 @@ func advance_roam_attacks(boss, game, e: Dictionary, delta: float, angry: bool) 
 func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vector2:
 	e.age += delta
 	e.cd = 1.0
+	shot_scale = e.bullet_scale
 	e.launch_flash = maxf(0.0,e.launch_flash-delta)
+	advance_closing(e,delta)
+	# Crowding the head in the first form calls the shock cage down on the player.
+	if e.phase == 1:
+		e.cage_cd -= delta
+		var close: bool = not e.submerged and game.player.distance_to(e.p) < 340
+		e.near_time = e.near_time+delta if close else maxf(0.0,e.near_time-delta*0.5)
+		# It also comes on its own while the head is out, so there is no
+		# stretch of the fight spent only shooting.
+		if (e.near_time > 1.2 or e.state == "exposed") and not e.submerged and e.cage_cd <= 0:
+			start_cage(game,e)
+			e.cage_cd = (8.0 if e.near_time > 1.2 else 11.0)*e.attack_scale
+			e.near_time = 0.0
 	if e.last_player != Vector2.INF and delta > 0:
 		var velocity: Vector2 = ((game.player-e.last_player)/delta).limit_length(game.SPEED+game.move_bonus)
 		e.player_velocity = e.player_velocity.lerp(velocity,1.0-exp(-8*delta))
@@ -962,7 +1099,8 @@ func advance(boss, game, e: Dictionary, delta: float, _toward: Vector2) -> Vecto
 	elif e.state in ["breach_dive","breach_wait"]: advance_breach(boss,game,e,delta)
 	else: advance_roam(boss,game,e,delta)
 	advance_volleys(game,e,delta)
-	advance_shells(game,e,delta)
+	advance_shells(boss,game,e,delta)
+	advance_cages(game,e,delta)
 	e.dir = e.face
 	return Vector2.ZERO
 

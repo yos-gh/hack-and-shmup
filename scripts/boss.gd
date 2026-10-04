@@ -154,9 +154,10 @@ func advance_lasers(game, delta: float) -> void:
 	for beam in lasers:
 		if beam.owner.hp <= 0: beam.duration = 0; continue
 		if beam.get("triad",false):
-			if beam.warning <= 0:
+			var rate: float = beam.turn_rate if beam.warning <= 0 else beam.get("pre_track",0.0)
+			if rate > 0:
 				var desired: Vector2 = beam.owner.p.direction_to(game.player)
-				beam.heading = beam.heading.rotated(clampf(angle_difference(beam.heading.angle(),desired.angle()),-beam.turn_rate*delta,beam.turn_rate*delta))
+				beam.heading = beam.heading.rotated(clampf(angle_difference(beam.heading.angle(),desired.angle()),-rate*delta,rate*delta))
 			beam.a = beam.owner.p+beam.heading*beam.get("muzzle",82.0)
 			beam.b = game.attack_end(beam.a,beam.heading,1600)
 		if beam.has("mount"):

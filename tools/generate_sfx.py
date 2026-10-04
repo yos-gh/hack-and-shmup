@@ -320,6 +320,23 @@ EFFECTS = {
         tri(0, 0.22, glide(120, 40, 0.2), decay(1, 0.22)),
         pulse(0.03, 0.45, vibrato(glide(260, 90, 0.42), 18, 0.08), line((0, 0.8), (0.3, 0.6), (0.45, 0)), alternate(0.5, 0.25, TICK * 2), 0.8),
     ]),
+    # Abyss Wyrm bombardment: the head spits a slag column (a rising, tearing roar),
+    # chunks crunch down on their marks, and the shock cage rings shut around the player.
+    'wyrm_plume': dict(length=0.95, hp=40, voices=[
+        noise(0, 0.95, line((0, 12), (0.5, 4), (0.95, 7)), line((0, 0.2), (0.18, 1), (0.95, 0))),
+        pulse(0, 0.8, vibrato(glide(90, 420, 0.7), 14, 0.07), line((0, 0.3), (0.2, 0.9), (0.8, 0)), alternate(0.5, 0.25, TICK * 2), 0.8),
+        tri(0, 0.5, glide(70, 140, 0.45), line((0, 1), (0.5, 0))),
+    ]),
+    'wyrm_slag': dict(length=0.4, hp=45, voices=[
+        noise(0, 0.05, 2, decay(1, 0.05), short=True),
+        noise(0.02, 0.38, line((0, 6), (0.35, 13)), line((0, 1), (0.38, 0))),
+        tri(0, 0.18, glide(110, 38, 0.16), decay(1, 0.18)),
+    ]),
+    'wyrm_cage': dict(length=0.85, hp=120, voices=[
+        pulse(0, 0.85, lambda t: note(72) * (1 + 0.5 * (int(t / 0.1) % 2)), line((0, 0.8), (0.7, 0.7), (0.85, 0)), 0.25),
+        pulse(0, 0.85, glide(note(48), note(60), 0.8), line((0, 0.4), (0.85, 0)), 0.5, 0.5),
+        noise(0.6, 0.25, 4, line((0, 0), (0.15, 0.5), (0.25, 0)), short=True, gain=0.5),
+    ]),
     'boss_destroy': dict(length=1.65, hp=35, voices=[
         *[noise(t0, 0.25, line((0, p), (0.2, p + 3)), decay(0.9, 0.25)) for t0, p in [(0, 6), (0.16, 7), (0.32, 5), (0.5, 8)]],
         noise(0.72, 0.93, line((0, 9), (0.9, 15)), line((0, 1), (0.1, 0.95), (0.93, 0))),
