@@ -15,7 +15,7 @@ func _draw() -> void:
 	if not icon.is_empty():
 		draw_icon_badge()
 		return
-	if kind in ["title","practice","sound"]:
+	if kind in ["title","practice","sound","continue"]:
 		if game.depth_view != null:
 			draw_texture_rect(game.depth_view.viewport.get_texture(),Rect2(Vector2.ZERO,size),false,Color(0.75,0.9,0.95,0.6))
 		var Hud := preload("res://scripts/game_hud.gd")

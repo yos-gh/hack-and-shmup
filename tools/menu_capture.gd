@@ -1,6 +1,7 @@
 extends SceneTree
 
-# Saves the menu screens as PNGs for layout review: title, upgrade cards and the sound mode.
+# Saves the menu screens as PNGs for layout review: title, upgrade cards, pause
+# with its resume password, CONTINUE and the sound mode.
 # Godot_console.exe --path . --script res://tools/menu_capture.gd -- --output=res://docs/validation
 # Needs a display renderer (not --headless).
 
@@ -22,6 +23,13 @@ func run() -> void:
 	await shoot(game, output + "/menu-cards.png")
 	game.choices.assign([3, 6, 7])
 	await shoot(game, output + "/menu-cards-2.png")
+	game.choosing = false
+	game.paused = true
+	await shoot(game, output + "/menu-pause.png")
+	game.password_entry.open(game)
+	game.password_entry.text = "BAD-PASSWORD"
+	game.password_entry.error = "INVALID PASSWORD"
+	await shoot(game, output + "/menu-continue.png")
 	game.return_to_title()
 	if game.get("sound_mode") == null:
 		quit(0)

@@ -48,6 +48,7 @@ func start_run(game) -> void:
 	game.practice.active = false
 	game.practice.selecting = false
 	game.sound_mode.selecting = false
+	game.password_entry.selecting = false
 	run.reset()
 	game.title_screen = false
 	game.paused = false
@@ -56,6 +57,20 @@ func start_run(game) -> void:
 	game.hit_banner = 0
 	game.hit_flash = 0
 	game.sound.set_paused(false)
+	game.new_floor()
+
+
+# Rebuild the floor a resume password describes, exactly as it first began.
+func resume_run(game, data: Dictionary) -> void:
+	start_run(game)
+	run.floor_number = data.floor_number
+	preload("res://scripts/run_password.gd").apply_counts(run,data.upgrade_counts)
+	run.sub_weapon = data.sub_weapon
+	run.deaths = data.deaths
+	run.kills = data.kills
+	run.last_boss = data.previous_boss
+	best_cleared = maxi(best_cleared,data.floor_number-1)
+	game.rng.state = data.floor_state
 	game.new_floor()
 
 
@@ -73,6 +88,7 @@ func return_to_title(game) -> void:
 	game.practice.active = false
 	game.practice.selecting = false
 	game.sound_mode.selecting = false
+	game.password_entry.selecting = false
 	game.title_screen = true
 	game.paused = false
 	game.choosing = false

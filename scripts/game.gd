@@ -148,6 +148,7 @@ var boss_max_hp := 0.0
 var boss_variant := 0
 var practice = preload("res://scripts/boss_practice.gd").new()
 var sound_mode = preload("res://scripts/sound_mode.gd").new()
+var password_entry = preload("res://scripts/password_entry.gd").new()
 
 func _ready() -> void:
 	Input.joy_connection_changed.connect(controls.joy_connection_changed.bind(self))
@@ -184,6 +185,9 @@ func new_floor(boss_choice: int = -1) -> void:
 	settings.physics_ticks = float(Engine.physics_ticks_per_second)
 	settings.boss_choice = boss_choice
 	settings.previous_boss = session.run.last_boss
+	session.run.floor_state = rng.state
+	session.run.floor_previous_boss = session.run.last_boss
+	session.run.floor_kills = kills
 	var generated = floor_generator.generate_from_state(settings,rng.state)
 	floor_revision += 1
 	cells = generated.cells

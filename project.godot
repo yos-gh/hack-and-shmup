@@ -74,6 +74,10 @@ boss_practice={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":66)]
 }
+continue_run={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":67)]
+}
 retry_attempt={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":82)]
