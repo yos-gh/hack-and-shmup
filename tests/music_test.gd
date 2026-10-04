@@ -35,7 +35,7 @@ func run() -> void:
 	quit(1 if failures else 0)
 
 func check_tracks() -> void:
-	var keys: Array = Music.STAGE + Music.BOSS + [Music.TITLE, Music.CARDS, Music.COOLING] + Music.RESERVED.values()
+	var keys: Array = Music.STAGE + Music.BOSS + [Music.WYRM_SECOND, Music.TITLE, Music.CARDS, Music.COOLING] + Music.RESERVED.values()
 	check(keys.size() == Music.LOOP_OFFSETS.size(), "every track has exactly one loop point")
 	for key in keys:
 		var stream: AudioStreamOggVorbis = Music.stream(key)
@@ -95,6 +95,15 @@ func check_boss_generation() -> void:
 		settings.depth = 5
 		first[generator.generate(settings, seed_value).boss_variant] = true
 	check(first.size() == 3, "the first boss of a run can be any boss")
+	var after_wyrm: Dictionary = {}
+	for seed_value in range(60):
+		var settings := Settings.new()
+		settings.depth = 30
+		settings.previous_boss = 3
+		after_wyrm[generator.generate(settings, seed_value).boss_variant] = true
+		settings.depth = 50
+		check(generator.generate(settings, seed_value).boss_variant == 3, "every 25th floor is the Abyss Wyrm")
+	check(after_wyrm.size() == 3 and not after_wyrm.has(3), "after the Abyss Wyrm any regular boss can follow")
 	var forced := Settings.new()
 	forced.depth = 15
 	forced.boss_choice = 1

@@ -11,14 +11,16 @@ const STAGE := [
 	"stage_static_field", "stage_tresillo_rush", "stage_rave_signal", "stage_dub_depth", "stage_electro_pulse",
 	"stage_starfall_run", "stage_origin_drive", "stage_afterimage", "stage_reverse_city",
 ]
-# Indexed by boss variant: Iron Citadel, Bastion of Stars, Triad Battery.
-const BOSS := ["boss_red_alert", "boss_dread_engine", "boss_triad_lattice"]
+# Indexed by boss variant: Iron Citadel, Bastion of Stars, Triad Battery, Abyss Wyrm (first form).
+const BOSS := ["boss_red_alert", "boss_dread_engine", "boss_triad_lattice", "boss_abyss_core"]
+# The Abyss Wyrm's second form, from the moment it tears out of the floor.
+const WYRM_SECOND := "boss_recca_dark_v2"
 const TITLE := "title_gate_of_the_deep"
 const CARDS := "intermission_card_select"
 # After a boss falls, until the player takes the stairs: a quiet, beatless loop instead of the boss track.
 const COOLING := "intermission_cooling"
-# Ready for content that does not exist yet: the final boss's two forms and an ending theme.
-const RESERVED := {"final_boss_1": "boss_abyss_core", "final_boss_2": "boss_recca_dark_v2", "theme": "theme_recca_style_bgm"}
+# Ready for content that does not exist yet: an ending theme.
+const RESERVED := {"theme": "theme_recca_style_bgm"}
 const LOOP_OFFSETS := {
 	"stage_ignition": 12.6316, "stage_wire_runner": 12.0, "stage_deep_drift": 26.6667, "stage_overdrive": 11.5663,
 	"stage_afterburner": 0.0, "stage_static_field": 14.5455, "stage_tresillo_rush": 12.3077, "stage_rave_signal": 6.2338,
@@ -62,7 +64,12 @@ func next_stage() -> String:
 func track_for(game) -> String:
 	if game.title_screen: return TITLE
 	if game.choosing: return CARDS
-	if game.boss_floor: return COOLING if game.stairs_unlocked else BOSS[clampi(game.boss_variant, 0, BOSS.size() - 1)]
+	if game.boss_floor:
+		if game.stairs_unlocked: return COOLING
+		if game.boss_variant == 3:
+			for e in game.enemies:
+				if e.get("phase", 1) == 2: return WYRM_SECOND
+		return BOSS[clampi(game.boss_variant, 0, BOSS.size() - 1)]
 	if game.floor_revision != floor_key:
 		floor_key = game.floor_revision
 		floor_track = next_stage()

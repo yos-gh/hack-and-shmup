@@ -4,7 +4,7 @@ param(
     [ValidateRange(0,40)][double]$Tilt = 25,
     [int]$Seed = 19045,
     [ValidateRange(0, 999)][int]$Floor = 0,
-    [ValidateRange(-1, 2)][int]$Boss = -1,
+    [ValidateRange(-1, 3)][int]$Boss = -1,
     [string]$Godot = 'C:/Users/ysyki/Godot/Godot_console.exe'
 )
 $projectPath = Split-Path -Parent $PSScriptRoot

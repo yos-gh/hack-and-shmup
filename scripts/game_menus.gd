@@ -191,16 +191,17 @@ func _practice(screen: Vector2) -> void:
 	var y := screen.y*0.5-24
 	_label(Rect2(24,y-225,screen.x-48,48),"BOSS PRACTICE",30,Color("63f5ce"))
 	_label(Rect2(24,y-177,screen.x-48,45),"LEFT STICK / DPAD: SELECT   A / LB: CONFIRM   B: BACK" if game.controls.using_gamepad else "A / D: BOSS   W / S: FLOOR   ARROW KEYS ALSO WORK   TAB + ENTER",15,Color("8194aa"))
-	for i in range(7):
-		var caption: String = game.boss.NAMES[i] if i < 3 else ["−","+","START","BACK (B)" if game.controls.using_gamepad else "BACK (Esc)"][i-3]
+	var bosses: int = game.practice.BOSSES
+	for i in range(game.practice.BACK+1):
+		var caption: String = game.boss.NAMES[i] if i < bosses else ["−","+","START","BACK (B)" if game.controls.using_gamepad else "BACK (Esc)"][i-bosses]
 		var button := _button(game.practice.button(screen,i),caption,func(): game.practice.activate(game,i); sync())
-		if i < 3:
+		if i < bosses:
 			button.toggle_mode = true
 			button.set_pressed_no_signal(i == game.practice.variant)
 			if i == game.practice.variant: button.add_theme_color_override("font_color",Color("63f5ce"))
 	_settings()
 	var practice_buttons := _buttons()
-	var tab_order := [0,1,2,3,4,5,6,7,8]
+	var tab_order := range(practice_buttons.size())
 	for j in range(tab_order.size()):
 		var current: Button = practice_buttons[tab_order[j]]
 		current.focus_next = current.get_path_to(practice_buttons[tab_order[(j+1)%tab_order.size()]])

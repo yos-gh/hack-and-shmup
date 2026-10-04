@@ -5,9 +5,11 @@ const Catalog = preload("res://scripts/combat_catalog.gd")
 var fortress = preload("res://scripts/boss_fortress.gd").new()
 var bastion = preload("res://scripts/boss_bastion.gd").new()
 var triad = preload("res://scripts/boss_triad.gd").new()
+var wyrm = preload("res://scripts/boss_wyrm.gd").new()
 
-const NAMES := ["IRON CITADEL", "BASTION OF STARS", "TRIAD BATTERY"]
-const COLORS := [Color("ff9470"), Color("e0a5fa"), Color("f7dab0")]
+# Index 3 is the Abyss Wyrm, which takes every 25th floor (FloorGenerator).
+const NAMES := ["IRON CITADEL", "BASTION OF STARS", "TRIAD BATTERY", "ABYSS WYRM"]
+const COLORS := [Color("ff9470"), Color("e0a5fa"), Color("f7dab0"), Color("8fc8ff")]
 var lasers: Array[Dictionary] = []
 var salvos: Array[Dictionary] = []
 
@@ -15,6 +17,7 @@ func controller(variant: int):
 	match variant:
 		0: return fortress
 		1: return bastion
+		3: return wyrm
 	return triad
 
 func reset() -> void:
@@ -22,7 +25,7 @@ func reset() -> void:
 	salvos.clear()
 
 func build_layout(data) -> void:
-	var arenas := [Rect2i(0,-17,48,36),Rect2i(0,-20,32,42),Rect2i(0,-19,40,40)]
+	var arenas := [Rect2i(0,-17,48,36),Rect2i(0,-20,32,42),Rect2i(0,-19,40,40),Rect2i(0,-22,56,44)]
 	data.rooms.assign([Rect2i(-12,-4,9,9),arenas[data.boss_variant]])
 	data.room_shapes.assign([0,0])
 	for i in range(2):
@@ -42,8 +45,8 @@ func build_layout(data) -> void:
 		for pillar in [Vector2i(6,-15),Vector2i(6,15),Vector2i(13,-7),Vector2i(13,6)]:
 			for y in range(2):
 				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
-	if data.boss_variant == 2:
-		for pillar in triad.COVER_CELLS:
+	if data.boss_variant in [2,3]:
+		for pillar in (triad.COVER_CELLS if data.boss_variant == 2 else wyrm.COVER_CELLS):
 			for y in range(2):
 				for x in range(2): data.cells.erase(pillar+Vector2i(x,y))
 	data.connect_rooms(0,1)
@@ -65,6 +68,7 @@ func build_layout(data) -> void:
 		fortress.setup(data,data.enemies[0])
 	if data.boss_variant == 1: bastion.setup(data,data.enemies[0])
 	if data.boss_variant == 2: triad.setup(data,data.enemies[0])
+	if data.boss_variant == 3: wyrm.setup(data,data.enemies[0])
 	data.boss_max_hp = data.enemies[0].hp
 	data.time_limit = 0.0
 	data.route_seconds = 0.0
@@ -132,6 +136,7 @@ func enemy_velocity(game, e: Dictionary, delta: float, toward: Vector2) -> Vecto
 		0: return fortress.advance(self,game,e,delta,toward)
 		1: return bastion.advance(self,game,e,delta,toward)
 		2: return triad.advance(self,game,e,delta,toward)
+		3: return wyrm.advance(self,game,e,delta,toward)
 	return Vector2.ZERO
 
 func advance_attacks(game, delta: float) -> void:
@@ -152,15 +157,18 @@ func advance_lasers(game, delta: float) -> void:
 			if beam.warning <= 0:
 				var desired: Vector2 = beam.owner.p.direction_to(game.player)
 				beam.heading = beam.heading.rotated(clampf(angle_difference(beam.heading.angle(),desired.angle()),-beam.turn_rate*delta,beam.turn_rate*delta))
-			beam.a = beam.owner.p+beam.heading*82
+			beam.a = beam.owner.p+beam.heading*beam.get("muzzle",82.0)
 			beam.b = game.attack_end(beam.a,beam.heading,1600)
+		if beam.has("mount"):
+			beam.a = wyrm.mount_position(beam.owner,beam.mount)
+			beam.b = game.attack_end(beam.a,beam.heading,1800)
 		if beam.has("gun"):
 			if beam.warning <= 0 and beam.has("sweep"): beam.heading = beam.heading.rotated(beam.sweep*minf(delta,beam.duration))
 			beam.a = fortress.gun_position(beam.owner,beam.gun)
 			beam.b = game.attack_end(beam.a,beam.heading,1800)
 		if beam.warning > 0:
 			beam.warning = maxf(0.0,beam.warning-delta)
-			if beam.warning == 0 and game.boss_variant in [0,2] and not sounded_owners.has(beam.owner):
+			if beam.warning == 0 and game.boss_variant in [0,2,3] and not sounded_owners.has(beam.owner):
 				game.enemy_attack_cue("boss_release" if beam.get("triad",false) else "hunter_fire",beam.a)
 				sounded_owners.append(beam.owner)
 			continue

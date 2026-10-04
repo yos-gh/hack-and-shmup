@@ -54,9 +54,9 @@ func run() -> void:
 	send(motion(JOY_AXIS_TRIGGER_LEFT,0.0))
 	game.practice.open(game)
 	game.menus.sync()
-	game.menus._buttons()[4].grab_focus()
+	game.menus._buttons()[game.practice.PLUS].grab_focus()
 	tap(JOY_BUTTON_LEFT_SHOULDER)
-	check(game.practice.depth == 10 and root.gui_get_focus_owner() == game.menus._buttons()[4],"practice plus retains focus after refresh")
+	check(game.practice.depth == 10 and root.gui_get_focus_owner() == game.menus._buttons()[game.practice.PLUS],"practice plus retains focus after refresh")
 	tap(JOY_BUTTON_LEFT_SHOULDER)
 	check(game.practice.depth == 15,"practice plus can be pressed again without navigating back")
 	# Held fire from a menu must remain disarmed until it is released.

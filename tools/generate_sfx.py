@@ -309,6 +309,17 @@ EFFECTS = {
         tri(0, 2.0, const(55), const(1), quantize=False),
         noise(0, 2.0, 9, lambda t: 0.35 + 0.25 * math.sin(math.tau * 8 * t), gain=0.6),
     ]),
+    # Abyss Wyrm: a deep, shuddering rumble under the next breach point, then the floor bursting with a roar.
+    'wyrm_rumble': dict(length=0.9, hp=30, voices=[
+        noise(0, 0.9, line((0, 14), (0.9, 12)), lambda t: min(1.0, 0.2 + t) * (0.55 + 0.45 * abs(math.sin(math.tau * 9 * t))) * (1 if t < 0.78 else max(0.0, (0.9 - t) / 0.12))),
+        tri(0, 0.9, vibrato(glide(48, 62, 0.85), 7, 0.08), line((0, 0.3), (0.75, 1), (0.9, 0))),
+        pulse(0.1, 0.8, glide(70, 110, 0.8), line((0, 0), (0.6, 0.5), (0.8, 0)), 0.125, 0.5),
+    ]),
+    'wyrm_breach': dict(length=0.62, hp=35, voices=[
+        noise(0, 0.62, line((0, 5), (0.55, 12)), line((0, 1), (0.06, 0.9), (0.62, 0))),
+        tri(0, 0.22, glide(120, 40, 0.2), decay(1, 0.22)),
+        pulse(0.03, 0.45, vibrato(glide(260, 90, 0.42), 18, 0.08), line((0, 0.8), (0.3, 0.6), (0.45, 0)), alternate(0.5, 0.25, TICK * 2), 0.8),
+    ]),
     'boss_destroy': dict(length=1.65, hp=35, voices=[
         *[noise(t0, 0.25, line((0, p), (0.2, p + 3)), decay(0.9, 0.25)) for t0, p in [(0, 6), (0.16, 7), (0.32, 5), (0.5, 8)]],
         noise(0.72, 0.93, line((0, 9), (0.9, 15)), line((0, 1), (0.1, 0.95), (0.93, 0))),

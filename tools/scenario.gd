@@ -3,7 +3,7 @@ extends SceneTree
 # Run with --script res://tools/scenario.gd -- --scenario=normal19 (or triad45).
 # --frames=0 enables ordinary interactive play; otherwise fixed 60 Hz input.
 # --floor=23 starts any depth from its normal spawn instead of a named scenario;
-# --boss=0..2 picks Citadel/Bastion/Triad on boss floors (default: seeded pick).
+# --boss=0..3 picks Citadel/Bastion/Triad/Wyrm on boss floors (default: seeded pick).
 const Scenario = preload("res://tools/dev_scenario.gd")
 
 func _initialize() -> void:
@@ -22,8 +22,8 @@ func run() -> void:
 		printerr("Expected scenario=normal11|normal19|citadel5|bastion15|triad45, integer seed, weapon=0..2, frames>=0, tilt=0..40")
 		quit(2)
 		return
-	if not options.floor.is_empty() and (not options.floor.is_valid_int() or int(options.floor) < 1) or not options.boss.is_valid_int() or int(options.boss) < -1 or int(options.boss) > 2:
-		printerr("Expected floor>=1 and boss=-1..2")
+	if not options.floor.is_empty() and (not options.floor.is_valid_int() or int(options.floor) < 1) or not options.boss.is_valid_int() or int(options.boss) < -1 or int(options.boss) > 3:
+		printerr("Expected floor>=1 and boss=-1..3")
 		quit(2)
 		return
 	var game = load("res://main.tscn").instantiate()

@@ -36,6 +36,10 @@ func draw(game, screen: Vector2) -> void:
 		label_at(game, timer.position+Vector2(0,43), "NO TIME LIMIT", 12, MUTED)
 		var fraction: float = clampf(game.boss.health(game)/maxf(game.boss_max_hp,1),0,1)
 		meter(game, Rect2(0,76,bar_width,4), fraction, boss_ink, clock)
+		if game.boss_variant == 3:
+			# The Abyss Wyrm's two forms split the bar at its midpoint.
+			var split: float = game.boss.wyrm.SECOND_FORM/(1.0+game.boss.wyrm.SECOND_FORM)
+			game.draw_rect(Rect2(bar_width*split-1,72,2,12),Color(boss_ink,0.9))
 		if not game.stairs_unlocked:
 			var caption: String = "%s  %d%%" % [game.boss.NAMES[game.boss_variant], ceili(fraction*100)]
 			label_at(game, Vector2(14,96), caption, 11, Color(boss_ink,0.85))

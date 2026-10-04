@@ -19,7 +19,7 @@ static func configure(game, scenario: String, seed_value: int, weapon: int) -> v
 
 # Any depth from its ordinary spawn: one automatic upgrade per cleared floor
 # (MOVE SPEED capped like boss practice),
-# normal damage and timer. Boss floors use boss_choice 0..2, or -1 for the seeded pick.
+# normal damage and timer. Boss floors use boss_choice 0..3, or -1 for the seeded pick.
 static func configure_floor(game, depth: int, seed_value: int, weapon: int, boss_choice: int = -1) -> void:
 	game.start_run()
 	game.floor_number = depth
