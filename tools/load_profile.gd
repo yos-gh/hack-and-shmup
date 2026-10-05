@@ -9,14 +9,15 @@ extends SceneTree
 # Godot_console.exe --path . --max-fps 0 --disable-vsync --script res://tools/load_profile.gd -- --floor=40 --output=<file>
 # Options: --floor=N --seed=S --weapon=0..2 --mobs=N (cap alive mobs) --fire=0|1 --view=2d|3d
 #          --warmup=600 --frames=600 --output=<json> --capture=<png>
-# Diagnostics: --hide=<3D batch keys> hides batches, --msaa=0|2|4 sets 3D MSAA.
+# Diagnostics: --hide=<3D batch keys> hides batches, --msaa=0|2|4 sets 3D MSAA,
+# --fx=0 hides the full-screen pass, --depth_scale=N renders N x the 3D pixels.
 const Scenario = preload("res://tools/dev_scenario.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","warmup":"600","frames":"600","output":""}
+	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","depth_scale":"1","fx":"1","warmup":"600","frames":"600","output":""}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=",true,1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -52,6 +53,9 @@ func run() -> void:
 		for child in game.depth_view.stage.get_children():
 			if child is MultiMeshInstance3D and (child.multimesh == game.depth_view.batches.get(key) or child.multimesh == game.depth_view.batches.get(key+"_wire")): child.visible = false
 	game.depth_view.viewport.msaa_3d = {"0":Viewport.MSAA_DISABLED,"2":Viewport.MSAA_2X,"4":Viewport.MSAA_4X}[options.msaa]
+	if options.fx == "0":
+		for child in game.get_children():
+			if child is CanvasLayer and child.layer == 50: child.visible = false
 	var instances := {}
 	for key in game.depth_view.batches: instances[key] = game.depth_view.batches[key].visible_instance_count
 	var vp_rid: RID = root.get_viewport_rid()
@@ -81,6 +85,8 @@ func run() -> void:
 		var physics_ms := (Time.get_ticks_usec()-started)/1000.0
 		started = Time.get_ticks_usec()
 		if game.depth_enabled: game.depth_view._process(1.0/60.0)
+		# Diagnostic fill-rate amplifier: same framing, more 3D pixels.
+		if options.depth_scale != "1": game.depth_view.viewport.size = Vector2i(game.get_viewport_rect().size*float(options.depth_scale))
 		var sync_ms := (Time.get_ticks_usec()-started)/1000.0
 		game.draw_usec = 0
 		await process_frame
