@@ -32,7 +32,11 @@ Use the left stick or D-pad to select menu items, then A / Cross or LB to confir
 - **Shockwave** — Push enemies back and clear nearby bullets.
 - **Lance** — A piercing beam.
 
-Face one of three bosses every five floors, with no time limit. Every 25th floor, the Abyss Wyrm rises from the floor instead. The pause screen shows a password for the current floor (click it to copy); CONTINUE on the title screen takes that password and restarts the run at the start of that floor, with the same layout and upgrades. The title screen also has sound and fullscreen controls. Clicking the emblem above the title logo opens a hidden sound mode that plays every BGM track, unused ones included.
+Face one of three bosses every five floors, with no time limit. Every 25th floor, the Abyss Wyrm rises from the floor instead. The title screen also has sound and fullscreen controls. Clicking the emblem above the title logo opens a hidden sound mode that plays every BGM track, unused ones included.
+
+## Resume with a password
+
+The pause screen shows a 42-character password for the current floor (click it to copy). Enter it with CONTINUE on the title screen to restart from the start of that floor, with the same layout and upgrades. Nothing is saved to your computer or browser, so keep the password somewhere safe.
 
 ## Run and build
 
