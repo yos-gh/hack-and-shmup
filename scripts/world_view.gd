@@ -92,11 +92,15 @@ func draw(game, screen: Vector2) -> void:
 	if game.boss_floor and game.boss_variant == 2: game.boss.triad.draw(game)
 	if game.boss_floor and game.boss_variant == 3: game.boss.wyrm.draw(game)
 	for e in game.enemies:
-		if game.cells.get(game.tile(e.p), -1) >= 0 and not game.discovered.has(game.cells[game.tile(e.p)]): continue
+		var room: int = game.cells.get(game.tile(e.p), -1)
+		if room >= 0 and not game.discovered.has(room): continue
 		var p: Vector2 = e.p
 		MobVisuals.draw_warning(game,e)
-		var warning = game.attack_warning(e)
 		if e.kind == Catalog.Enemy.BOSS: continue
+		# Every remaining mob mark stays within 25px of its body, inside the
+		# view's 32px margin, so off-screen mobs would draw nothing visible.
+		if not view.has_point(p): continue
+		var warning = game.attack_warning(e)
 		if e.has("drop"): draw_carrier_mark(game,e)
 		if not e.active:
 			game.draw_line(p + e.dir * 13, p + e.dir * 23, Color("ffb95e") if e.searching else Color("8194aa"), 2)

@@ -303,10 +303,14 @@ func _upload_mesh(mesh: MultiMesh, entries: Array) -> void:
 		mesh.visible_instance_count = 1
 		mesh.set_instance_transform(0,Transform3D(Basis.from_scale(Vector3.ZERO),Vector3.ZERO))
 		mesh.set_instance_color(0,Color.TRANSPARENT)
+	if entries.is_empty(): return
+	var clock: float = get_parent().presentation.clock
+	var custom := mesh.use_custom_data
 	for i in range(entries.size()):
-		mesh.set_instance_transform(i, entries[i].transform)
-		mesh.set_instance_color(i, entries[i].color)
-		if mesh.use_custom_data: mesh.set_instance_custom_data(i, Color(entries[i].warning, get_parent().presentation.clock, entries[i].get("line",0.0), 0))
+		var item: Dictionary = entries[i]
+		mesh.set_instance_transform(i, item.transform)
+		mesh.set_instance_color(i, item.color)
+		if custom: mesh.set_instance_custom_data(i, Color(item.warning, clock, item.get("line",0.0), 0))
 
 func set_active(value: bool) -> void:
 	active = value
@@ -354,7 +358,7 @@ func sync(game) -> void:
 	var world_screen: Vector2 = screen/game.view_scale()
 	var bounds := Rect2(game.view_origin()-world_screen*0.5-Vector2(64,64), world_screen+Vector2(128,128))
 	for enemy in game.enemies:
-		if not Catalog.is_mob(enemy.kind) or enemy.hp <= 0 or not bounds.has_point(enemy.p) or not game.attack_open(enemy.p): continue
+		if not bounds.has_point(enemy.p) or enemy.hp <= 0 or not Catalog.is_mob(enemy.kind) or not game.attack_open(enemy.p): continue
 		var warning: float = game.attack_warning(enemy)
 		var core_ink := Color("f3637a") if enemy.kind == Catalog.Enemy.CHASER else (Color("ffb95e") if enemy.kind == Catalog.Enemy.SNIPER else Color("ad8fff"))
 		if enemy.kind in [Catalog.Enemy.FLANKER,Catalog.Enemy.INTERCEPTOR]: core_ink = MobVisuals.ink(enemy.kind)

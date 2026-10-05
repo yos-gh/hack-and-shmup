@@ -169,11 +169,13 @@ func _ready() -> void:
 	new_floor()
 	set_depth_view(true)
 
+# tile/center/walkable/attack_open run thousands of times a frame with a full
+# crowd, so the live Game computes them inline (same results as FloorQueries).
 func tile(p: Vector2) -> Vector2i:
-	return Queries.tile(self,p)
+	return Vector2i(floori(p.x/TILE),floori(p.y/TILE))
 
 func center(p: Vector2i) -> Vector2:
-	return Queries.center(self,p)
+	return Vector2(p)*TILE+Vector2(TILE*0.5,TILE*0.5)
 
 func new_floor(boss_choice: int = -1) -> void:
 	var settings = preload("res://scripts/floor_settings.gd").new()
@@ -219,6 +221,9 @@ func enemy_health(kind: int, depth: int) -> float:
 func enemy_touches_player(e: Dictionary) -> bool:
 	if e.get("arrival",0.0) > 0: return false
 	if e.kind == Catalog.Enemy.BOSS: return boss.controller(boss_variant).touches(e,player,PLAYER_HIT_RADIUS)
+	# No mob body reaches 30px from its centre (a shield corner plus the hit
+	# radius is under 22px), so distant mobs skip the exact test.
+	if e.p.distance_squared_to(player) > 900.0: return false
 	if e.kind == Catalog.Enemy.SNIPER: return e.p.distance_to(player) < PLAYER_HIT_RADIUS + 12.0
 	var half_size := 12.0 if e.kind == Catalog.Enemy.SHIELD else 10.0
 	var nearest: Vector2 = player.clamp(e.p-Vector2.ONE*half_size,e.p+Vector2.ONE*half_size)
@@ -247,7 +252,10 @@ func update_awareness(e: Dictionary, room_id: int, delta: float) -> void:
 		if e.kind in [Catalog.Enemy.SNIPER,Catalog.Enemy.SHIELD]: e.cd = maxf(e.cd,Catalog.ENEMIES[e.kind].activation_delay)
 
 func entry_safe(p: Vector2, room_id: int) -> bool:
-	return Queries.entry_safe(self,p,room_id)
+	if cells.get(Vector2i(floori(p.x/TILE),floori(p.y/TILE)),-1) != room_id: return false
+	for entrance in entrances.get(room_id,[]):
+		if p.distance_to(entrance) < ENTRY_CLEARANCE: return false
+	return walkable(p)
 
 func room_contains(p: Vector2i, r: Rect2i, shape: int) -> bool:
 	return Queries.room_contains(self,p,r,shape)
@@ -256,8 +264,8 @@ func restart_attempt() -> void:
 	session.restart_attempt(self)
 
 func attack_open(p: Vector2) -> bool:
-	var c := tile(p)
-	return cells.has(c) and (cells[c] == -1 or discovered.has(cells[c]))
+	var id: int = cells.get(Vector2i(floori(p.x/TILE),floori(p.y/TILE)),-2)
+	return id == -1 or (id >= 0 and discovered.has(id))
 
 func attack_end(origin: Vector2, direction: Vector2, distance: float) -> Vector2:
 	var end := origin
@@ -316,7 +324,14 @@ func connect_rooms(a: int, b: int) -> void:
 	Queries.connect_rooms(self,a,b)
 
 func walkable(p: Vector2, radius: float = 10.0) -> bool:
-	return Queries.walkable(self,p,radius)
+	# Same single-precision corner sums as FloorQueries.walkable.
+	var lo := p-Vector2(radius,radius)
+	var hi := p+Vector2(radius,radius)
+	var left := floori(lo.x/TILE)
+	var right := floori(hi.x/TILE)
+	var top := floori(lo.y/TILE)
+	var bottom := floori(hi.y/TILE)
+	return cells.has(Vector2i(left,top)) and cells.has(Vector2i(right,top)) and cells.has(Vector2i(left,bottom)) and cells.has(Vector2i(right,bottom))
 
 func slide(p: Vector2, motion: Vector2, radius: float = 10.0) -> Vector2:
 	var next := p
@@ -340,14 +355,19 @@ func rebuild_enemy_buckets() -> void:
 	# A bullet needs one lookup; overlapping targets keep their original priority.
 	for e in enemies:
 		if e.hp <= 0: continue
+		# bullet_target only accepts targets in open cells, and neither positions
+		# nor discovered rooms change while bullets fly, so sleeping mobs in
+		# unopened rooms never need a bucket.
+		if e.kind != Catalog.Enemy.BOSS and not attack_open(e.p): continue
 		var radius := enemy_bullet_radius(e)
 		var lo := enemy_bucket(e.p - Vector2.ONE * radius)
 		var hi := enemy_bucket(e.p + Vector2.ONE * radius)
 		for y in range(lo.y, hi.y + 1):
 			for x in range(lo.x, hi.x + 1):
 				var key := Vector2i(x, y)
-				if not enemy_buckets.has(key): enemy_buckets[key] = []
-				enemy_buckets[key].append(e)
+				var bucket = enemy_buckets.get(key)
+				if bucket == null: enemy_buckets[key] = [e]
+				else: bucket.append(e)
 
 func bullet_target(p: Vector2) -> Dictionary:
 	for e in enemy_buckets.get(enemy_bucket(p), []):
