@@ -36,7 +36,7 @@ Face one of three bosses every five floors, with no time limit. Every 25th floor
 
 ## Resume with a password
 
-The pause screen shows a 42-character password for the current floor (click it to copy). Enter it with CONTINUE on the title screen to restart from the start of that floor, with the same layout and upgrades. Nothing is saved to your computer or browser, so keep the password somewhere safe.
+The pause screen shows a 42-character password for the current floor (click it to copy). Enter it with CONTINUE on the title screen to restart from the start of that floor, with the same layout and upgrades.
 
 ## Run and build
 
