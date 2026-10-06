@@ -106,6 +106,9 @@ func setup(data, e: Dictionary) -> void:
 	for k in range(SLOTS): e.plates.append({"hp":plate_hp,"max_hp":plate_hp,"timer":0.0})
 	var home: Vector2 = data.center(Vector2i(32,0))-Vector2(16,16)
 	e["home"] = home
+	# The wyrm draws from its own stream, seeded by the floor, so every attempt
+	# meets the same pattern no matter how many shots were fired on the way.
+	e["rng_state"] = seeded_state(hash([data.rng.state,"wyrm"]))
 	e["phase"] = 1
 	e["state"] = "under"
 	e["state_time"] = FIRST_UNDER_TIME
@@ -184,6 +187,26 @@ func setup(data, e: Dictionary) -> void:
 	e.p = home
 	e.dir = Vector2.LEFT
 	e.cd = 1.0
+
+# The stream's state lives in the enemy itself, so the floor snapshot restores
+# it on every retry along with the rest of the wyrm.
+var stream := RandomNumberGenerator.new()
+
+func seeded_state(seed_value: int) -> int:
+	stream.seed = seed_value
+	return stream.state
+
+func roll(e: Dictionary) -> float:
+	stream.state = e.rng_state
+	var value := stream.randf()
+	e.rng_state = stream.state
+	return value
+
+func roll_range(e: Dictionary, from: float, to: float) -> float:
+	stream.state = e.rng_state
+	var value := stream.randf_range(from,to)
+	e.rng_state = stream.state
+	return value
 
 func rage(e: Dictionary) -> bool:
 	return e.hp <= e.phase_hp*(SECOND_FORM+0.5) if e.phase == 1 else e.hp <= e.phase_hp*SECOND_FORM*0.5
@@ -597,14 +620,14 @@ func plan_wave(game, e: Dictionary, wave: int, warn: float) -> void:
 	var hit := {}
 	for i in range(cells.size()):
 		var chance: float = 0.4 if wave == 0 else (0.1 if previous.has(i) else 0.55)
-		if game.rng.randf() >= chance: continue
+		if roll(e) >= chance: continue
 		# The running lane through the player: their row, then their column.
 		if wave%2 == 0 and grid[i].y == here.y: continue
 		if wave%2 == 1 and grid[i].x == here.x: continue
 		hit[i] = true
 	for i in hit:
-		var jitter := Vector2(game.rng.randf_range(-24,24),game.rng.randf_range(-24,24))
-		e.shells.append({"p":cells[i]+jitter,"r":SHELL_RADIUS,"impact":warn,"warn":warn,"fired":false,"wave":wave,"spin":game.rng.randf_range(-4,4)})
+		var jitter := Vector2(roll_range(e,-24,24),roll_range(e,-24,24))
+		e.shells.append({"p":cells[i]+jitter,"r":SHELL_RADIUS,"impact":warn,"warn":warn,"fired":false,"wave":wave,"spin":roll_range(e,-4,4)})
 	e.shell_previous = hit
 	if wave > 0: game.enemy_attack_cue("boss_mark",game.player,false)
 
@@ -716,9 +739,9 @@ func pick_holes(game, e: Dictionary) -> void:
 	var best_tail := Vector2.INF
 	var best_score := -INF
 	for attempt in range(60):
-		var head: Vector2 = Vector2(game.rng.randf_range(box.position.x,box.end.x),game.rng.randf_range(box.position.y,box.end.y))
-		if e.pattern == "barrage": head = e.home+Vector2.from_angle(game.rng.randf_range(0,TAU))*game.rng.randf_range(0,240)
-		var tail: Vector2 = head+Vector2.from_angle(game.rng.randf_range(0,TAU))*game.rng.randf_range(520,900)
+		var head: Vector2 = Vector2(roll_range(e,box.position.x,box.end.x),roll_range(e,box.position.y,box.end.y))
+		if e.pattern == "barrage": head = e.home+Vector2.from_angle(roll_range(e,0,TAU))*roll_range(e,0,240)
+		var tail: Vector2 = head+Vector2.from_angle(roll_range(e,0,TAU))*roll_range(e,520,900)
 		if not inner(e).grow(60).has_point(tail) or not clear_disc(game,tail,TAIL_HOLE_RADIUS+60): continue
 		var score: float = minf(head.distance_to(player),520.0)+minf(tail.distance_to(player),320.0)*0.6
 		if e.head_hole != Vector2.INF: score += minf(head.distance_to(e.head_hole),400.0)*0.4
@@ -733,7 +756,7 @@ func pick_holes(game, e: Dictionary) -> void:
 	e.head_hole = best
 	e.tail_hole = best_tail
 	# Rise at an angle to the player, never straight at them, and stay in the middle.
-	var heading: float = best.angle_to_point(player)+(0.7 if game.rng.randf() < 0.5 else -0.7)
+	var heading: float = best.angle_to_point(player)+(0.7 if roll(e) < 0.5 else -0.7)
 	if not inner(e).has_point(best+Vector2.from_angle(heading)*300): heading = best.angle_to_point(e.home)
 	e.emerge_heading = heading
 	e.tail_dir = best.direction_to(best_tail)
@@ -945,13 +968,13 @@ func enter_mode(boss, game, e: Dictionary, mode: String) -> void:
 			var box := inner(e).grow(-60)
 			var target: Vector2 = e.home
 			for attempt in range(16):
-				target = Vector2(game.rng.randf_range(box.position.x,box.end.x),game.rng.randf_range(box.position.y,box.end.y))
+				target = Vector2(roll_range(e,box.position.x,box.end.x),roll_range(e,box.position.y,box.end.y))
 				if target.distance_to(e.lead) > 420 and target.distance_to(game.player) > 300: break
 			e.move_target = target
-			e.move_time = game.rng.randf_range(2.6,3.6)
+			e.move_time = roll_range(e,2.6,3.6)
 		"stalk":
 			e.move_side = -e.move_side
-			e.move_time = game.rng.randf_range(2.4,3.2)
+			e.move_time = roll_range(e,2.4,3.2)
 		"evade":
 			e.move_target = (e.lead+game.player.direction_to(e.lead)*460).clamp(inner(e).position,inner(e).end)
 			e.move_time = 1.6
@@ -996,7 +1019,7 @@ func next_mode(boss, game, e: Dictionary) -> void:
 			else: e.move_time = 0.3
 		_:
 			if e.charge_cd <= 0 and e.lead.distance_to(game.player) > 340: enter_mode(boss,game,e,"charge_warning")
-			elif e.still_time > 1.6 or (e.move_mode == "prowl" and game.rng.randf() < 0.55): enter_mode(boss,game,e,"stalk")
+			elif e.still_time > 1.6 or (e.move_mode == "prowl" and roll(e) < 0.55): enter_mode(boss,game,e,"stalk")
 			else: enter_mode(boss,game,e,"prowl")
 
 func advance_roam(boss, game, e: Dictionary, delta: float) -> void:

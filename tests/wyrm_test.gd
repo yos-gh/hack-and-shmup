@@ -23,6 +23,30 @@ func until(game, condition: Callable, limit: float) -> bool:
 		frames += 1
 	return condition.call()
 
+# Holes of the first two breaches on a fresh floor 25, with the player waiting
+# at the same spot. burn spends gameplay random numbers first, like firing does.
+func opening(game, burn: int, retry: bool = false) -> Array:
+	game.rng.seed = 2501
+	game.floor_number = 25
+	game.new_floor()
+	game.set_physics_process(false)
+	if retry:
+		game.discovered[1] = true
+		game.player = game.enemies[0].home+Vector2(-620,0)
+		step(game,4.0)
+		game.restart_attempt()
+	for i in range(burn): game.rng.randf()
+	game.discovered[1] = true
+	var e: Dictionary = game.enemies[0]
+	game.player = e.home+Vector2(-620,0)
+	var holes := []
+	until(game,func(): return e.active,5.0)
+	holes.append([e.head_hole,e.tail_hole])
+	until(game,func(): return e.state == "dive",12.0)
+	until(game,func(): return e.state == "under",6.0)
+	holes.append([e.head_hole,e.tail_hole])
+	return holes
+
 func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
@@ -226,6 +250,12 @@ func run() -> void:
 	wyrm.skip_form(game)
 	game.player = e.home+Vector2(-620,0)
 	check(until(game,func(): return e.state == "roam",8.0),"the second-form skip reaches the prowling form")
+
+	# Retries meet the same breaches: the wyrm's own stream comes from the floor
+	# seed, so shots fired on the way in (gameplay randomness) change nothing.
+	var plain := opening(game,0)
+	check(plain == opening(game,37),"randomness used before the fight leaves the breaches unchanged")
+	check(plain == opening(game,0,true),"a retry replays the same breaches")
 	game.free()
-	if failures == 0: print("PASS: Abyss Wyrm placement, cover, breach warnings, crawling patterns, shielded core, two forms, unstuck movement, charge, body beams, bombardment and debug shortcuts")
+	if failures == 0: print("PASS: Abyss Wyrm placement, cover, breach warnings, crawling patterns, shielded core, two forms, unstuck movement, charge, body beams, bombardment, debug shortcuts and repeatable breaches")
 	quit(1 if failures else 0)
