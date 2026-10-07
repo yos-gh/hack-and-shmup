@@ -574,6 +574,11 @@ func _physics_process(delta: float) -> void:
 		if discovered.has(i) or (simulation_tick + i) % IDLE_UPDATE_PHASES == 0:
 			patrol_elapsed[i] = 0.0
 	rebuild_enemy_buckets()
+	# Bastion energy orbs absorb player shots; list them once, not per shot step.
+	var orbs: Array[Dictionary] = []
+	if boss_variant == 1:
+		for b in bullets:
+			if b.get("energy_orb",false): orbs.append(b)
 	for b in bullets:
 		b.life -= delta
 		if b.get("energy_orb",false):
@@ -608,10 +613,10 @@ func _physics_process(delta: float) -> void:
 					b.life = 0
 					break
 			else:
-				if boss_variant == 1:
+				if not orbs.is_empty():
 					var absorbed := false
-					for orb in bullets:
-						if not orb.get("energy_orb",false) or orb.life <= 0: continue
+					for orb in orbs:
+						if orb.life <= 0: continue
 						if b.p.distance_to(orb.p) > orb.orb_radius+2.0: continue
 						orb.orb_flash = 0.15
 						sound.play_sfx("armor")

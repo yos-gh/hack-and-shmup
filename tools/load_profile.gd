@@ -12,13 +12,16 @@ extends SceneTree
 # Diagnostics: --hide=<3D batch keys> hides batches, --msaa=0|2|4 sets 3D MSAA,
 # --fx=0 hides the full-screen pass, --depth_scale=N renders N x the 3D pixels,
 # --light=1 plays in the LIGHT display (no bloom, no 3D MSAA; overrides --msaa).
+# Boss fights: --boss=0..3 picks the boss on a boss floor, --spread=1 keeps the
+# SPREAD pickup active, --aim=boss aims at the boss instead of rotating.
 const Scenario = preload("res://tools/dev_scenario.gd")
+const Catalog = preload("res://scripts/combat_catalog.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","depth_scale":"1","fx":"1","light":"0","warmup":"600","frames":"600","output":""}
+	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","depth_scale":"1","fx":"1","light":"0","boss":"-1","spread":"0","aim":"rotate","warmup":"600","frames":"600","output":""}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=",true,1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -29,7 +32,7 @@ func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	game.set_script(load("res://tools/load_profile_game.gd"))
 	root.add_child(game)
-	Scenario.configure_floor(game,int(options.floor),int(options.seed),int(options.weapon))
+	Scenario.configure_floor(game,int(options.floor),int(options.seed),int(options.weapon),int(options.boss))
 	game.set_depth_view(options.view == "3d")
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
@@ -79,9 +82,16 @@ func run() -> void:
 	for frame in range(total):
 		game.grace = 0.0
 		game.time_left = 120.0
+		# A window that loses focus would pause the run mid-measurement.
+		game.paused = false
 		game.fire_armed = true
 		var firing: bool = options.fire == "1"
-		game.replay_input = {"movement":Vector2.ZERO,"aim":Vector2.from_angle(frame/120.0),"primary":firing,"secondary":firing}
+		if options.spread == "1": game.pickups.timers[game.pickups.Kind.SPREAD] = 10.0
+		var aim := Vector2.from_angle(frame/120.0)
+		if options.aim == "boss":
+			for e in game.enemies:
+				if e.kind == Catalog.Enemy.BOSS and e.hp > 0 and e.p != game.player: aim = (e.p-game.player).normalized()
+		game.replay_input = {"movement":Vector2.ZERO,"aim":aim,"primary":firing,"secondary":firing}
 		var started := Time.get_ticks_usec()
 		game._physics_process(1.0/60.0)
 		var physics_ms := (Time.get_ticks_usec()-started)/1000.0
