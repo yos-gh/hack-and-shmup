@@ -115,7 +115,7 @@ func run() -> void:
 	game.practice.start(game)
 	game.paused = true
 	menus.sync()
-	check(menus._buttons().size() == 4,"practice pause shows no password")
+	check(menus._buttons().size() == 5,"practice pause shows no password")
 	game.queue_free()
 	await process_frame
 	if failures == 0: print("PASS: resume passwords rebuild floors, reject edits, and drive pause and CONTINUE")

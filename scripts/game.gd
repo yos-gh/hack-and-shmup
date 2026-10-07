@@ -30,6 +30,9 @@ var corridor_cells: Dictionary = {}
 var room_links: Array[Vector2i] = []
 var sound: Node
 var audio_on := true
+# LIGHT display drops the bloom and 3D MSAA for slower GPUs; FULL at every start.
+var light_display := false
+var screen_fx: CanvasLayer
 var menus: CanvasLayer
 var SUB_NAMES: Array:
 	get: return Catalog.WEAPONS.map(func(definition): return definition.title)
@@ -159,7 +162,7 @@ func _ready() -> void:
 	menus = preload("res://scripts/game_menus.gd").new()
 	add_child(menus)
 	menus.setup(self)
-	var screen_fx = preload("res://scripts/screen_fx.gd").new()
+	screen_fx = preload("res://scripts/screen_fx.gd").new()
 	add_child(screen_fx)
 	screen_fx.setup(self)
 	combat_feedback.bind_to(self)
@@ -383,6 +386,16 @@ func cycle_audio() -> void:
 
 func audio_button_rect() -> Rect2:
 	return Rect2(get_viewport_rect().size.x-390,22,172,42)
+
+# Display is FULL or LIGHT (L, the DISPLAY button); it is not saved.
+func toggle_display() -> void:
+	light_display = not light_display
+	screen_fx.set_light(light_display)
+	if depth_view != null: depth_view.set_light(light_display)
+	queue_redraw()
+
+func display_button_rect() -> Rect2:
+	return Rect2(get_viewport_rect().size.x-578,22,172,42)
 
 func start_run() -> void:
 	session.start_run(self)
@@ -694,6 +707,7 @@ func set_depth_view(enabled: bool) -> void:
 	if enabled and depth_view == null:
 		depth_view = preload("res://scripts/depth_view.gd").new()
 		add_child(depth_view)
+		depth_view.set_light(light_display)
 	depth_enabled = enabled
 	if depth_view != null: depth_view.set_active(enabled)
 	queue_redraw()
