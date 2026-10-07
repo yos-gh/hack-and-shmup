@@ -38,7 +38,7 @@ def verify(directory):
         expected[name] = item
     required = {'index.html', 'game-v2.html', 'game-v2.js', 'game-v2.wasm', 'game-v2.pck'}
     if target == 'Windows':
-        required = {'hack-and-shmup.exe', 'hack-and-shmup.pck', 'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll'}
+        required = {'hack-and-shmup.exe', 'hack-and-shmup.pck'}
         if manifest.get('startup_verified') is not True:
             raise ValueError('Windows startup was not verified')
     if manifest.get('notices_generated') is True:

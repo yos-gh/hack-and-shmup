@@ -20,12 +20,10 @@ func _initialize() -> void:
 	names.sort()
 	for name in names:
 		text += "\nLICENSE: " + str(name) + "\n\n" + str(licenses[name]) + "\n"
-	var sentry := FileAccess.get_file_as_string("res://addons/sentry/LICENSE.md")
-	if sentry.is_empty() or licenses.is_empty():
+	if licenses.is_empty():
 		printerr("Required bundled notices missing")
 		quit(1)
 		return
-	text += "\nSENTRY GODOT SDK\n\n" + sentry
 	for family in ["Rajdhani","Barlow"]:
 		text += "\nFONT: "+family+"\n\n"+FileAccess.get_file_as_string("res://assets/fonts/"+family+"-OFL.txt")
 	var output := FileAccess.open(args[0],FileAccess.WRITE)
@@ -40,6 +38,6 @@ func _initialize() -> void:
 	if error != OK:
 		quit(1)
 		return
-	print("PASS: bundled engine and Sentry notices exported")
+	print("PASS: bundled engine and font notices exported")
 	quit()
 

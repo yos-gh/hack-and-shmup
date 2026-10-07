@@ -44,8 +44,7 @@ class ManifestTests(unittest.TestCase):
             verify(self.root)
 
     def make_windows(self):
-        names = ['hack-and-shmup.exe', 'hack-and-shmup.pck',
-                 'libsentry.windows.release.x86_64.dll', 'crashpad_handler.exe', 'crashpad_wer.dll']
+        names = ['hack-and-shmup.exe', 'hack-and-shmup.pck']
         (self.root / 'windows').mkdir()
         self.manifest['files'] = []
         with zipfile.ZipFile(self.root / 'windows.zip', 'w') as archive:
@@ -61,7 +60,7 @@ class ManifestTests(unittest.TestCase):
 
     def test_windows(self):
         self.make_windows()
-        self.assertEqual(verify(self.root), 5)
+        self.assertEqual(verify(self.root), 2)
 
     def test_windows_requires_startup(self):
         self.make_windows()

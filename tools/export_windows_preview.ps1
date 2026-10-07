@@ -19,17 +19,9 @@ New-Item -ItemType Directory -Path $buildRoot | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Cannot archive source commit' }
 Expand-Archive -LiteralPath $sourceZip -DestinationPath $sourcePath
 
-# The preview build must neither load nor distribute the telemetry SDK.
-$resolvedSource = (Resolve-Path -LiteralPath $sourcePath).Path
-$previewSentry = (Resolve-Path -LiteralPath (Join-Path $sourcePath 'addons/sentry')).Path
-if (-not $resolvedSource.StartsWith((Resolve-Path -LiteralPath $buildRoot).Path + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or -not $previewSentry.StartsWith($resolvedSource + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Preview cleanup path is outside the isolated source copy' }
-Remove-Item -LiteralPath $previewSentry -Recurse -Force
+# The preview build does not distribute the asset manifest.
 Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/catalog.json') -Force
 Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/README.md') -Force
-$projectFile = Join-Path $sourcePath 'project.godot'
-$projectText = Get-Content -LiteralPath $projectFile -Raw
-$projectText = $projectText -replace '(?ms)^\[sentry\]\r?\n.*?(?=^\[|\z)', ''
-[IO.File]::WriteAllText($projectFile, $projectText)
 
 & $enginePath --headless --path $sourcePath --editor --import --disable-crash-handler --log-file (Join-Path $buildRoot 'import.log')
 if ($LASTEXITCODE -ne 0) { throw 'Preview import failed' }
