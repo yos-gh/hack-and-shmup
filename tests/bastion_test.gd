@@ -51,8 +51,8 @@ func run() -> void:
 		game.bullets.clear()
 		bastion.launch_orb(game,e)
 		var orb: Dictionary = game.bullets[-1]
-		check(bastion.orb_absorbs_area(game,orb.p,1),"orb absorbs shockwave")
-		check(bastion.orb_absorbs_lance(game,[{"p":orb.p+Vector2(-80,0),"end":orb.p+Vector2(80,0),"width":20.0,"origin":orb.p+Vector2(-80,0)}]),"orb absorbs lance")
+		check(game.boss.orb_absorbs_area(game,orb.p,1),"orb absorbs shockwave")
+		check(game.boss.orb_absorbs_lance(game,[{"p":orb.p+Vector2(-80,0),"end":orb.p+Vector2(80,0),"width":20.0,"origin":orb.p+Vector2(-80,0)}]),"orb absorbs lance")
 		game.emit_shot(orb.p,Vector2.RIGHT,100,1,false,100)
 		game.bullets[-1]["probe"] = true
 		game.grace = 2

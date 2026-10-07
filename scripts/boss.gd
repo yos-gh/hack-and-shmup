@@ -20,6 +20,24 @@ func controller(variant: int):
 		3: return wyrm
 	return triad
 
+# Energy orbs (Bastion, Abyss Wyrm) swallow every player weapon they touch.
+func orb_absorbs_area(game, center: Vector2, radius: float) -> bool:
+	for bullet in game.bullets:
+		if bullet.get("energy_orb",false) and bullet.life > 0 and bullet.p.distance_to(center) < bullet.orb_radius+radius:
+			bullet.orb_flash = 0.15
+			return true
+	return false
+
+func orb_absorbs_lance(game, rays: Array) -> bool:
+	for bullet in game.bullets:
+		if not bullet.get("energy_orb",false) or bullet.life <= 0: continue
+		for ray in rays:
+			var point: Vector2 = Geometry2D.get_closest_point_to_segment(bullet.p,ray.p,ray.end)
+			if point.distance_to(bullet.p) <= bullet.orb_radius+ray.width*0.5:
+				bullet.orb_flash = 0.15
+				return true
+	return false
+
 func reset() -> void:
 	lasers.clear()
 	salvos.clear()

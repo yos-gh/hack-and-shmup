@@ -4,6 +4,9 @@ const PATTERN_ORDER := ["radial","fan","direct","missile","radial","guided","fan
 const TURRET_REBUILD := 7.0
 const ARM_OFFSETS := [Vector2(-105,-570),Vector2(-125,-350),Vector2(-90,-170),Vector2(-105,170),Vector2(-125,350),Vector2(-90,570),Vector2(-125,-455),Vector2(-125,455)]
 const MISSILE_PORT_Y := 245.0
+# Gun positions for the current tick; every player shot step tests them.
+var gun_cache: Array[Vector2] = []
+var gun_cache_key := []
 
 static func wall_curve(y: float) -> float:
 	# The entire curtain wall bows forward at its ends, including its sockets.
@@ -86,15 +89,20 @@ func turret_burst(boss, e: Dictionary, gun: int, rage: bool, delay: float = 0.12
 func intercept_bullet(game, bullet: Dictionary) -> bool:
 	for e in game.enemies:
 		if not e.has("turrets") or e.hp <= 0: continue
+		var key := [e.age,e.p,e.turrets.size()]
+		if key != gun_cache_key:
+			gun_cache_key = key
+			gun_cache.resize(e.turrets.size())
+			for i in range(e.turrets.size()): gun_cache[i] = gun_position(e,i)
 		for i in range(e.turrets.size()):
 			var turret: Dictionary = e.turrets[i]
-			if turret.hp <= 0 or bullet.p.distance_to(gun_position(e,i)) > 23: continue
+			if turret.hp <= 0 or bullet.p.distance_to(gun_cache[i]) > 23: continue
 			turret.hp = maxf(0.0,turret.hp-bullet.damage)
-			game.combat_events.enemy_hit.emit(gun_position(e,i),bullet.damage,true,false)
+			game.combat_events.enemy_hit.emit(gun_cache[i],bullet.damage,true,false)
 			if turret.hp == 0:
 				turret.timer = TURRET_REBUILD
 				game.sound.play_sfx("armor_break")
-				game.burst(gun_position(e,i),Color("e0a5fa"),10)
+				game.burst(gun_cache[i],Color("e0a5fa"),10)
 			return true
 	return super.intercept_bullet(game,bullet)
 
@@ -142,23 +150,6 @@ func launch_orb(game, e: Dictionary) -> void:
 		"energy_orb":true,"orb_phase":"charge","orb_age":0.0,"orb_radius":18.0,
 		"orb_flash":0.0,"orb_speed_scale":e.bullet_scale,"pressure":false})
 	game.enemy_attack_cue("boss_orb_charge",e.p,false)
-
-func orb_absorbs_area(game, center: Vector2, radius: float) -> bool:
-	for bullet in game.bullets:
-		if bullet.get("energy_orb",false) and bullet.life > 0 and bullet.p.distance_to(center) < bullet.orb_radius+radius:
-			bullet.orb_flash = 0.15
-			return true
-	return false
-
-func orb_absorbs_lance(game, rays: Array) -> bool:
-	for bullet in game.bullets:
-		if not bullet.get("energy_orb",false) or bullet.life <= 0: continue
-		for ray in rays:
-			var point: Vector2 = Geometry2D.get_closest_point_to_segment(bullet.p,ray.p,ray.end)
-			if point.distance_to(bullet.p) <= bullet.orb_radius+ray.width*0.5:
-				bullet.orb_flash = 0.15
-				return true
-	return false
 
 func launch_missile(game, e: Dictionary, rage: bool) -> void:
 	var target: Vector2 = game.player
