@@ -27,6 +27,7 @@ var floor_updates: Dictionary = {}
 var shown_rooms: Dictionary = {}
 var floor_material: ShaderMaterial
 var ripple_uniform := PackedVector4Array()
+var light := false
 
 func _ready() -> void:
 	viewport.own_world_3d = true
@@ -311,6 +312,10 @@ func _upload_mesh(mesh: MultiMesh, entries: Array) -> void:
 		mesh.set_instance_transform(i, item.transform)
 		mesh.set_instance_color(i, item.color)
 		if custom: mesh.set_instance_custom_data(i, Color(item.warning, clock, item.get("line",0.0), 0))
+
+func set_light(value: bool) -> void:
+	light = value
+	viewport.msaa_3d = Viewport.MSAA_DISABLED if light else Viewport.MSAA_2X
 
 func set_active(value: bool) -> void:
 	active = value

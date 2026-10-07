@@ -70,6 +70,10 @@ cycle_audio={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":77)]
 }
+toggle_display={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"keycode":76)]
+}
 boss_practice={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"keycode":66)]

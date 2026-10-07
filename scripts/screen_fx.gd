@@ -13,6 +13,9 @@ func setup(host: Node) -> void:
 	rect.material = material
 	add_child(rect)
 
+func set_light(light: bool) -> void:
+	rect.material.shader = preload("res://scripts/screen_fx_lite.gdshader") if light else preload("res://scripts/screen_fx.gdshader")
+
 func _process(_delta: float) -> void:
 	var fx = game.presentation
 	var danger := 0.0

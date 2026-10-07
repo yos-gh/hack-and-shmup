@@ -76,5 +76,6 @@ func input(game, event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.is_action_pressed("back"): close(game)
 		elif event.is_action_pressed("cycle_audio"): game.cycle_audio()
+		elif event.is_action_pressed("toggle_display"): game.toggle_display()
 	elif event is InputEventJoypadButton and event.pressed and event.is_action_pressed("back"):
 		close(game)

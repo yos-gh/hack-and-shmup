@@ -28,7 +28,7 @@ func sync() -> void:
 	if state.is_empty() and signature == [""]: return
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	var focus_index := focused.get_index() if focused != null and focused.get_parent() == surface and signature.size() > 1 and signature[1] == state else -1
-	var next: Array = [screen,state,game.audio_on,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad,game.sound_mode.track,game.password_entry.error,password_copied]
+	var next: Array = [screen,state,game.audio_on,game.light_display,game.best_cleared,game.choices.duplicate(),game.player_stats(),game.session.run.expansion,game.session.run.recharge,DisplayServer.window_get_mode(),game.practice.variant,game.practice.depth,game.controls.using_gamepad,game.sound_mode.track,game.password_entry.error,password_copied]
 	if state.is_empty(): next = [""]
 	if next == signature:
 		if not state.is_empty() and game.controls.using_gamepad:
@@ -134,7 +134,7 @@ func _title(screen: Vector2) -> void:
 	_button(Rect2(screen.x*0.5-190,y+122,380,42),"CONTINUE" if game.controls.using_gamepad else "CONTINUE (C)",func():
 		if game.title_screen: game.password_entry.open(game); sync())
 	_label(Rect2(24,y+185,screen.x-48,45),"LEFT STICK / DPAD MOVE / RIGHT STICK AIM" if game.controls.using_gamepad else "WASD MOVE / MOUSE AIM / Q & E WEAPONS",14,Color("8194aa"))
-	var hint := "LEFT STICK / DPAD SELECT / A / LB CONFIRM" if game.controls.using_gamepad else "M AUDIO / RECORD LASTS UNTIL YOU QUIT"
+	var hint := "LEFT STICK / DPAD SELECT / A / LB CONFIRM" if game.controls.using_gamepad else "M AUDIO / L DISPLAY / RECORD LASTS UNTIL YOU QUIT"
 	if not OS.has_feature("web"): hint += " / B QUIT" if game.controls.using_gamepad else " / ESC QUIT"
 	_label(Rect2(24,y+240,screen.x-48,40),hint,14,Color("8194aa"))
 	_settings()
@@ -143,6 +143,7 @@ func _settings() -> void:
 	_button(game.audio_button_rect(),"AUDIO: ON" if game.audio_on else "AUDIO: OFF",func(): game.cycle_audio(); sync())
 	var fullscreen := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN,DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
 	_button(game.fullscreen_button_rect(),"WINDOWED" if fullscreen else "FULLSCREEN",func(): game.toggle_fullscreen(); sync())
+	_button(game.display_button_rect(),"DISPLAY: LIGHT" if game.light_display else "DISPLAY: FULL",func(): game.toggle_display(); sync())
 
 func _battle_menu(screen: Vector2, is_pause: bool) -> void:
 	var y: float = game.menu_origin_y(screen,is_pause)

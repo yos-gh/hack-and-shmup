@@ -154,6 +154,9 @@ func handle_event(game, event: InputEvent) -> void:
 		if event is InputEventKey and event.is_action_pressed("cycle_audio"):
 			game.cycle_audio()
 			return
+		if event is InputEventKey and event.is_action_pressed("toggle_display"):
+			game.toggle_display()
+			return
 		if game.title_screen:
 			if event.is_action_pressed("confirm"): game.start_run()
 			elif event is InputEventKey and event.is_action_pressed("continue_run"): game.password_entry.open(game)
@@ -186,6 +189,8 @@ func handle_event(game, event: InputEvent) -> void:
 					if event.button_index == MOUSE_BUTTON_LEFT: game.cycle_audio()
 				elif game.fullscreen_button_rect().has_point(event.position):
 					if event.button_index == MOUSE_BUTTON_LEFT: game.toggle_fullscreen()
+				elif game.display_button_rect().has_point(event.position):
+					if event.button_index == MOUSE_BUTTON_LEFT: game.toggle_display()
 				elif game.sound_mode.hits_emblem(game.get_viewport_rect().size,event.position):
 					if event.button_index == MOUSE_BUTTON_LEFT: game.sound_mode.open(game)
 				else: game.start_run()

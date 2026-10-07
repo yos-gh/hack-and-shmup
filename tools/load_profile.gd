@@ -10,14 +10,15 @@ extends SceneTree
 # Options: --floor=N --seed=S --weapon=0..2 --mobs=N (cap alive mobs) --fire=0|1 --view=2d|3d
 #          --warmup=600 --frames=600 --output=<json> --capture=<png>
 # Diagnostics: --hide=<3D batch keys> hides batches, --msaa=0|2|4 sets 3D MSAA,
-# --fx=0 hides the full-screen pass, --depth_scale=N renders N x the 3D pixels.
+# --fx=0 hides the full-screen pass, --depth_scale=N renders N x the 3D pixels,
+# --light=1 plays in the LIGHT display (no bloom, no 3D MSAA; overrides --msaa).
 const Scenario = preload("res://tools/dev_scenario.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","depth_scale":"1","fx":"1","warmup":"600","frames":"600","output":""}
+	var options := {"floor":"40","seed":"19045","weapon":"1","mobs":"999","fire":"1","view":"3d","alert":"99","hide":"","msaa":"2","capture":"","depth_scale":"1","fx":"1","light":"0","warmup":"600","frames":"600","output":""}
 	for argument in OS.get_cmdline_user_args():
 		var pair := argument.trim_prefix("--").split("=",true,1)
 		if pair.size() != 2 or not options.has(pair[0]):
@@ -53,6 +54,7 @@ func run() -> void:
 		for child in game.depth_view.stage.get_children():
 			if child is MultiMeshInstance3D and (child.multimesh == game.depth_view.batches.get(key) or child.multimesh == game.depth_view.batches.get(key+"_wire")): child.visible = false
 	game.depth_view.viewport.msaa_3d = {"0":Viewport.MSAA_DISABLED,"2":Viewport.MSAA_2X,"4":Viewport.MSAA_4X}[options.msaa]
+	if options.light == "1": game.toggle_display()
 	if options.fx == "0":
 		for child in game.get_children():
 			if child is CanvasLayer and child.layer == 50: child.visible = false

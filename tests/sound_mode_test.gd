@@ -42,7 +42,7 @@ func run() -> void:
 	check(game.sound_mode.track == game.sound.music_lib.TITLE, "sound mode starts on the track already playing")
 	game.menus.sync()
 	var buttons: Array = game.menus._buttons()
-	check(buttons.size() == keys.size() + 3, "one button per track plus back and the two settings")
+	check(buttons.size() == keys.size() + 4, "one button per track plus back and the three settings")
 	for i in range(keys.size()):
 		var rect: Rect2 = game.sound_mode.button(screen, i)
 		check(rect.position.x >= 0 and rect.end.x <= screen.x and rect.end.y < game.sound_mode.progress_rect(screen).position.y - 80, "track button fits above the now-playing caption: %d" % i)

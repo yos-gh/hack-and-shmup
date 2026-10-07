@@ -148,7 +148,7 @@ func meter(game, rect: Rect2, fraction: float, ink: Color, clock: float) -> void
 func draw_help(game, screen: Vector2) -> void:
 	gradient_rect(game, Rect2(0,screen.y-40,screen.x,40), Color(0.03,0.07,0.1,0.8), Color(0.012,0.027,0.05,0.95))
 	game.draw_line(Vector2(0,screen.y-40),Vector2(screen.x,screen.y-40),Color(0.25,0.55,0.62,0.45),1)
-	var help := "LS / DPAD  MOVE     RS  AIM     A / LB  FIRE     RB  SUB WEAPON     LT / RT  SWITCH     B  PAUSE" if game.controls.using_gamepad else "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO"
+	var help := "LS / DPAD  MOVE     RS  AIM     A / LB  FIRE     RB  SUB WEAPON     LT / RT  SWITCH     B  PAUSE" if game.controls.using_gamepad else "WASD  MOVE     LMB  MACHINE GUN     RMB  SUB WEAPON     Q/E / WHEEL  SWITCH     ESC  PAUSE     M  AUDIO     L  DISPLAY"
 	# Keycap chips: "KEY  ACTION" pairs separated by wide gaps.
 	var x := 22.0
 	var baseline: float = screen.y-15

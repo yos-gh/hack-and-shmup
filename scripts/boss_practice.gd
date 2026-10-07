@@ -76,6 +76,7 @@ func input(game, event: InputEvent) -> void:
 		elif event.is_action_pressed("practice_down"): depth = maxi(depth-5,5)
 		elif event.is_action_pressed("confirm"): start(game)
 		elif event.is_action_pressed("cycle_audio"): game.cycle_audio()
+		elif event.is_action_pressed("toggle_display"): game.toggle_display()
 		else:
 			for i in range(3):
 				if event.is_action_pressed("select_%d" % (i+1)): variant = i
