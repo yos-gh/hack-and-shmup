@@ -27,11 +27,6 @@ $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $version = (& $enginePath --version | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $version -ne $lock.godot_version) { throw "Engine mismatch: expected $($lock.godot_version), got $version" }
 $release = "hack-and-shmup@$revision"
-$projectFile = Join-Path $sourcePath 'project.godot'
-$projectText = Get-Content -LiteralPath $projectFile -Raw
-if ($projectText -notmatch '(?m)^options/release=') { throw 'Missing Sentry release setting' }
-$projectText = $projectText -replace '(?m)^options/release=.*$', ('options/release="' + $release + '"')
-[IO.File]::WriteAllText($projectFile,$projectText)
 $validationPath = Join-Path $sourcePath 'docs/validation'
 New-Item -ItemType Directory -Force -Path $validationPath | Out-Null
 function Invoke-CheckedGodot([string[]]$EngineArguments, [string]$LogFile) {
@@ -64,7 +59,7 @@ Invoke-CheckedGodot @('--export-release', $preset, (Join-Path $exportPath $entry
 if ($Target -eq 'Web') { Copy-Item -LiteralPath (Join-Path $sourcePath 'web/index.html') -Destination $exportPath }
 [ordered]@{ revision = $revision; engine = $version; release = $release } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $exportPath 'build-info.json')
 $required = @('index.html','game-v2.html','game-v2.js','game-v2.wasm','game-v2.pck')
-if ($Target -eq 'Windows') { $required = @('hack-and-shmup.exe','hack-and-shmup.pck','libsentry.windows.release.x86_64.dll','crashpad_handler.exe','crashpad_wer.dll') }
+if ($Target -eq 'Windows') { $required = @('hack-and-shmup.exe','hack-and-shmup.pck') }
 if ($noticesGenerated) { $required += 'THIRD_PARTY_NOTICES.txt' }
 foreach ($name in $required) {
     $file = Join-Path $exportPath $name

@@ -3,15 +3,6 @@ __pycache__/
 *.log
 /[Dd]ocs/
 
-addons/sentry/bin/android/
-addons/sentry/bin/ios/
-addons/sentry/bin/linux/
-addons/sentry/bin/macos/
-addons/sentry/bin/windows/x86_32/
-addons/sentry/bin/windows/arm64/
-addons/sentry/dotnet/
-addons/sentry/bin/windows/x86_64/~libsentry.windows.debug.x86_64.dll*
-
 # Web exports are built by CI; only the landing page and its skin are authored.
 /web/*
 !/web/index.html
