@@ -29,6 +29,8 @@ Remove-Item -LiteralPath (Join-Path $sourcePath 'assets/README.md') -Force
 $projectFile = Join-Path $sourcePath 'project.godot'
 $projectText = Get-Content -LiteralPath $projectFile -Raw
 $projectText = $projectText -replace '(?ms)^\[sentry\]\r?\n.*?(?=^\[|\z)', ''
+# Sentry's editor plugin forces GDScript call stack tracking on, which slows every script call.
+$projectText = $projectText -replace '(?m)^settings/gdscript/always_track_call_stacks=true', 'settings/gdscript/always_track_call_stacks=false'
 [IO.File]::WriteAllText($projectFile, $projectText)
 
 & $enginePath --headless --path $sourcePath --editor --import --disable-crash-handler --log-file (Join-Path $buildRoot 'import.log')

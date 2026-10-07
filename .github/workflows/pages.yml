@@ -82,8 +82,11 @@ jobs:
           set -euo pipefail
           # The preview build must neither load nor distribute the telemetry SDK
           # (same steps as tools/export_windows_preview.ps1).
+          # Sentry's editor plugin forces GDScript call stack tracking on, which
+          # slows every script call; without the SDK nothing reads those stacks.
           rm -rf addons/sentry assets/catalog.json assets/README.md
           sed -i '/^\[sentry\]/,/^\[/{/^\[sentry\]/d;/^\[/!d}' project.godot
+          sed -i 's|^settings/gdscript/always_track_call_stacks=true$|settings/gdscript/always_track_call_stacks=false|' project.godot
           mkdir -p export/windows
           EXE="${PWD}/export/windows/HACK-AND-SHMUP.exe"
           godot --headless --path . --editor --import 2>&1 | tee import.log
