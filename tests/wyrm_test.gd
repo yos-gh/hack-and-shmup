@@ -102,6 +102,16 @@ func run() -> void:
 	var link: Dictionary = e.segments.filter(func(s): return s.z >= 0)[0]
 	check(wyrm.intercept_bullet(game,{"p":link.p,"damage":1.0,"hostile":false}),"armoured links stop player shots")
 	check(not wyrm.intercept_bullet(game,{"p":e.p,"damage":1.0,"hostile":false}),"shots reach the core")
+	# The head's energy orb swallows player weapons exactly like Bastion's.
+	var spot: Vector2 = game.player+Vector2(0,-90)
+	var orb := {"p":spot,"v":Vector2.ZERO,"damage":1.0,"hostile":true,"life":8.0,"energy_orb":true,"orb_phase":"charge","orb_age":0.0,"orb_radius":18.0,"orb_flash":0.0,"orb_speed_scale":1.0,"pressure":false}
+	game.bullets.append(orb)
+	game.emit_shot(spot,Vector2.RIGHT,100,1,false,100)
+	game.bullets[-1]["probe"] = true
+	step(game,1.0/60.0)
+	check(game.attack_open(spot) and not game.bullets.any(func(b): return b.get("probe",false)) and orb.orb_flash > 0,"a wyrm orb absorbs primary fire")
+	check(game.boss.orb_absorbs_area(game,spot,1) and game.boss.orb_absorbs_lance(game,[{"p":spot+Vector2(-80,0),"end":spot+Vector2(80,0),"width":20.0,"origin":spot+Vector2(-80,0)}]),"a wyrm orb absorbs shockwave and lance")
+	game.bullets.erase(orb)
 	check(wyrm.touches(e,e.hole+Vector2(0,20),game.PLAYER_HIT_RADIUS) or e.segments.any(func(s): return s.z >= 0 and s.p.distance_to(e.hole) < s.radius),"an open hole is deadly to step into")
 	check(until(game,func(): return e.state == "dive",12.0),"the wyrm dives after its pattern")
 	check(until(game,func(): return e.state == "under",6.0) and not e.closing.is_empty() and wyrm.touches(e,e.closing[0].p,game.PLAYER_HIT_RADIUS),"a hole stays deadly while it fills in")

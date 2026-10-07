@@ -301,7 +301,7 @@ func fire_sub(aim: Vector2) -> void:
 			var radius := SHOCK_RADIUS
 			for e in enemies:
 				if e.has("plates"):
-					if boss_variant == 1 and boss.bastion.orb_absorbs_area(self,player,radius): continue
+					if boss.orb_absorbs_area(self,player,radius): continue
 					boss.controller(boss_variant).shock(self,e,power*definition.damage)
 					continue
 				var body_radius: float = enemy_bullet_radius(e) if e.kind == Catalog.Enemy.BOSS else 0.0
@@ -315,7 +315,7 @@ func fire_sub(aim: Vector2) -> void:
 			var rays := LanceTrace.lanes(self,player,direction)
 			for e in enemies:
 				if e.has("plates"):
-					if boss_variant == 1 and boss.bastion.orb_absorbs_lance(self,rays): continue
+					if boss.orb_absorbs_lance(self,rays): continue
 					boss.controller(boss_variant).lance(self,e,rays,direction,power*definition.damage)
 					continue
 				if LanceTrace.hits(self,e,rays,direction):
@@ -574,9 +574,9 @@ func _physics_process(delta: float) -> void:
 		if discovered.has(i) or (simulation_tick + i) % IDLE_UPDATE_PHASES == 0:
 			patrol_elapsed[i] = 0.0
 	rebuild_enemy_buckets()
-	# Bastion energy orbs absorb player shots; list them once, not per shot step.
+	# Boss energy orbs absorb player shots; list them once, not per shot step.
 	var orbs: Array[Dictionary] = []
-	if boss_variant == 1:
+	if boss_floor:
 		for b in bullets:
 			if b.get("energy_orb",false): orbs.append(b)
 	for b in bullets:
