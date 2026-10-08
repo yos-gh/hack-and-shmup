@@ -119,7 +119,16 @@ func run() -> void:
 	mouse.position = Vector2(800,500)
 	mouse.relative = Vector2.ONE
 	send(mouse)
-	check(not game.controls.using_gamepad and game.controls.movement(game).normalized().is_equal_approx(before_mouse),"mouse aim does not stop a held left stick")
+	check(game.controls.using_gamepad,"mouse movement alone keeps gamepad aim")
+	var click := InputEventMouseButton.new()
+	click.position = Vector2(800,500)
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	send(click)
+	click = click.duplicate()
+	click.pressed = false
+	send(click)
+	check(not game.controls.using_gamepad and game.controls.movement(game).normalized().is_equal_approx(before_mouse),"mouse click aim does not stop a held left stick")
 	var movement_start: Vector2 = game.spawn_point
 	game.player = movement_start
 	game._physics_process(0.01)
@@ -133,6 +142,8 @@ func run() -> void:
 	send(motion(JOY_AXIS_LEFT_X,0.0))
 	send(motion(JOY_AXIS_LEFT_Y,0.0))
 	check(game.controls.movement(game).is_zero_approx(),"stick release stops movement")
+	tap(JOY_BUTTON_RIGHT_SHOULDER)
+	check(game.controls.using_gamepad,"a pad button hands aim back to the right stick")
 	for screen_direction in [Vector2.RIGHT,Vector2.DOWN,Vector2.LEFT,Vector2.UP,Vector2(1,1),Vector2(-1,1),Vector2(-1,-1),Vector2(1,-1)]:
 		send(motion(JOY_AXIS_RIGHT_X,screen_direction.x))
 		send(motion(JOY_AXIS_RIGHT_Y,screen_direction.y))
