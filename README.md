@@ -17,6 +17,7 @@ Reach the stairs before time runs out. Defeat enemies to earn more time, and cho
 | Q / E or wheel | Switch subweapon |
 | Esc | Pause |
 | M | Sound on / off |
+| L | Display FULL / LIGHT (LIGHT drops the glow and 3D anti-aliasing for slower GPUs) |
 | Left stick / D-pad | Move |
 | Right stick | Aim |
 | A / Cross or LB | Fire / confirm menus |
