@@ -17,7 +17,6 @@ Reach the stairs before time runs out. Defeat enemies to earn more time, and cho
 | Q / E or wheel | Switch subweapon |
 | Esc | Pause |
 | M | Sound on / off |
-| L | Display FULL / LIGHT (LIGHT drops the glow and 3D anti-aliasing for slower GPUs) |
 | Left stick / D-pad | Move |
 | Right stick | Aim |
 | A / Cross or LB | Fire / confirm menus |
@@ -26,8 +25,6 @@ Reach the stairs before time runs out. Defeat enemies to earn more time, and cho
 | B / Circle | Pause, return to title from pause, or quit at title in the native build |
 
 Use the left stick or D-pad to select menu items, then A / Cross or LB to confirm.
-
-The left stick, D-pad and WASD always move the ship. A mouse click hands aiming and firing to the mouse, and a gamepad button or trigger hands them to the right stick and pad buttons, so a gamepad without a right stick can be paired with the mouse.
 
 ## Subweapons
 
