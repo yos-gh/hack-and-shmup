@@ -113,7 +113,7 @@ section h3 { margin: 18px 0 6px; font-size: .9rem; font-weight: 650; }
 section h2 + h3 { margin-top: 0; }
 
 section p, section ul, section dl { margin: 0; color: var(--muted); font-size: .9rem; }
-section p + p { margin-top: 10px; }
+section p + p, .controls + p { margin-top: 10px; }
 section ul { padding-left: 1.2rem; }
 section li + li { margin-top: 4px; }
 

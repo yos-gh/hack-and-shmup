@@ -36,6 +36,8 @@ func secondary(game) -> bool:
 	return game.replay_input.get("secondary", Input.is_action_pressed("fire_secondary"))
 
 func _set_gamepad(game, device: int) -> void:
+	# A right stick already held while the mouse aimed takes over at once.
+	if not using_gamepad: _stick_aim(game,right_sticks.get(device,Vector2.ZERO))
 	using_gamepad = true
 	active_device = device
 	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
@@ -47,6 +49,12 @@ func _set_mouse(game) -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	game.queue_redraw()
 
+func _stick_aim(game, right: Vector2) -> void:
+	if right.length() <= JOY_DEADZONE: return
+	var origin: Vector2 = game.screen_to_world(Vector2.ZERO)
+	var transformed: Vector2 = game.screen_to_world(right) - origin
+	if transformed.length_squared() > 0.0: last_aim = transformed.normalized()
+
 func joy_connection_changed(device: int, connected: bool, game) -> void:
 	if not connected:
 		left_sticks.erase(device)
@@ -57,17 +65,17 @@ func joy_connection_changed(device: int, connected: bool, game) -> void:
 		menu_dpad_held.clear()
 		if device == active_device: _set_mouse(game)
 
-# This runs from _input before GUI Controls consume the event. Releases and
-# sub-dead-zone drift only clear navigation latches; they never change scheme.
+# This runs from _input before GUI Controls consume the event. Movement (left
+# stick, D-pad, WASD/arrows) works in both schemes, so a pad without a right
+# stick can be paired with the mouse; only a mouse click or a pad button /
+# trigger press picks whether aim and fire follow the mouse or the pad.
+# Releases and sub-dead-zone drift only clear navigation latches.
 func observe_event(game, event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		if event.relative.length_squared() > 0.0: _set_mouse(game)
-		return
-	if event is InputEventMouseButton and event.pressed:
-		_set_mouse(game)
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index in [MOUSE_BUTTON_LEFT,MOUSE_BUTTON_RIGHT,MOUSE_BUTTON_MIDDLE,MOUSE_BUTTON_XBUTTON1,MOUSE_BUTTON_XBUTTON2]: _set_mouse(game)
 		return
 	if event is InputEventJoypadButton:
-		if event.pressed: _set_gamepad(game,event.device)
+		if event.pressed and not DPAD.has(event.button_index): _set_gamepad(game,event.device)
 		if DPAD.has(event.button_index) and not event.pressed: menu_dpad_held[event.button_index] = false
 		return
 	if event is InputEventJoypadMotion:
@@ -87,19 +95,13 @@ func observe_event(game, event: InputEvent) -> void:
 			else: left.y = event.axis_value
 			left_sticks[event.device] = left
 			if left.length() <= JOY_DEADZONE: menu_stick_held = false
-			if left.length() > JOY_DEADZONE: _set_gamepad(game,event.device)
 		elif event.axis in [JOY_AXIS_RIGHT_X,JOY_AXIS_RIGHT_Y]:
 			var right: Vector2 = right_sticks.get(event.device, Vector2.ZERO)
 			if event.axis == JOY_AXIS_RIGHT_X: right.x = event.axis_value
 			else: right.y = event.axis_value
 			right_sticks[event.device] = right
-			if right.length() > JOY_DEADZONE:
-				_set_gamepad(game,event.device)
-				var origin: Vector2 = game.screen_to_world(Vector2.ZERO)
-				var transformed: Vector2 = game.screen_to_world(right) - origin
-				if transformed.length_squared() > 0.0: last_aim = transformed.normalized()
-		elif event.axis_value > JOY_DEADZONE:
-			_set_gamepad(game,event.device)
+			# The mouse keeps aiming until a pad button is pressed.
+			if using_gamepad: _stick_aim(game,right)
 
 func menu_direction(event: InputEvent) -> Vector2i:
 	if event is InputEventJoypadButton and event.pressed and DPAD.has(event.button_index):

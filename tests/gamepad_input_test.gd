@@ -33,11 +33,23 @@ func run() -> void:
 	controls.observe_event(game,motion(JOY_AXIS_LEFT_X,0.1))
 	controls.observe_event(game,motion(JOY_AXIS_LEFT_Y,-0.1))
 	check(not controls.using_gamepad,"radial drift below 0.2 does not select gamepad")
+	# Movement stays live in both schemes, so a pad without a right stick can
+	# be paired with the mouse: sticks and the D-pad never switch the scheme.
 	controls.observe_event(game,motion(JOY_AXIS_LEFT_X,0.8))
-	check(controls.using_gamepad,"left stick selects pad above radial deadzone")
+	check(not controls.using_gamepad,"left stick keeps mouse aim")
+	controls.observe_event(game,button(JOY_BUTTON_DPAD_LEFT))
+	controls.observe_event(game,button(JOY_BUTTON_DPAD_LEFT,false))
+	check(not controls.using_gamepad,"D-pad keeps mouse aim")
 	controls.observe_event(game,motion(JOY_AXIS_RIGHT_X,0.0))
 	controls.observe_event(game,motion(JOY_AXIS_RIGHT_Y,-1.0))
+	check(not controls.using_gamepad,"right stick alone keeps mouse aim")
+	controls.observe_event(game,button(JOY_BUTTON_X))
+	check(controls.using_gamepad,"a pad button selects gamepad")
 	var expected: Vector2 = (game.screen_to_world(Vector2(0,-1)) - game.screen_to_world(Vector2.ZERO)).normalized()
+	check(controls.aim(game).is_equal_approx(expected),"a right stick held before the switch aims at once, screen-to-world")
+	controls.observe_event(game,motion(JOY_AXIS_RIGHT_X,1.0))
+	controls.observe_event(game,motion(JOY_AXIS_RIGHT_Y,0.0))
+	expected = (game.screen_to_world(Vector2(1,0)) - game.screen_to_world(Vector2.ZERO)).normalized()
 	check(controls.aim(game).is_equal_approx(expected),"right stick uses screen-to-world aiming")
 	controls.observe_event(game,motion(JOY_AXIS_RIGHT_Y,0.0))
 	check(controls.aim(game).is_equal_approx(expected),"right-stick neutral retains the last aim")
@@ -58,7 +70,26 @@ func run() -> void:
 	var moved := InputEventMouseMotion.new()
 	moved.relative = Vector2.ONE
 	controls.observe_event(game,moved)
-	check(not controls.using_gamepad,"mouse movement restores mouse aim")
+	check(controls.using_gamepad,"mouse movement alone keeps gamepad aim")
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	controls.observe_event(game,wheel)
+	check(controls.using_gamepad,"mouse wheel keeps gamepad aim")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	controls.observe_event(game,click)
+	check(not controls.using_gamepad,"mouse click restores mouse aim")
+	var keyboard := InputEventKey.new()
+	keyboard.keycode = KEY_W
+	keyboard.pressed = true
+	controls.observe_event(game,motion(JOY_AXIS_TRIGGER_RIGHT,0.8))
+	check(controls.using_gamepad,"trigger pull selects gamepad")
+	controls.observe_event(game,motion(JOY_AXIS_TRIGGER_RIGHT,0.0))
+	controls.observe_event(game,keyboard)
+	check(controls.using_gamepad,"WASD keeps gamepad aim")
+	controls.observe_event(game,click)
 	controls.observe_event(game,button(JOY_BUTTON_A))
 	check(controls.using_gamepad,"primary button selects gamepad")
 	controls.joy_connection_changed(0,false,game)
@@ -67,5 +98,5 @@ func run() -> void:
 	game.menus._input(button(JOY_BUTTON_A))
 	check(not game.title_screen and not game.fire_armed,"gamepad accept activates the focused title button once")
 	game.free()
-	if failures == 0: print("PASS: gamepad radial movement, aim retention, cursor switching and menu latches")
+	if failures == 0: print("PASS: gamepad radial movement, aim retention, click/button scheme switching and menu latches")
 	quit(1 if failures else 0)
